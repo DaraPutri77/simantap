@@ -9,49 +9,28 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f1f5f9;
-        }
-
-        .wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .content {
-            flex: 1;
-        }
-
-        .main-content {
-            padding: 30px;
-        }
-    </style>
 </head>
 
 
-<body>
+<body class="bg-slate-100">
 
 
-<div class="wrapper">
+<div class="flex min-h-screen">
 
 
+    {{-- SIDEBAR --}}
     @include('layouts.sidebar')
 
 
-    <div class="content">
+    {{-- CONTENT --}}
+    <div class="flex-1 ml-64">
 
 
+        {{-- NAVBAR --}}
         @include('layouts.navbar')
 
 
-        <main class="main-content">
+        <main class="p-8">
 
             {{ $slot }}
 
