@@ -1,145 +1,141 @@
 <x-app-layout>
 
-<div>
+<div style="padding:40px">
+
 
 <h1 style="
 font-size:32px;
 font-weight:bold;
 margin-bottom:30px;
-color:#0f172a;
 ">
 User Management
 </h1>
 
 
+<a href="{{ route('users.create') }}"
+style="
+background:#2563eb;
+color:white;
+padding:12px 20px;
+border-radius:10px;
+display:inline-block;
+margin-bottom:25px;
+">
++ Tambah User
+</a>
+
+
+
 <div style="
 background:white;
-border-radius:18px;
 padding:25px;
-overflow-x:auto;
-box-shadow:0 10px 25px rgba(0,0,0,0.05);
+border-radius:18px;
 ">
 
 
-<table width="100%" style="
-border-collapse:collapse;
-">
-
-<thead>
-
-<tr style="
-background:#f8fafc;
-text-align:left;
-border-bottom:1px solid #e5e7eb;
-">
+<table width="100%"
+cellpadding="15">
 
 
-<th style="padding:15px;">
-No
-</th>
+<tr style="border-bottom:1px solid #ddd">
 
-
-<th style="padding:15px;">
-Nama
-</th>
-
-
-<th style="padding:15px;">
-Email
-</th>
-
-
-<th style="padding:15px;">
-Role
-</th>
-
-
-<th style="padding:15px;">
-Profile
-</th>
-
+<th>No</th>
+<th>Nama</th>
+<th>Email</th>
+<th>Role</th>
+<th>Aksi</th>
 
 </tr>
 
-</thead>
-
-
-<tbody>
 
 
 @foreach($users as $user)
 
-<tr style="
-border-bottom:1px solid #e5e7eb;
-">
+<tr>
 
 
-<td style="padding:15px;">
+<td>
 {{ $loop->iteration }}
 </td>
 
 
-<td style="padding:15px;font-weight:600;">
+<td>
 {{ $user->name }}
 </td>
 
 
-<td style="padding:15px;color:#64748b;">
+<td>
 {{ $user->email }}
 </td>
 
 
-<td style="padding:15px;">
+<td>
 
-@forelse($user->roles as $role)
+@foreach($user->roles as $role)
 
 <span style="
 background:#2563eb;
 color:white;
-padding:6px 14px;
+padding:5px 12px;
 border-radius:20px;
-font-size:13px;
 ">
 
 {{ $role->nama_role }}
 
 </span>
 
-@empty
-
-<span style="color:#64748b;">
--
-</span>
-
-@endforelse
+@endforeach
 
 
 </td>
 
 
-<td style="padding:15px;">
 
-@if($user->profile)
+<td>
 
-{{ $user->profile->nama_lengkap }}
 
-@else
+<a href="{{ route('users.edit',$user->id) }}"
+style="
+color:#2563eb;
+">
+Edit
+</a>
 
--
 
-@endif
+
+<form action="{{ route('users.destroy',$user->id) }}"
+method="POST"
+style="display:inline">
+
+
+@csrf
+
+@method('DELETE')
+
+
+<button
+style="
+color:red;
+margin-left:15px;
+"
+onclick="return confirm('Hapus user?')">
+
+Hapus
+
+</button>
+
+
+</form>
 
 
 </td>
+
 
 
 </tr>
 
 
 @endforeach
-
-
-</tbody>
 
 
 </table>
