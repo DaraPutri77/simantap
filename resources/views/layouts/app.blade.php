@@ -1,37 +1,59 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>
-        SIMANTAP
-    </title>
+    <title>SIMANTAP</title>
 
-    @vite(['resources/css/app.css','resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+        }
+
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .content {
+            flex: 1;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+    </style>
 </head>
 
 
-<body class="bg-slate-100">
+<body>
 
-<div class="min-h-screen flex">
+
+<div class="wrapper">
 
 
     @include('layouts.sidebar')
 
 
-    <div class="flex-1">
+    <div class="content">
 
 
         @include('layouts.navbar')
 
 
-        <main class="p-6">
+        <main class="main-content">
 
-            {{ $slot ?? '' }}
-
-            @yield('content')
+            {{ $slot }}
 
         </main>
 

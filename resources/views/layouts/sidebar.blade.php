@@ -1,68 +1,42 @@
-<aside 
-class="
-w-64 
-bg-slate-900 
-text-white 
-min-h-screen 
-hidden 
-md:block
+<div style="
+width:260px;
+min-height:100vh;
+background:#111827;
+color:white;
+padding:30px 25px;
 ">
 
 
-<div class="p-6 text-2xl font-bold">
-
+<h2 style="
+font-size:24px;
+font-weight:bold;
+margin-bottom:45px;
+">
 SIMANTAP
+</h2>
 
+
+<div style="
+font-size:16px;
+margin-bottom:35px;
+">
+Dashboard
 </div>
 
 
-
-<nav class="px-4 space-y-3">
-
-
-<a href="/dashboard"
-class="
-block 
-px-4 
-py-3 
-rounded-lg
-hover:bg-blue-600
+<div style="
+font-size:16px;
+margin-bottom:35px;
 ">
-
-Dashboard
-
-</a>
-
-
-<a href="#"
-class="
-block
-px-4
-py-3
-rounded-lg
-hover:bg-blue-600
-">
-
 User Management
+</div>
 
-</a>
 
-
-<a href="#"
-class="
-block
-px-4
-py-3
-rounded-lg
-hover:bg-blue-600
+<div style="
+font-size:16px;
 ">
-
 Laporan
-
-</a>
-
-
-</nav>
+</div>
 
 
-</aside>
+</div>

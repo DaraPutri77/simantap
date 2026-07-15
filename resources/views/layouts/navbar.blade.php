@@ -1,50 +1,51 @@
-<header 
-class="
-bg-white
-shadow-sm
-h-16
-flex
-items-center
-justify-between
-px-6
+<div style="
+height:70px;
+background:white;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 30px;
+border-bottom:1px solid #e5e7eb;
 ">
 
 
-<div>
-
-<h1 class="font-semibold text-xl">
-
+<h3 style="
+margin:0;
+font-size:20px;
+font-weight:bold;
+">
 Dashboard
-
-</h1>
-
-</div>
+</h3>
 
 
+<div style="
+display:flex;
+align-items:center;
+gap:20px;
+">
 
-<div class="flex items-center gap-4">
 
-
-<span class="text-gray-600">
-
+<span style="
+font-size:16px;
+color:#64748b;
+">
 {{ Auth::user()->name }}
-
 </span>
 
 
-
-<form method="POST" action="/logout">
+<form method="POST" action="{{ route('logout') }}">
 
 @csrf
 
 
-<button
-class="
-bg-red-500
-text-white
-px-4
-py-2
-rounded-lg
+<button style="
+background:#ef4444;
+color:white;
+border:none;
+padding:10px 20px;
+border-radius:8px;
+cursor:pointer;
+font-size:14px;
 ">
 
 Logout
@@ -58,5 +59,4 @@ Logout
 </div>
 
 
-
-</header>
+</div>

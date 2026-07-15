@@ -1,79 +1,133 @@
 <x-app-layout>
 
-<div class="py-12 bg-slate-100 min-h-screen">
 
-    <div class="max-w-7xl mx-auto px-6">
+<h1 style="
+font-size:32px;
+font-weight:bold;
+margin-bottom:35px;
+">
 
-        <h1 class="text-3xl font-bold text-slate-800 mb-8">
-            Dashboard SIMANTAP
-        </h1>
+Dashboard SIMANTAP
 
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-
-            <div class="bg-white rounded-xl shadow p-6">
-
-                <p class="text-gray-500">
-                    Total User
-                </p>
-
-                <h2 class="text-4xl font-bold text-blue-600 mt-3">
-                    {{ $totalUser }}
-                </h2>
-
-            </div>
+</h1>
 
 
 
-            <div class="bg-white rounded-xl shadow p-6">
-
-                <p class="text-gray-500">
-                    Total Role
-                </p>
-
-                <h2 class="text-4xl font-bold text-blue-600 mt-3">
-                    {{ $totalRole }}
-                </h2>
-
-            </div>
+<div style="
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:25px;
+">
 
 
 
-            <div class="bg-white rounded-xl shadow p-6">
+<div style="
+background:white;
+padding:30px;
+border-radius:18px;
+">
 
-                <p class="text-gray-500">
-                    Total Profile
-                </p>
+<p style="color:#64748b;">
+Total User
+</p>
 
-                <h2 class="text-4xl font-bold text-blue-600 mt-3">
-                    {{ $totalProfile }}
-                </h2>
+<h2 style="
+font-size:40px;
+color:#2563eb;
+">
 
-            </div>
+{{ $totalUser }}
 
-
-        </div>
-
-
-
-        <div class="mt-10 bg-white rounded-xl shadow p-8">
-
-            <h2 class="text-xl font-bold text-slate-800">
-                Aktivitas Sistem
-            </h2>
-
-
-            <p class="text-gray-500 mt-3">
-                Sistem SIMANTAP siap digunakan.
-            </p>
-
-
-        </div>
-
-
-    </div>
+</h2>
 
 </div>
+
+
+
+
+<div style="
+background:white;
+padding:30px;
+border-radius:18px;
+">
+
+<p style="color:#64748b;">
+Total Role
+</p>
+
+<h2 style="
+font-size:40px;
+color:#2563eb;
+">
+
+{{ $totalRole }}
+
+</h2>
+
+</div>
+
+
+
+
+
+<div style="
+background:white;
+padding:30px;
+border-radius:18px;
+">
+
+<p style="color:#64748b;">
+Total Profile
+</p>
+
+<h2 style="
+font-size:40px;
+color:#2563eb;
+">
+
+{{ $totalProfile }}
+
+</h2>
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<div style="
+background:white;
+margin-top:35px;
+padding:35px;
+border-radius:18px;
+">
+
+
+<h2 style="
+font-size:20px;
+font-weight:bold;
+">
+
+Aktivitas Sistem
+
+</h2>
+
+
+<p style="
+color:#64748b;
+margin-top:10px;
+">
+
+Sistem SIMANTAP siap digunakan.
+
+</p>
+
+
+</div>
+
 
 </x-app-layout>
