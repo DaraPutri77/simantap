@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -11,50 +9,133 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
+
     public function edit(Request $request): View
     {
+        $user = $request->user();
+
+        $user->load('profile');
+
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $user,
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+
+
+    public function update(Request $request)
     {
-        $request->user()->fill($request->validated());
+        $user = Auth::user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
 
-        $request->user()->save();
+        $request->validate([
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+            'name' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+
+            'email' => [
+                'required',
+                'email',
+                'max:255'
+            ],
+
+
+            'nama_lengkap' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+
+            'alamat' => [
+                'nullable',
+                'string'
+            ],
+
+
+            'no_hp' => [
+                'nullable',
+                'string',
+                'max:20'
+            ],
+
+
+        ]);
+
+
+
+        $user->update([
+
+            'name' => $request->name,
+
+            'email' => $request->email,
+
+        ]);
+
+
+
+        $user->profile()->updateOrCreate(
+
+            [
+                'user_id' => $user->id
+            ],
+
+
+            [
+
+                'nama_lengkap' => $request->nama_lengkap,
+
+                'alamat' => $request->alamat,
+
+                'no_hp' => $request->no_hp,
+
+            ]
+
+        );
+
+
+
+        return Redirect::route('profile.edit')
+            ->with('status','profile-updated');
+
     }
 
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
+
+
+
+    public function destroy(Request $request)
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
+        $request->validate([
+
+            'password' => [
+                'required',
+                'current_password'
+            ],
+
         ]);
+
+
 
         $user = $request->user();
 
+
         Auth::logout();
+
 
         $user->delete();
 
+
         $request->session()->invalidate();
+
         $request->session()->regenerateToken();
 
+
         return Redirect::to('/');
+
     }
+
 }
