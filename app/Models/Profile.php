@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+
 use Illuminate\Database\Eloquent\Model;
 
 
 class Profile extends Model
 {
-    protected $fillable = [
+
+    protected $fillable=[
         'user_id',
         'nama_lengkap',
         'foto',
         'alamat',
-        'no_hp',
+        'no_hp'
     ];
 
 
@@ -20,4 +22,5 @@ class Profile extends Model
     {
         return $this->belongsTo(User::class);
     }
+
 }
