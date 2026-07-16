@@ -6,25 +6,32 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, ...$roles): Response
+
+    public function handle(Request $request, Closure $next, $role): Response
     {
+
         if (!auth()->check()) {
-            return redirect()->route('login');
+
+            abort(401);
+
         }
 
-        $userRoles = auth()->user()
-            ->roles()
-            ->pluck('nama_role')
-            ->toArray();
 
-        foreach ($roles as $role) {
-            if (in_array($role, $userRoles)) {
-                return $next($request);
-            }
+        $user = auth()->user();
+
+
+        if (!$user->roles()->where('nama_role', $role)->exists()) {
+
+            abort(403);
+
         }
 
-        abort(403, 'Anda tidak memiliki akses.');
+
+        return $next($request);
+
     }
+
 }
