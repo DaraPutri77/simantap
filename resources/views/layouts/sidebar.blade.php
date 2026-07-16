@@ -1,7 +1,6 @@
-<aside class="fixed left-0 top-0 w-64 h-screen bg-[#0f172a] text-white">
+<div class="w-full h-full bg-[#111827] text-white">
 
-
-    <div class="px-8 py-8">
+    <div class="px-8 py-10">
 
         <h1 class="text-3xl font-bold tracking-wide">
             SIMANTAP
@@ -10,12 +9,13 @@
     </div>
 
 
-
-    <nav class="mt-5">
+    <div class="px-5 mt-5">
 
 
         <a href="{{ route('dashboard') }}"
-           class="flex items-center px-8 py-4 text-gray-200 hover:bg-slate-800 transition">
+           class="flex items-center px-6 py-4 rounded-xl mb-3
+           text-white font-medium text-lg
+           hover:bg-[#1f2937] transition">
 
             Dashboard
 
@@ -23,24 +23,32 @@
 
 
 
+        @if(auth()->user()->hasRole('Admin'))
+
         <a href="{{ route('users.index') }}"
-           class="flex items-center px-8 py-4 text-gray-200 hover:bg-slate-800 transition">
+           class="flex items-center px-6 py-4 rounded-xl mb-3
+           text-white font-medium text-lg
+           hover:bg-[#1f2937] transition">
 
             User Management
 
         </a>
 
+        @endif
 
 
-        <a href="#"
-           class="flex items-center px-8 py-4 text-gray-200 hover:bg-slate-800 transition">
 
-            Laporan
+        <a href="{{ route('profile.edit') }}"
+           class="flex items-center px-6 py-4 rounded-xl mb-3
+           text-white font-medium text-lg
+           hover:bg-[#1f2937] transition">
+
+            Profile
 
         </a>
 
 
-    </nav>
+    </div>
 
 
-</aside>
+</div>
