@@ -14,11 +14,16 @@ class RoleAndPermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $permissionRegistrar = app(PermissionRegistrar::class);
+        $permissionRegistrar = app(
+            PermissionRegistrar::class,
+        );
+
         $permissionRegistrar->forgetCachedPermissions();
 
         DB::transaction(function (): void {
-            foreach (PermissionName::cases() as $permissionName) {
+            foreach (
+                PermissionName::cases() as $permissionName
+            ) {
                 Permission::findOrCreate(
                     $permissionName->value,
                     'web',

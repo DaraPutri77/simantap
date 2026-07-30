@@ -21,14 +21,17 @@ return Application::configure(
     ->withMiddleware(
         function (Middleware $middleware): void {
             $middleware->redirectGuestsTo(
-                fn (Request $request): string => route('login'),
+                fn (Request $request): string => route(
+                    'login',
+                ),
             );
 
             $middleware->redirectUsersTo(
-                fn (Request $request): string => $request->user()
+                fn (Request $request): string => $request
+                    ->user()
                     ?->must_change_password === true
                         ? route('password.change')
-                            : route('dashboard'),
+                        : route('dashboard'),
             );
 
             $middleware->alias([

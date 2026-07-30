@@ -43,10 +43,7 @@ class StatusEnumTest extends TestCase
             'account status' => [
                 AccountStatus::class,
                 [
-                    'pending_activation',
-                    'active',
-                    'inactive',
-                    'suspended',
+                    'pending', 'active', 'suspended',
                 ],
             ],
             'inventory receipt status' => [

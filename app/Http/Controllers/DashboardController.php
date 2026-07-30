@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Contracts\View\View;
+use App\Services\DashboardDataService;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(): View
-    {
-        return view('dashboard');
+    public function __invoke(
+        Request $request,
+        DashboardDataService $dashboardData,
+    ): View {
+        return view(
+            'dashboard',
+            $dashboardData->for($request->user()),
+        );
     }
 }

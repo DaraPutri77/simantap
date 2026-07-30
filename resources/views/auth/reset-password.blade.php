@@ -1,20 +1,18 @@
 <x-layouts.guest title="Reset Kata Sandi">
     <div class="mb-8">
-        <h2 class="text-3xl font-black tracking-tight text-slate-950">
-            Buat kata sandi baru
+        <span class="eyebrow">Kata sandi baru</span>
+
+        <h2 class="mt-4 text-3xl font-black tracking-[-.035em] text-slate-950 sm:text-4xl">
+            Amankan kembali akun Anda
         </h2>
 
-        <p class="mt-2 text-sm leading-6 text-slate-500">
-            Gunakan minimal 12 karakter dengan huruf besar, huruf kecil,
-            angka, dan simbol.
+        <p class="mt-3 text-sm font-medium leading-6 text-slate-500">
+            Buat kata sandi baru yang kuat dan berbeda dari kata sandi yang
+            pernah digunakan sebelumnya.
         </p>
     </div>
 
-    <form
-        method="POST"
-        action="{{ route('password.store') }}"
-        class="space-y-5"
-    >
+    <form method="POST" action="{{ route('password.store') }}" class="space-y-5">
         @csrf
 
         <input
@@ -28,83 +26,89 @@
                 Alamat email
             </label>
 
-            <input
-                id="email"
-                name="email"
-                type="email"
-                value="{{ old('email', $email) }}"
-                required
-                autocomplete="username"
-                class="form-input @error('email') form-input-error @enderror"
-            >
+            <div class="field-control relative">
+                <span class="field-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <rect x="3" y="5" width="18" height="14" rx="3"/>
+                        <path d="m4 7 8 6 8-6"/>
+                    </svg>
+                </span>
+
+                <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value="{{ old('email', $email) }}"
+                    required
+                    autocomplete="username"
+                    class="form-input form-input-with-icon @error('email') form-input-error @enderror"
+                    placeholder="nama@bps.go.id"
+                >
+            </div>
 
             @error('email')
                 <p class="form-error">{{ $message }}</p>
             @enderror
         </div>
 
-        <div>
-            <label for="password" class="form-label">
-                Kata sandi baru
-            </label>
+        <x-auth.password-field
+            name="password"
+            label="Kata sandi baru"
+            autocomplete="new-password"
+            placeholder="Masukkan kata sandi baru"
+        />
 
-            <div class="relative">
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    autocomplete="new-password"
-                    class="form-input pr-12 @error('password') form-input-error @enderror"
+        <x-auth.password-field
+            name="password_confirmation"
+            label="Konfirmasi kata sandi"
+            autocomplete="new-password"
+            placeholder="Ulangi kata sandi baru"
+        />
+
+        <div class="auth-note border-sky-100 bg-sky-50/70 text-sky-800">
+            <span class="auth-note-icon text-sky-600 ring-sky-100">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
                 >
+                    <path d="M12 3 4 7v5c0 5 3.4 8 8 10 4.6-2 8-5 8-10V7l-8-4Z"/>
+                    <path d="M9 12h6"/>
+                </svg>
+            </span>
 
-                <button
-                    type="button"
-                    class="password-toggle absolute inset-y-0 right-0 grid w-12 place-items-center text-xs font-bold text-slate-500"
-                    data-target="password"
-                    aria-label="Tampilkan kata sandi"
-                >
-                    Lihat
-                </button>
-            </div>
-
-            @error('password')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
-        </div>
-
-        <div>
-            <label
-                for="password_confirmation"
-                class="form-label"
-            >
-                Konfirmasi kata sandi
-            </label>
-
-            <div class="relative">
-                <input
-                    id="password_confirmation"
-                    name="password_confirmation"
-                    type="password"
-                    required
-                    autocomplete="new-password"
-                    class="form-input pr-12"
-                >
-
-                <button
-                    type="button"
-                    class="password-toggle absolute inset-y-0 right-0 grid w-12 place-items-center text-xs font-bold text-slate-500"
-                    data-target="password_confirmation"
-                    aria-label="Tampilkan konfirmasi kata sandi"
-                >
-                    Lihat
-                </button>
-            </div>
+            <p>
+                Minimal 12 karakter dengan kombinasi huruf besar, huruf kecil,
+                angka, dan simbol.
+            </p>
         </div>
 
         <button type="submit" class="primary-button">
-            Simpan Kata Sandi
-            <span aria-hidden="true">→</span>
+            <span>Simpan Kata Sandi</span>
+
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <path d="M5 12h14m-5-5 5 5-5 5"/>
+            </svg>
         </button>
     </form>
 </x-layouts.guest>

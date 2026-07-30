@@ -22,6 +22,7 @@ enum RoleName: string
     {
         return match ($this) {
             self::Administrator => PermissionName::values(),
+
             self::Employee => [
                 PermissionName::DashboardView->value,
                 PermissionName::ItemView->value,

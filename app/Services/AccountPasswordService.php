@@ -39,9 +39,9 @@ class AccountPasswordService
         }, 3);
     }
 
-    private function revokeDatabaseSessions(
+    public function revokeDatabaseSessions(
         User $user,
-        ?string $preservedSessionId,
+        ?string $preservedSessionId = null,
     ): void {
         if (config('session.driver') !== 'database') {
             return;

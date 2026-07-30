@@ -2,15 +2,10 @@
 
 namespace App\Enums;
 
-use App\Enums\Concerns\HasEnumOptions;
-
 enum AccountStatus: string
 {
-    use HasEnumOptions;
-
-    case PendingActivation = 'pending_activation';
+    case PendingActivation = 'pending';
     case Active = 'active';
-    case Inactive = 'inactive';
     case Suspended = 'suspended';
 
     public function label(): string
@@ -18,8 +13,32 @@ enum AccountStatus: string
         return match ($this) {
             self::PendingActivation => 'Menunggu Aktivasi',
             self::Active => 'Aktif',
-            self::Inactive => 'Tidak Aktif',
-            self::Suspended => 'Ditangguhkan',
+            self::Suspended => 'Nonaktif',
         };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(
+            static fn (self $status): string => $status->value,
+            self::cases(),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $status) {
+            $options[$status->value] = $status->label();
+        }
+
+        return $options;
     }
 }
