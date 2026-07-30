@@ -15,11 +15,15 @@ class AccountActivationToken extends Model
         'created_by',
     ];
 
+    protected $hidden = [
+        'token_hash',
+    ];
+
     protected function casts(): array
     {
         return [
-            'expires_at' => 'datetime',
-            'used_at' => 'datetime',
+            'expires_at' => 'immutable_datetime',
+            'used_at' => 'immutable_datetime',
         ];
     }
 
@@ -33,18 +37,15 @@ class AccountActivationToken extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function isUsed(): bool
-    {
-        return $this->used_at !== null;
-    }
-
-    public function isExpired(): bool
-    {
-        return $this->expires_at === null || $this->expires_at->isPast();
-    }
-
     public function isValid(): bool
     {
-        return ! $this->isUsed() && ! $this->isExpired();
+        return $this->used_at === null
+            && $this->expires_at !== null
+            && $this->expires_at->isFuture();
+    }
+
+    public function isUsable(): bool
+    {
+        return $this->isValid();
     }
 }
