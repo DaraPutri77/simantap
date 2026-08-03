@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class VehicleLoan extends Model
 {
@@ -18,10 +19,9 @@ class VehicleLoan extends Model
     protected $fillable = [
         'loan_number',
         'borrower_id',
-        'employee_number_snapshot',
         'borrower_name_snapshot',
+        'employee_number_snapshot',
         'work_unit_snapshot',
-        'phone_snapshot',
         'vehicle_id',
         'vehicle_code_snapshot',
         'license_plate_snapshot',
@@ -29,36 +29,53 @@ class VehicleLoan extends Model
         'purpose',
         'destination',
         'reason',
+        'phone_snapshot',
         'planned_start_at',
         'planned_end_at',
         'actual_start_at',
         'actual_end_at',
         'overdue_at',
         'status',
+        'submitted_at',
         'reviewed_by',
         'reviewed_at',
+        'approved_by',
         'approved_at',
         'rejected_at',
         'rejection_reason',
         'cancelled_at',
         'cancellation_reason',
+        'admin_notes',
         'notes',
     ];
 
     protected function casts(): array
     {
         return [
+            'status' => VehicleLoanStatus::class,
             'planned_start_at' => 'datetime',
             'planned_end_at' => 'datetime',
             'actual_start_at' => 'datetime',
             'actual_end_at' => 'datetime',
             'overdue_at' => 'datetime',
-            'status' => VehicleLoanStatus::class,
+            'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'approved_at' => 'datetime',
             'rejected_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $vehicleLoan): void {
+            $vehicleLoan->public_id ??= (string) Str::uuid();
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
     }
 
     public function borrower(): BelongsTo
@@ -71,16 +88,14 @@ class VehicleLoan extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
-    }
-
-    public function statusHistories(): HasMany
-    {
-        return $this->hasMany(VehicleLoanStatusHistory::class)
-            ->orderBy('changed_at')
-            ->orderBy('id');
     }
 
     public function conditionChecks(): HasMany
@@ -106,6 +121,29 @@ class VehicleLoan extends Model
     public function digitalSignatures(): MorphMany
     {
         return $this->morphMany(DigitalSignature::class, 'signable');
+    }
+
+    public function signatures(): MorphMany
+    {
+        return $this->digitalSignatures();
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(VehicleLoanStatusHistory::class)
+            ->orderBy('changed_at')
+            ->orderBy('id');
+    }
+
+    public function submissionSignature(): ?DigitalSignature
+    {
+        return $this->signatures
+            ->firstWhere('purpose', 'vehicle_loan_submission');
+    }
+
+    public function isOwnedBy(User $user): bool
+    {
+        return $this->borrower_id === $user->getKey();
     }
 
     public function isDraft(): bool

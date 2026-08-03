@@ -3,14 +3,12 @@
 namespace App\Models;
 
 use App\Enums\VehicleLoanStatus;
-use App\Models\Concerns\IsImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LogicException;
 
 class VehicleLoanStatusHistory extends Model
 {
-    use IsImmutable;
-
     public $timestamps = false;
 
     protected $fillable = [
@@ -29,6 +27,21 @@ class VehicleLoanStatusHistory extends Model
             'new_status' => VehicleLoanStatus::class,
             'changed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (): never {
+            throw new LogicException(
+                'Riwayat status peminjaman tidak boleh diubah.',
+            );
+        });
+
+        static::deleting(function (): never {
+            throw new LogicException(
+                'Riwayat status peminjaman tidak boleh dihapus.',
+            );
+        });
     }
 
     public function vehicleLoan(): BelongsTo

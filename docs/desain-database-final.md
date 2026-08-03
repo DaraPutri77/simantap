@@ -263,7 +263,7 @@ Status: `available`, `reserved`, `borrowed`, `inspection`, `maintenance`,
 
 Kolom:
 
-`id`; `loan_number varchar(80) unique`;
+`id`; `public_id uuid unique`; `loan_number varchar(80) unique`;
 `borrower_id foreignId restrictOnDelete`;
 `employee_number_snapshot varchar(50) nullable`;
 `borrower_name_snapshot varchar(255)`;
@@ -274,11 +274,15 @@ Kolom:
 `planned_start_at datetime index`; `planned_end_at datetime index`;
 `actual_start_at datetime nullable`; `actual_end_at datetime nullable`;
 `overdue_at timestamp nullable`; `status varchar(40) index`;
+`submitted_at timestamp nullable`;
 `reviewed_by foreignId nullable nullOnDelete`;
-`reviewed_at timestamp nullable`; `approved_at timestamp nullable`;
+`reviewed_at timestamp nullable`;
+`approved_by foreignId nullable nullOnDelete`;
+`approved_at timestamp nullable`;
 `rejected_at timestamp nullable`; `rejection_reason text nullable`;
 `cancelled_at timestamp nullable`; `cancellation_reason text nullable`;
-`notes text nullable`; `created_at`; `updated_at`; `deleted_at`.
+`admin_notes text nullable`; `notes text nullable`; `created_at`; `updated_at`;
+`deleted_at`.
 
 Status: `draft`, `submitted`, `under_review`, `approved`,
 `ready_for_pickup`, `borrowed`, `awaiting_return_inspection`, `completed`,
@@ -446,7 +450,9 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 15. Foto empat sisi, odometer, dan bahan bakar wajib saat serah terima.
 16. Odometer akhir tidak boleh lebih kecil dari odometer awal.
 17. Kerusakan pengembalian membuat maintenance record.
-18. Kendaraan non-available tidak dapat dipilih.
+18. Kendaraan nonaktif, rusak, diperiksa, dipelihara, atau sedang dipinjam
+    tidak dapat dijadwalkan. Kendaraan berstatus reserved tetap dapat dipilih
+    untuk waktu yang tidak bertumpang tindih.
 19. Pengecekan stok dan jadwal diulang di dalam database transaction.
 20. Setiap perubahan status membuat status history dan audit log.
 21. Lampiran hanya tersedia melalui route yang memiliki otorisasi.
@@ -460,7 +466,9 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 - `inventory_requests(requested_by, status)`
 - `stock_movements(item_id, transaction_date)`
 - `vehicle_loans(vehicle_id, planned_start_at, planned_end_at)`
+- `vehicle_loans(status, planned_start_at, planned_end_at)`
 - `vehicle_loans(borrower_id, status)`
+- `vehicle_loan_status_histories(vehicle_loan_id, changed_at)`
 - `maintenance_records(status, reported_date)`
 - `audit_logs(module, created_at)`
 - `audit_logs(actor_id, created_at)`

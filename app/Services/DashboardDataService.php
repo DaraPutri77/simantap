@@ -112,12 +112,12 @@ final class DashboardDataService
                     'borrower:id,name,work_unit',
                     'vehicle:id,brand,model,license_plate',
                 ])
-                ->where('status', VehicleLoanStatus::Borrowed->value)
-                ->where(
-                    fn ($query) => $query
-                        ->whereNotNull('overdue_at')
-                        ->orWhere('planned_end_at', '<', now()),
-                )
+                ->whereIn('status', [
+                    VehicleLoanStatus::Borrowed->value,
+                    VehicleLoanStatus::AwaitingReturnInspection->value,
+                    VehicleLoanStatus::ReturnIssue->value,
+                ])
+                ->where('planned_end_at', '<', now())
                 ->oldest('planned_end_at')
                 ->limit(5)
                 ->get(),
@@ -447,20 +447,13 @@ final class DashboardDataService
      */
     private function activeLoanStatuses(): array
     {
-        $statusValues = [
-            'approved',
-            'ready_for_pickup',
-            'borrowed',
-            'awaiting_return_inspection',
-            'return_issue',
+        return [
+            VehicleLoanStatus::Approved->value,
+            VehicleLoanStatus::ReadyForPickup->value,
+            VehicleLoanStatus::Borrowed->value,
+            VehicleLoanStatus::AwaitingReturnInspection->value,
+            VehicleLoanStatus::ReturnIssue->value,
         ];
-
-        return array_values(array_filter(array_map(
-            static fn (string $status): ?string => VehicleLoanStatus::tryFrom(
-                $status,
-            )?->value,
-            $statusValues,
-        )));
     }
 
     /**

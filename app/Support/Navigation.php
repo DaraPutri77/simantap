@@ -104,9 +104,15 @@ final class Navigation
                 'icon' => 'vehicle',
                 'active_patterns' => [
                     'vehicles.*',
-                    'vehicle-loans.*',
                 ],
                 'permission' => PermissionName::VehicleView,
+            ],
+            [
+                'label' => 'Peminjaman Kendaraan',
+                'route' => 'vehicle-loans.index',
+                'icon' => 'request',
+                'active_patterns' => ['vehicle-loans.*'],
+                'permission' => PermissionName::VehicleLoanViewAll,
             ],
             [
                 'label' => 'Pemeliharaan',
@@ -182,7 +188,7 @@ final class Navigation
                 'permission' => PermissionName::VehicleView,
             ],
             [
-                'label' => 'Peminjaman Motor',
+                'label' => 'Peminjaman Kendaraan',
                 'route' => 'my.vehicle-loans.index',
                 'icon' => 'vehicle',
                 'active_patterns' => ['my.vehicle-loans.*'],

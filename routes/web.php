@@ -17,6 +17,8 @@ use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\VehicleLoanApprovalController;
+use App\Http\Controllers\VehicleLoanController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -458,6 +460,103 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                 Route::get(
                     '/{inventory_request}',
                     [InventoryRequestController::class, 'show'],
+                )->name('show');
+            });
+
+        Route::middleware([
+            'role:admin',
+            'permission:vehicle-loan.view-all',
+        ])->prefix('peminjaman-kendaraan')
+            ->name('vehicle-loans.')
+            ->group(function (): void {
+                Route::get(
+                    '/',
+                    [VehicleLoanController::class, 'index'],
+                )->name('index');
+                Route::get(
+                    '/persetujuan',
+                    VehicleLoanApprovalController::class,
+                )->middleware(
+                    'permission:vehicle-loan.approve',
+                )->name('approval-queue');
+                Route::get(
+                    '/{vehicle_loan}/pdf',
+                    [VehicleLoanController::class, 'downloadPdf'],
+                )->name('pdf');
+
+                Route::middleware('permission:vehicle-loan.approve')
+                    ->group(function (): void {
+                        Route::post(
+                            '/{vehicle_loan}/mulai-pemeriksaan',
+                            [VehicleLoanController::class, 'startReview'],
+                        )->name('review');
+                        Route::post(
+                            '/{vehicle_loan}/setujui',
+                            [VehicleLoanController::class, 'approve'],
+                        )->name('approve');
+                        Route::post(
+                            '/{vehicle_loan}/tolak',
+                            [VehicleLoanController::class, 'reject'],
+                        )->name('reject');
+                    });
+
+                Route::patch(
+                    '/{vehicle_loan}/batalkan',
+                    [VehicleLoanController::class, 'cancel'],
+                )->name('cancel');
+                Route::get(
+                    '/{vehicle_loan}',
+                    [VehicleLoanController::class, 'show'],
+                )->name('show');
+            });
+
+        Route::middleware([
+            'role:pegawai',
+            'permission:vehicle-loan.view-own',
+        ])->prefix('peminjaman-saya')
+            ->name('my.vehicle-loans.')
+            ->group(function (): void {
+                Route::get(
+                    '/',
+                    [VehicleLoanController::class, 'index'],
+                )->name('index');
+                Route::middleware('permission:vehicle-loan.create')
+                    ->group(function (): void {
+                        Route::get(
+                            '/tambah',
+                            [VehicleLoanController::class, 'create'],
+                        )->name('create');
+                        Route::post(
+                            '/',
+                            [VehicleLoanController::class, 'store'],
+                        )->name('store');
+                    });
+                Route::get(
+                    '/{vehicle_loan}/pdf',
+                    [VehicleLoanController::class, 'downloadPdf'],
+                )->name('pdf');
+                Route::middleware('permission:vehicle-loan.update-own')
+                    ->group(function (): void {
+                        Route::get(
+                            '/{vehicle_loan}/edit',
+                            [VehicleLoanController::class, 'edit'],
+                        )->name('edit');
+                        Route::put(
+                            '/{vehicle_loan}',
+                            [VehicleLoanController::class, 'update'],
+                        )->name('update');
+                        Route::post(
+                            '/{vehicle_loan}/ajukan',
+                            [VehicleLoanController::class, 'submit'],
+                        )->name('submit');
+                        Route::patch(
+                            '/{vehicle_loan}/batalkan',
+                            [VehicleLoanController::class, 'cancel'],
+                        )->name('cancel');
+                    });
+                Route::get(
+                    '/{vehicle_loan}',
+                    [VehicleLoanController::class, 'show'],
                 )->name('show');
             });
 
