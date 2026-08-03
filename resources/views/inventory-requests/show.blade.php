@@ -344,18 +344,44 @@
                 @csrf
                 <div class="space-y-4">
                     @foreach ($inventoryRequest->items as $line)
+                        @php
+                            $requestedQuantity = (float) $line->requested_quantity;
+                            $availableQuantity = max(0, (float) $line->item->available_stock);
+                            $maximumApproval = min($requestedQuantity, $availableQuantity);
+                            $stockIsSufficient = $availableQuantity >= $requestedQuantity;
+                            $stockIsPartiallyAvailable = ! $stockIsSufficient && $availableQuantity > 0;
+                        @endphp
                         <article class="rounded-2xl border border-slate-300 bg-slate-50 p-4">
                             <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_minmax(0,.8fr)]">
                                 <div>
-                                    <p class="font-black text-slate-950">
-                                        {{ $line->item_name_snapshot }}
-                                    </p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="font-black text-slate-950">
+                                            {{ $line->item_name_snapshot }}
+                                        </p>
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.08em] ring-1 ring-inset {{ $stockIsSufficient
+                                            ? 'bg-emerald-100 text-emerald-900 ring-emerald-300'
+                                            : ($stockIsPartiallyAvailable
+                                                ? 'bg-amber-100 text-amber-950 ring-amber-300'
+                                                : 'bg-red-100 text-red-900 ring-red-300') }}">
+                                            {{ $stockIsSufficient
+                                                ? 'Stok Cukup'
+                                                : ($stockIsPartiallyAvailable
+                                                    ? 'Tersedia Sebagian'
+                                                    : 'Stok Kosong') }}
+                                        </span>
+                                    </div>
                                     <p class="mt-1 text-xs font-semibold text-slate-600">
                                         Diminta:
-                                        {{ number_format((float) $line->requested_quantity, 2, ',', '.') }}
+                                        {{ number_format($requestedQuantity, 2, ',', '.') }}
                                         {{ $line->unit_snapshot }}
                                         · Stok tersedia:
-                                        {{ number_format((float) $line->item->available_stock, 2, ',', '.') }}
+                                        {{ number_format($availableQuantity, 2, ',', '.') }}
+                                        {{ $line->unit_snapshot }}
+                                    </p>
+                                    <p class="mt-1 text-xs font-bold text-slate-700">
+                                        Maksimal dapat disetujui:
+                                        {{ number_format($maximumApproval, 2, ',', '.') }}
+                                        {{ $line->unit_snapshot }}
                                     </p>
                                 </div>
                                 <div>
@@ -366,10 +392,10 @@
                                         id="approved_{{ $line->id }}"
                                         name="items[{{ $line->id }}][approved_quantity]"
                                         type="number"
-                                        value="{{ old("items.{$line->id}.approved_quantity", $line->requested_quantity) }}"
+                                        value="{{ old("items.{$line->id}.approved_quantity", $maximumApproval) }}"
                                         class="form-input"
                                         min="0"
-                                        max="{{ $line->requested_quantity }}"
+                                        max="{{ $maximumApproval }}"
                                         step="0.01"
                                         required
                                     >

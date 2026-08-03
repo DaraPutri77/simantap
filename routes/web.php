@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryReceiptController;
+use App\Http\Controllers\InventoryRequestApprovalController;
 use App\Http\Controllers\InventoryRequestController;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemController;
@@ -327,6 +328,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     '/',
                     [InventoryRequestController::class, 'index'],
                 )->name('index');
+                Route::get(
+                    '/persetujuan',
+                    InventoryRequestApprovalController::class,
+                )->middleware(
+                    'permission:inventory-request.approve',
+                )->name('approval-queue');
                 Route::get(
                     '/{inventory_request}/pdf',
                     [InventoryRequestController::class, 'downloadPdf'],

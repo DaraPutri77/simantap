@@ -22,14 +22,21 @@
             </p>
         </div>
 
-        @unless ($canViewAll)
+        @if ($canViewAll && $canApprove)
+            <a
+                href="{{ route('inventory-requests.approval-queue') }}"
+                class="button-primary-inline"
+            >
+                Buka Antrean Approval
+            </a>
+        @elseif (! $canViewAll)
             <a
                 href="{{ route('my.inventory-requests.create') }}"
                 class="button-primary-inline"
             >
                 Ajukan Permintaan
             </a>
-        @endunless
+        @endif
     </section>
 
     <section class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -166,6 +166,9 @@ class InventoryRequestController extends Controller
                     ->count(),
             ],
             'canViewAll' => $canViewAll,
+            'canApprove' => $actor->can(
+                PermissionName::InventoryRequestApprove->value,
+            ),
             'routePrefix' => $this->routePrefix($request),
             'displayTimezone' => (string) config(
                 'simantap.display_timezone',
@@ -325,10 +328,12 @@ class InventoryRequestController extends Controller
             $request,
         );
 
-        return back()->with(
-            'status',
-            'Pemeriksaan permintaan telah dimulai.',
-        );
+        return redirect()
+            ->route('inventory-requests.show', $inventoryRequest)
+            ->with(
+                'status',
+                'Pemeriksaan permintaan telah dimulai.',
+            );
     }
 
     public function approve(
