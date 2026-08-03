@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\VehicleStatus;
 use App\Models\Concerns\HasPublicId;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,6 +31,7 @@ class Vehicle extends Model
         'status',
         'registration_expiry_date',
         'storage_location',
+        'responsible_person',
         'image_path',
         'notes',
         'is_active',
@@ -37,9 +40,9 @@ class Vehicle extends Model
     protected function casts(): array
     {
         return [
+            'status' => VehicleStatus::class,
             'year' => 'integer',
             'current_odometer' => 'decimal:1',
-            'status' => VehicleStatus::class,
             'registration_expiry_date' => 'date',
             'is_active' => 'boolean',
         ];
@@ -60,6 +63,11 @@ class Vehicle extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    public function displayName(): string
+    {
+        return trim("{$this->brand} {$this->model}");
+    }
+
     public function isAvailable(): bool
     {
         return $this->status === VehicleStatus::Available;
@@ -78,5 +86,35 @@ class Vehicle extends Model
     public function canBeBorrowed(): bool
     {
         return $this->is_active && $this->isAvailable();
+    }
+
+    public function registrationState(
+        ?CarbonInterface $referenceDate = null,
+    ): string {
+        if ($this->registration_expiry_date === null) {
+            return 'missing';
+        }
+
+        $timezone = (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
+        $reference = $referenceDate === null
+            ? CarbonImmutable::now($timezone)->startOfDay()
+            : CarbonImmutable::instance($referenceDate)->startOfDay();
+        $expiry = CarbonImmutable::parse(
+            $this->registration_expiry_date->toDateString(),
+            $timezone,
+        )->startOfDay();
+
+        if ($expiry->lt($reference)) {
+            return 'expired';
+        }
+
+        if ($expiry->lte($reference->addDays(30))) {
+            return 'expiring';
+        }
+
+        return 'valid';
     }
 }

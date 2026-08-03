@@ -16,6 +16,7 @@ use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -459,5 +460,51 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     [InventoryRequestController::class, 'show'],
                 )->name('show');
             });
+
+        Route::prefix('kendaraan')->group(function (): void {
+            Route::middleware('permission:vehicle.view')
+                ->group(function (): void {
+                    Route::get(
+                        '/',
+                        [VehicleController::class, 'index'],
+                    )->name('vehicles.index');
+                });
+
+            Route::middleware([
+                'role:admin',
+                'permission:vehicle.manage',
+            ])->group(function (): void {
+                Route::get(
+                    '/tambah',
+                    [VehicleController::class, 'create'],
+                )->name('vehicles.create');
+                Route::post(
+                    '/',
+                    [VehicleController::class, 'store'],
+                )->name('vehicles.store');
+                Route::get(
+                    '/{vehicle}/edit',
+                    [VehicleController::class, 'edit'],
+                )->name('vehicles.edit');
+                Route::put(
+                    '/{vehicle}',
+                    [VehicleController::class, 'update'],
+                )->name('vehicles.update');
+                Route::patch(
+                    '/{vehicle}/nonaktifkan',
+                    [VehicleController::class, 'deactivate'],
+                )->name('vehicles.deactivate');
+                Route::patch(
+                    '/{vehicle}/aktifkan',
+                    [VehicleController::class, 'activate'],
+                )->name('vehicles.activate');
+            });
+
+            Route::middleware('permission:vehicle.view')
+                ->get(
+                    '/{vehicle}',
+                    [VehicleController::class, 'show'],
+                )->name('vehicles.show');
+        });
     });
 });

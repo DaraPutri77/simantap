@@ -251,7 +251,8 @@ Kolom:
 `engine_number varchar(120) nullable unique`;
 `current_odometer decimal(12,1) default 0`; `status varchar(40) index`;
 `registration_expiry_date date nullable index`;
-`storage_location varchar(255) nullable`; `image_path varchar(255) nullable`;
+`storage_location varchar(255) nullable`;
+`responsible_person varchar(255) nullable`; `image_path varchar(255) nullable`;
 `notes text nullable`; `is_active boolean default true index`; `created_at`;
 `updated_at`; `deleted_at`.
 

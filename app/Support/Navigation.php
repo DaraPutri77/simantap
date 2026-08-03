@@ -175,6 +175,13 @@ final class Navigation
                 'permission' => PermissionName::InventoryRequestViewOwn,
             ],
             [
+                'label' => 'Kendaraan Tersedia',
+                'route' => 'vehicles.index',
+                'icon' => 'vehicle',
+                'active_patterns' => ['vehicles.*'],
+                'permission' => PermissionName::VehicleView,
+            ],
+            [
                 'label' => 'Peminjaman Motor',
                 'route' => 'my.vehicle-loans.index',
                 'icon' => 'vehicle',
