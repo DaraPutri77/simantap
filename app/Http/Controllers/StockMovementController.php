@@ -141,7 +141,10 @@ class StockMovementController extends Controller
                     ->distinct()
                     ->count('item_id'),
             ],
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => (string) config(
+                'simantap.display_timezone',
+                'Asia/Jakarta',
+            ),
         ]);
     }
 }

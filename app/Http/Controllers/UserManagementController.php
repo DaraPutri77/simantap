@@ -182,7 +182,10 @@ class UserManagementController extends Controller
 
         return view('users.show', [
             'employee' => $user,
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => (string) config(
+                'simantap.display_timezone',
+                'Asia/Jakarta',
+            ),
         ]);
     }
 

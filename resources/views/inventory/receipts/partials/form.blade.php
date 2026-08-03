@@ -21,7 +21,10 @@
             'notes' => '',
         ],
     ];
-    $displayTimezone = 'Asia/Jakarta';
+    $displayTimezone = (string) config(
+        'simantap.display_timezone',
+        'Asia/Jakarta',
+    );
     $receiptDate = old(
         'receipt_date',
         $managedReceipt?->receipt_date

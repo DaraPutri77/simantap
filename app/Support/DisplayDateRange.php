@@ -6,8 +6,6 @@ use Carbon\CarbonImmutable;
 
 final class DisplayDateRange
 {
-    private const DISPLAY_TIMEZONE = 'Asia/Jakarta';
-
     /**
      * @return array{
      *     from: CarbonImmutable|null,
@@ -23,14 +21,22 @@ final class DisplayDateRange
                 ? null
                 : CarbonImmutable::parse(
                     $from,
-                    self::DISPLAY_TIMEZONE,
+                    self::displayTimezone(),
                 )->startOfDay()->utc(),
             'until' => $until === null || $until === ''
                 ? null
                 : CarbonImmutable::parse(
                     $until,
-                    self::DISPLAY_TIMEZONE,
+                    self::displayTimezone(),
                 )->endOfDay()->utc(),
         ];
+    }
+
+    private static function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
     }
 }

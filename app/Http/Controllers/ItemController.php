@@ -185,7 +185,10 @@ class ItemController extends Controller
                 ->latest('id')
                 ->limit(10)
                 ->get(),
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => (string) config(
+                'simantap.display_timezone',
+                'Asia/Jakarta',
+            ),
         ]);
     }
 

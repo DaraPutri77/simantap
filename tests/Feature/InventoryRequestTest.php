@@ -13,6 +13,7 @@ use App\Models\ItemCategory;
 use App\Models\StockMovement;
 use App\Models\Unit;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Database\Seeders\ReferenceDataSeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -468,6 +469,52 @@ class InventoryRequestTest extends TestCase
             )
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_request_history_and_signature_times_are_displayed_in_current_wib(): void
+    {
+        $this->travelTo(CarbonImmutable::create(
+            2026,
+            8,
+            3,
+            2,
+            47,
+            0,
+            'UTC',
+        ));
+
+        try {
+            $employee = $this->employee();
+            $inventoryRequest = $this->submittedRequest(
+                $employee,
+                $this->item(),
+                2,
+            );
+
+            $this->actingAs($employee)
+                ->get(route(
+                    'my.inventory-requests.show',
+                    $inventoryRequest,
+                ))
+                ->assertOk()
+                ->assertSee('09:47')
+                ->assertDontSee('02:47');
+
+            $latestHistory = $inventoryRequest
+                ->statusHistories()
+                ->latest('changed_at')
+                ->firstOrFail();
+
+            $this->assertSame(
+                '2026-08-03 02:47:00',
+                $latestHistory->changed_at
+                    ->copy()
+                    ->utc()
+                    ->format('Y-m-d H:i:s'),
+            );
+        } finally {
+            $this->travelBack();
+        }
     }
 
     private function admin(): User

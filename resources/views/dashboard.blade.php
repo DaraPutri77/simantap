@@ -1,5 +1,10 @@
 @php
     $user = auth()->user();
+    $displayTimezone = (string) config(
+        'simantap.display_timezone',
+        'Asia/Jakarta',
+    );
+    $displayNow = now()->timezone($displayTimezone);
 
     if ($isAdmin) {
         $dashboardStatistics = [
@@ -40,7 +45,7 @@
                     ',',
                     '.',
                 ),
-                'note' => now()->translatedFormat('F Y'),
+                'note' => $displayNow->translatedFormat('F Y'),
                 'accent' => 'from-violet-400 to-purple-500',
             ],
             [
@@ -454,7 +459,7 @@
                             </div>
 
                             <p class="mt-3 text-xs text-slate-400">
-                                {{ $request->request_date->translatedFormat('d M Y') }}
+                                {{ $request->request_date->copy()->timezone($displayTimezone)->translatedFormat('d M Y') }}
                                 · {{ $request->requester->work_unit ?: 'Tanpa unit' }}
                             </p>
                         </div>
@@ -494,7 +499,7 @@
                                     </td>
 
                                     <td>
-                                        {{ $request->request_date->translatedFormat('d M Y') }}
+                                        {{ $request->request_date->copy()->timezone($displayTimezone)->translatedFormat('d M Y') }}
                                     </td>
 
                                     <td>
@@ -625,7 +630,7 @@
 
                             <p class="mt-1 text-xs font-semibold text-red-600">
                                 Seharusnya kembali
-                                {{ $loan->planned_end_at->translatedFormat('d M Y, H:i') }}
+                                {{ $loan->planned_end_at->copy()->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
                             </p>
                         </div>
                     @empty
@@ -837,7 +842,7 @@
                                 <p class="mt-1 text-xs text-slate-400">
                                     {{ $activity['reference'] }}
                                     ·
-                                    {{ $activity['occurred_at']->translatedFormat('d M Y, H:i') }}
+                                    {{ $activity['occurred_at']->copy()->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
                                 </p>
                             </div>
 

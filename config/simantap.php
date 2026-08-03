@@ -17,7 +17,7 @@ return [
     ],
 
     'display_timezone' => env(
-        'APP_TIMEZONE',
+        'SIMANTAP_DISPLAY_TIMEZONE',
         'Asia/Jakarta',
     ),
 

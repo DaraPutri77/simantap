@@ -110,7 +110,7 @@ class StockAdjustmentController extends Controller
                 'until',
             ),
             'statusOptions' => StockAdjustmentStatus::cases(),
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => $this->displayTimezone(),
         ]);
     }
 
@@ -153,7 +153,7 @@ class StockAdjustmentController extends Controller
                 'postedBy:id,name',
                 'cancelledBy:id,name',
             ]),
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => $this->displayTimezone(),
         ]);
     }
 
@@ -237,6 +237,14 @@ class StockAdjustmentController extends Controller
         return back()->with(
             'status',
             'Draft penyesuaian stok berhasil dibatalkan.',
+        );
+    }
+
+    private function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
         );
     }
 

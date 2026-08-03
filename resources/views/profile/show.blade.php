@@ -4,7 +4,10 @@
     eyebrow="Akun"
 >
     @php
-        $displayTimezone = 'Asia/Jakarta';
+        $displayTimezone = (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
         $lastLoginAt = $user->last_login_at?->copy()->timezone(
             $displayTimezone,
         );

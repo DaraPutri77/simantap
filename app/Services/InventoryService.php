@@ -26,8 +26,6 @@ use Throwable;
 
 class InventoryService
 {
-    private const DISPLAY_TIMEZONE = 'Asia/Jakarta';
-
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly DocumentNumberService $documentNumberService,
@@ -73,7 +71,7 @@ class InventoryService
 
                 if ($initialStock > 0) {
                     $displayNow = CarbonImmutable::now(
-                        self::DISPLAY_TIMEZONE,
+                        $this->displayTimezone(),
                     );
 
                     $this->createStockMovement(
@@ -1125,10 +1123,18 @@ class InventoryService
     {
         $displayDate = CarbonImmutable::parse(
             $date,
-            self::DISPLAY_TIMEZONE,
+            $this->displayTimezone(),
         );
 
         return [$displayDate, $displayDate->utc()];
+    }
+
+    private function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
     }
 
     private function lineNumber(

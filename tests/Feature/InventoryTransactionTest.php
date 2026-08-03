@@ -66,8 +66,21 @@ class InventoryTransactionTest extends TestCase
             InventoryReceiptStatus::Draft,
             $receipt->status,
         );
+        $this->assertSame(
+            '2026-07-31 03:00:00',
+            $receipt->receipt_date
+                ->copy()
+                ->utc()
+                ->format('Y-m-d H:i:s'),
+        );
         $this->assertSame('10.00', $item->refresh()->current_stock);
         $this->assertDatabaseCount('stock_movements', 0);
+
+        $this->actingAs($admin)
+            ->get(route('inventory-receipts.show', $receipt))
+            ->assertOk()
+            ->assertSee('31 Juli 2026, 10:00')
+            ->assertDontSee('31 Juli 2026, 17:00');
 
         $this->actingAs($admin)
             ->post(route('inventory-receipts.post', $receipt))

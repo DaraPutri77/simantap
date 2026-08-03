@@ -115,7 +115,7 @@ class InventoryReceiptController extends Controller
                 'until',
             ),
             'statusOptions' => InventoryReceiptStatus::cases(),
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => $this->displayTimezone(),
         ]);
     }
 
@@ -158,7 +158,7 @@ class InventoryReceiptController extends Controller
                 'postedBy:id,name',
                 'cancelledBy:id,name',
             ]),
-            'displayTimezone' => 'Asia/Jakarta',
+            'displayTimezone' => $this->displayTimezone(),
         ]);
     }
 
@@ -237,6 +237,14 @@ class InventoryReceiptController extends Controller
         return back()->with(
             'status',
             'Draft barang masuk berhasil dibatalkan.',
+        );
+    }
+
+    private function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
         );
     }
 

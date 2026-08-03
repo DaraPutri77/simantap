@@ -11,6 +11,7 @@ use App\Models\ItemCategory;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Vehicle;
+use Carbon\CarbonImmutable;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -179,6 +180,43 @@ class DashboardTest extends TestCase
             ->assertSee('Permintaan milik Budi')
             ->assertDontSee('REQ/LAIN/0001')
             ->assertDontSee('Permintaan pegawai lain');
+    }
+
+    public function test_dashboard_activity_time_is_displayed_in_current_wib(): void
+    {
+        $employee = $this->activeUser([
+            'name' => 'Pegawai Zona Waktu',
+            'employee_number' => 'PEG-WIB-001',
+            'email' => 'pegawai.wib@example.test',
+        ]);
+        $employee->assignRole('pegawai');
+        $utcMoment = CarbonImmutable::create(
+            2026,
+            8,
+            3,
+            2,
+            47,
+            0,
+            'UTC',
+        );
+
+        InventoryRequest::query()->create([
+            'request_number' => 'REQ/WIB/0001',
+            'requested_by' => $employee->id,
+            'employee_number_snapshot' => $employee->employee_number,
+            'requester_name_snapshot' => $employee->name,
+            'work_unit_snapshot' => $employee->work_unit,
+            'request_date' => $utcMoment,
+            'purpose' => 'Validasi jam aktivitas WIB',
+            'status' => InventoryRequestStatus::Submitted,
+            'submitted_at' => $utcMoment,
+        ]);
+
+        $this->actingAs($employee)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('09:47 WIB')
+            ->assertDontSee('02:47 WIB');
     }
 
     public function test_user_can_open_complete_profile_page(): void

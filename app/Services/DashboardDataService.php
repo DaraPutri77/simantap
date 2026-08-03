@@ -16,6 +16,7 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
@@ -36,7 +37,7 @@ final class DashboardDataService
      */
     private function administratorData(): array
     {
-        $monthStart = now()->startOfMonth();
+        $monthStart = $this->displayNow()->startOfMonth()->utc();
 
         return [
             'isAdmin' => true,
@@ -221,8 +222,8 @@ final class DashboardDataService
     private function inventoryChart(): array
     {
         $months = $this->lastSixMonths();
-        $start = $months->first()->copy()->startOfMonth();
-        $end = $months->last()->copy()->endOfMonth();
+        $start = $months->first()->copy()->startOfMonth()->utc();
+        $end = $months->last()->copy()->endOfMonth()->utc();
         $movements = StockMovement::query()
             ->whereBetween('transaction_date', [$start, $end])
             ->get([
@@ -252,6 +253,8 @@ final class DashboardDataService
                         ->filter(
                             fn (StockMovement $movement): bool => $movement
                                 ->transaction_date
+                                ->copy()
+                                ->timezone($this->displayTimezone())
                                 ->isSameMonth($month),
                         )
                         ->sum('quantity_in'),
@@ -264,6 +267,8 @@ final class DashboardDataService
                         ->filter(
                             fn (StockMovement $movement): bool => $movement
                                 ->transaction_date
+                                ->copy()
+                                ->timezone($this->displayTimezone())
                                 ->isSameMonth($month),
                         )
                         ->sum('quantity_out'),
@@ -276,6 +281,8 @@ final class DashboardDataService
                         ->filter(
                             fn (InventoryRequest $inventoryRequest): bool => $inventoryRequest
                                 ->request_date
+                                ->copy()
+                                ->timezone($this->displayTimezone())
                                 ->isSameMonth($month),
                         )
                         ->count(),
@@ -295,8 +302,10 @@ final class DashboardDataService
     private function vehicleChart(): array
     {
         $months = $this->lastSixMonths();
-        $start = $months->first()->copy()->startOfMonth();
-        $end = $months->last()->copy()->endOfMonth();
+        $displayStart = $months->first()->copy()->startOfMonth();
+        $displayEnd = $months->last()->copy()->endOfMonth();
+        $start = $displayStart->copy()->utc();
+        $end = $displayEnd->copy()->utc();
         $loans = VehicleLoan::query()
             ->whereBetween('created_at', [$start, $end])
             ->whereNotIn('status', [
@@ -306,8 +315,8 @@ final class DashboardDataService
             ->get(['created_at']);
         $maintenance = MaintenanceRecord::query()
             ->whereBetween('reported_date', [
-                $start->toDateString(),
-                $end->toDateString(),
+                $displayStart->toDateString(),
+                $displayEnd->toDateString(),
             ])
             ->get(['reported_date']);
 
@@ -325,6 +334,8 @@ final class DashboardDataService
                         ->filter(
                             fn (VehicleLoan $loan): bool => $loan
                                 ->created_at
+                                ->copy()
+                                ->timezone($this->displayTimezone())
                                 ->isSameMonth($month),
                         )
                         ->count(),
@@ -368,7 +379,8 @@ final class DashboardDataService
                     'title' => $inventoryRequest->purpose,
                     'reference' => $inventoryRequest->request_number,
                     'status' => $inventoryRequest->status->label(),
-                    'occurred_at' => $inventoryRequest->request_date,
+                    'occurred_at' => $inventoryRequest->submitted_at
+                        ?? $inventoryRequest->created_at,
                 ],
             )
             ->merge(
@@ -395,12 +407,27 @@ final class DashboardDataService
      */
     private function lastSixMonths(): Collection
     {
-        $firstMonth = now()->startOfMonth()->subMonths(5);
+        $firstMonth = $this->displayNow()
+            ->startOfMonth()
+            ->subMonths(5);
 
         return collect(range(0, 5))->map(
             fn (int $offset): CarbonInterface => $firstMonth
                 ->copy()
                 ->addMonths($offset),
+        );
+    }
+
+    private function displayNow(): CarbonImmutable
+    {
+        return CarbonImmutable::now($this->displayTimezone());
+    }
+
+    private function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
         );
     }
 

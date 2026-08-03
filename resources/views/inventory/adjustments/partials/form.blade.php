@@ -19,7 +19,10 @@
             'notes' => '',
         ],
     ];
-    $displayTimezone = 'Asia/Jakarta';
+    $displayTimezone = (string) config(
+        'simantap.display_timezone',
+        'Asia/Jakarta',
+    );
     $adjustmentDate = old(
         'adjustment_date',
         $managedAdjustment?->adjustment_date
