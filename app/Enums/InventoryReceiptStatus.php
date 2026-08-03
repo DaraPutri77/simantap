@@ -2,12 +2,8 @@
 
 namespace App\Enums;
 
-use App\Enums\Concerns\HasEnumOptions;
-
 enum InventoryReceiptStatus: string
 {
-    use HasEnumOptions;
-
     case Draft = 'draft';
     case Posted = 'posted';
     case Cancelled = 'cancelled';
@@ -16,8 +12,33 @@ enum InventoryReceiptStatus: string
     {
         return match ($this) {
             self::Draft => 'Draft',
-            self::Posted => 'Diposting',
+            self::Posted => 'Sudah Diposting',
             self::Cancelled => 'Dibatalkan',
         };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(
+            static fn (self $status): string => $status->value,
+            self::cases(),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $status) {
+            $options[$status->value] = $status->label();
+        }
+
+        return $options;
     }
 }

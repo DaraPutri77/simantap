@@ -39,34 +39,29 @@ class StockAdjustment extends Model
         ];
     }
 
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function poster(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'posted_by');
-    }
-
-    public function canceller(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'cancelled_by');
-    }
-
     public function items(): HasMany
     {
         return $this->hasMany(StockAdjustmentItem::class);
     }
 
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function postedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'posted_by');
+    }
+
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
     public function stockMovements(): MorphMany
     {
         return $this->morphMany(StockMovement::class, 'reference');
-    }
-
-    public function attachments(): MorphMany
-    {
-        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     public function isDraft(): bool

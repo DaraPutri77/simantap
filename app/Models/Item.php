@@ -2,20 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasPublicId;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Item extends Model
 {
     use HasFactory;
-    use HasPublicId;
     use SoftDeletes;
 
     protected $fillable = [
@@ -24,6 +21,8 @@ class Item extends Model
         'unit_id',
         'name',
         'description',
+        'current_stock',
+        'reserved_stock',
         'minimum_stock',
         'storage_location',
         'image_path',
@@ -45,36 +44,40 @@ class Item extends Model
         ];
     }
 
-    public function scopeActive(Builder $query): Builder
+    protected static function booted(): void
     {
-        return $query->where('is_active', true);
+        static::creating(function (self $item): void {
+            if ($item->public_id === null || $item->public_id === '') {
+                $item->public_id = (string) Str::uuid();
+            }
+        });
     }
 
-    public function scopeLowStock(Builder $query): Builder
+    public function getRouteKeyName(): string
     {
-        return $query->whereRaw(
-            '(current_stock - reserved_stock) <= minimum_stock',
-        );
+        return 'public_id';
     }
 
     protected function availableStock(): Attribute
     {
-        return Attribute::get(function (): string {
-            $availableStock = max(
-                0,
-                (float) $this->getAttribute('current_stock')
-                    - (float) $this->getAttribute('reserved_stock'),
-            );
-
-            return number_format($availableStock, 2, '.', '');
-        });
+        return Attribute::get(
+            fn (): string => number_format(
+                max(
+                    0,
+                    (float) $this->current_stock
+                        - (float) $this->reserved_stock,
+                ),
+                2,
+                '.',
+                '',
+            ),
+        );
     }
 
     protected function isLowStock(): Attribute
     {
         return Attribute::get(
-            fn (): bool => (float) $this->available_stock
-                <= (float) $this->minimum_stock,
+            fn (): bool => (float) $this->available_stock <= (float) $this->minimum_stock,
         );
     }
 
@@ -85,20 +88,10 @@ class Item extends Model
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class, 'unit_id');
+        return $this->belongsTo(Unit::class);
     }
 
-    public function inventoryReceiptItems(): HasMany
-    {
-        return $this->hasMany(InventoryReceiptItem::class);
-    }
-
-    public function stockAdjustmentItems(): HasMany
-    {
-        return $this->hasMany(StockAdjustmentItem::class);
-    }
-
-    public function inventoryRequestItems(): HasMany
+    public function requestItems(): HasMany
     {
         return $this->hasMany(InventoryRequestItem::class);
     }
@@ -108,8 +101,18 @@ class Item extends Model
         return $this->hasMany(StockMovement::class);
     }
 
-    public function attachments(): MorphMany
+    public function receiptItems(): HasMany
     {
-        return $this->morphMany(Attachment::class, 'attachable');
+        return $this->hasMany(InventoryReceiptItem::class);
+    }
+
+    public function adjustmentItems(): HasMany
+    {
+        return $this->hasMany(StockAdjustmentItem::class);
+    }
+
+    public function maintenanceRecords(): HasMany
+    {
+        return $this->hasMany(MaintenanceRecord::class);
     }
 }

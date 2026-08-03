@@ -28,6 +28,7 @@ class InventoryRequest extends Model
         'submitted_at',
         'reviewed_by',
         'reviewed_at',
+        'approved_by',
         'approved_at',
         'rejected_at',
         'rejection_reason',
@@ -37,6 +38,7 @@ class InventoryRequest extends Model
         'received_at',
         'completed_at',
         'cancelled_at',
+        'cancellation_reason',
         'expired_at',
         'admin_notes',
     ];
@@ -44,8 +46,8 @@ class InventoryRequest extends Model
     protected function casts(): array
     {
         return [
-            'request_date' => 'datetime',
             'status' => InventoryRequestStatus::class,
+            'request_date' => 'datetime',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'approved_at' => 'datetime',
@@ -61,6 +63,11 @@ class InventoryRequest extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function reviewer(): BelongsTo
@@ -80,14 +87,7 @@ class InventoryRequest extends Model
 
     public function statusHistories(): HasMany
     {
-        return $this->hasMany(InventoryRequestStatusHistory::class)
-            ->orderBy('changed_at')
-            ->orderBy('id');
-    }
-
-    public function stockMovements(): MorphMany
-    {
-        return $this->morphMany(StockMovement::class, 'reference');
+        return $this->hasMany(InventoryRequestStatusHistory::class);
     }
 
     public function attachments(): MorphMany
@@ -100,18 +100,26 @@ class InventoryRequest extends Model
         return $this->morphMany(DigitalSignature::class, 'signable');
     }
 
-    public function isDraft(): bool
+    public function signatures(): MorphMany
     {
-        return $this->status === InventoryRequestStatus::Draft;
+        return $this->digitalSignatures();
     }
 
-    public function requiresRevision(): bool
+    public function submissionSignature(): ?DigitalSignature
     {
-        return $this->status === InventoryRequestStatus::RevisionRequired;
+        return $this->signatures
+            ->firstWhere('purpose', 'inventory_request_submission');
     }
 
-    public function isCompleted(): bool
+    public function approvalSignature(): ?DigitalSignature
     {
-        return $this->status === InventoryRequestStatus::Completed;
+        return $this->signatures
+            ->firstWhere('purpose', 'inventory_request_approval');
+    }
+
+    public function receiptSignature(): ?DigitalSignature
+    {
+        return $this->signatures
+            ->firstWhere('purpose', 'inventory_receipt_confirmation');
     }
 }

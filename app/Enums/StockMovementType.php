@@ -2,12 +2,8 @@
 
 namespace App\Enums;
 
-use App\Enums\Concerns\HasEnumOptions;
-
 enum StockMovementType: string
 {
-    use HasEnumOptions;
-
     case InitialStock = 'initial_stock';
     case StockIn = 'stock_in';
     case RequestOut = 'request_out';
@@ -21,11 +17,11 @@ enum StockMovementType: string
         return match ($this) {
             self::InitialStock => 'Stok Awal',
             self::StockIn => 'Barang Masuk',
-            self::RequestOut => 'Pengeluaran Permintaan',
-            self::AdjustmentIn => 'Penyesuaian Stok Masuk',
-            self::AdjustmentOut => 'Penyesuaian Stok Keluar',
-            self::ReturnIn => 'Pengembalian Barang',
-            self::DamagedOut => 'Pengeluaran Barang Rusak',
+            self::RequestOut => 'Barang Keluar',
+            self::AdjustmentIn => 'Penyesuaian Masuk',
+            self::AdjustmentOut => 'Penyesuaian Keluar',
+            self::ReturnIn => 'Pengembalian Masuk',
+            self::DamagedOut => 'Barang Rusak Keluar',
         };
     }
 
@@ -41,10 +37,31 @@ enum StockMovementType: string
 
     public function isOutbound(): bool
     {
-        return in_array($this, [
-            self::RequestOut,
-            self::AdjustmentOut,
-            self::DamagedOut,
-        ], true);
+        return ! $this->isInbound();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(
+            static fn (self $type): string => $type->value,
+            self::cases(),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $type) {
+            $options[$type->value] = $type->label();
+        }
+
+        return $options;
     }
 }

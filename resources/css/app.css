@@ -2,6 +2,7 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../../app/Enums/InventoryRequestStatus.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
@@ -53,7 +54,7 @@
     }
 
     .eyebrow {
-        @apply inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-sky-600;
+        @apply inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-sky-700;
     }
 
     .eyebrow::before {
@@ -62,11 +63,11 @@
     }
 
     .form-label {
-        @apply mb-2.5 block text-[13px] font-extrabold text-slate-700;
+        @apply mb-2.5 block text-[13px] font-extrabold text-slate-800;
     }
 
     .form-input {
-        @apply block w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 shadow-sm shadow-slate-200/40 outline-none transition-all duration-200 placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-sky-500 focus:bg-white focus:ring-4 focus:ring-sky-100;
+        @apply block min-w-0 w-full appearance-none rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-950 shadow-sm shadow-slate-200/50 outline-none transition-all duration-200 placeholder:font-normal placeholder:text-slate-500 hover:border-slate-400 focus:border-sky-600 focus:bg-white focus:ring-4 focus:ring-sky-100;
         min-height: 3.375rem;
     }
 
@@ -108,7 +109,7 @@
     }
 
     .primary-button {
-        @apply relative flex min-h-13 w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-sky-600 via-blue-600 to-blue-700 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 focus-visible:ring-4 focus-visible:ring-sky-200 active:translate-y-0;
+        @apply relative flex min-h-13 w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-sky-700 via-blue-700 to-blue-800 px-5 py-3.5 text-sm font-black whitespace-nowrap text-white shadow-lg shadow-blue-700/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-700/30 focus-visible:ring-4 focus-visible:ring-sky-200 active:translate-y-0;
     }
 
     .primary-button::before {
@@ -125,11 +126,11 @@
     }
 
     .secondary-button {
-        @apply flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-extrabold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-4 focus-visible:ring-slate-100;
+        @apply flex min-h-12 min-w-0 w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold whitespace-nowrap text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 focus-visible:ring-4 focus-visible:ring-slate-100;
     }
 
     .button-primary-inline {
-        @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-sky-950/15 transition hover:-translate-y-0.5 hover:bg-sky-500 focus-visible:ring-4 focus-visible:ring-sky-200;
+        @apply inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-black whitespace-nowrap text-white shadow-lg shadow-sky-950/15 transition hover:-translate-y-0.5 hover:bg-sky-800 focus-visible:ring-4 focus-visible:ring-sky-200;
     }
 
     .button-secondary-dark {
@@ -179,19 +180,19 @@
     }
 
     .sidebar-section-label {
-        @apply px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600;
+        @apply px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500;
     }
 
     .stat-card {
-        @apply relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50 transition-all duration-200 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60;
+        @apply relative overflow-hidden rounded-3xl border border-slate-300/80 bg-white p-5 shadow-sm shadow-slate-200/60 transition-all duration-200 hover:-translate-y-1 hover:border-sky-300 hover:shadow-xl hover:shadow-slate-200/70;
     }
 
     .panel {
-        @apply overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50;
+        @apply min-w-0 overflow-hidden rounded-3xl border border-slate-300/80 bg-white shadow-sm shadow-slate-200/60;
     }
 
     .panel-header {
-        @apply flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-6;
+        @apply flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6;
     }
 
     .panel-title {
@@ -199,7 +200,7 @@
     }
 
     .panel-subtitle {
-        @apply mt-1 text-xs text-slate-400;
+        @apply mt-1 text-xs font-medium text-slate-600;
     }
 
     .data-table {
@@ -207,11 +208,11 @@
     }
 
     .data-table th {
-        @apply bg-slate-50 px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400;
+        @apply bg-slate-100 px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-600;
     }
 
     .data-table td {
-        @apply border-t border-slate-100 px-5 py-4 text-slate-600;
+        @apply border-t border-slate-200 px-5 py-4 text-slate-700;
     }
 
     .status-badge {
@@ -219,7 +220,56 @@
     }
 
     .empty-state {
-        @apply px-5 py-10 text-center text-sm text-slate-400;
+        @apply px-5 py-10 text-center text-sm font-medium text-slate-600;
+    }
+
+    .inventory-filter-grid {
+        @apply grid gap-4 border-b border-slate-200 p-4 sm:p-5;
+        grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 13rem), 1fr)
+        );
+    }
+
+    .inventory-filter-grid > *,
+    .inventory-line-grid > * {
+        min-width: 0;
+    }
+
+    .inventory-filter-actions {
+        @apply grid self-end gap-2;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .inventory-filter-actions .button-primary-inline {
+        @apply w-full;
+    }
+
+    .inventory-line-grid {
+        @apply grid items-end gap-4;
+        grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 12rem), 1fr)
+        );
+    }
+
+    .danger-button {
+        @apply flex min-h-12 w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 text-sm font-extrabold whitespace-nowrap text-red-700 transition hover:border-red-400 hover:bg-red-50 focus-visible:ring-red-100;
+    }
+
+    .signature-pad {
+        @apply rounded-3xl border border-slate-300 bg-slate-100 p-4 sm:p-5;
+    }
+
+    .signature-pad canvas {
+        background-image:
+            linear-gradient(
+                to bottom,
+                transparent calc(100% - 38px),
+                #cbd5e1 calc(100% - 38px),
+                #cbd5e1 calc(100% - 37px),
+                transparent calc(100% - 37px)
+            );
     }
 }
 

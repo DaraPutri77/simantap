@@ -2,28 +2,49 @@
 
 namespace App\Enums;
 
-use App\Enums\Concerns\HasEnumOptions;
-
 enum DocumentType: string
 {
-    use HasEnumOptions;
-
     case InventoryRequest = 'REQ';
     case VehicleLoan = 'LOAN';
     case Maintenance = 'MTC';
-    case InventoryReceipt = 'STK-IN';
+    case StockIn = 'STK-IN';
     case StockAdjustment = 'STK-ADJ';
     case StockMovement = 'MOV';
 
     public function label(): string
     {
         return match ($this) {
-            self::InventoryRequest => 'Permintaan Barang',
+            self::InventoryRequest => 'Permintaan Persediaan',
             self::VehicleLoan => 'Peminjaman Kendaraan',
             self::Maintenance => 'Pemeliharaan Kendaraan',
-            self::InventoryReceipt => 'Penerimaan Barang',
+            self::StockIn => 'Barang Masuk',
             self::StockAdjustment => 'Penyesuaian Stok',
             self::StockMovement => 'Pergerakan Stok',
         };
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(
+            static fn (self $type): string => $type->value,
+            self::cases(),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $type) {
+            $options[$type->value] = $type->label();
+        }
+
+        return $options;
     }
 }

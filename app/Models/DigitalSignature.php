@@ -2,16 +2,13 @@
 
 namespace App\Models;
 
-use App\Enums\DigitalSignaturePurpose;
-use App\Models\Concerns\IsImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use LogicException;
 
 class DigitalSignature extends Model
 {
-    use IsImmutable;
-
     protected $fillable = [
         'signable_type',
         'signable_id',
@@ -30,9 +27,23 @@ class DigitalSignature extends Model
     protected function casts(): array
     {
         return [
-            'purpose' => DigitalSignaturePurpose::class,
             'signed_at' => 'immutable_datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (): never {
+            throw new LogicException(
+                'Tanda tangan digital tidak boleh diubah.',
+            );
+        });
+
+        static::deleting(function (): never {
+            throw new LogicException(
+                'Tanda tangan digital tidak boleh dihapus.',
+            );
+        });
     }
 
     public function signable(): MorphTo

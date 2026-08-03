@@ -6,7 +6,10 @@ use App\Enums\RoleName;
 use App\Models\InventoryReceipt;
 use App\Models\InventoryRequest;
 use App\Models\Item;
+use App\Models\ItemCategory;
 use App\Models\MaintenanceRecord;
+use App\Models\StockAdjustment;
+use App\Models\Unit;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleConditionCheck;
@@ -26,13 +29,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Model::preventLazyLoading(
-            ! app()->isProduction(),
-        );
-
-        Model::preventSilentlyDiscardingAttributes(
-            ! app()->isProduction(),
-        );
+        Model::preventLazyLoading(! app()->isProduction());
+        Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
 
         Password::defaults(
             fn (): Password => Password::min(
@@ -56,9 +54,12 @@ class AppServiceProvider extends ServiceProvider
         );
 
         Relation::enforceMorphMap([
-            'inventory_receipt' => InventoryReceipt::class,
             'inventory_request' => InventoryRequest::class,
+            'inventory_receipt' => InventoryReceipt::class,
             'item' => Item::class,
+            'item_category' => ItemCategory::class,
+            'stock_adjustment' => StockAdjustment::class,
+            'unit' => Unit::class,
             'user' => User::class,
             'vehicle' => Vehicle::class,
             'vehicle_loan' => VehicleLoan::class,

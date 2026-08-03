@@ -29,9 +29,12 @@ class InventoryReceiptItem extends Model
         ];
     }
 
-    public function inventoryReceipt(): BelongsTo
+    public function receipt(): BelongsTo
     {
-        return $this->belongsTo(InventoryReceipt::class);
+        return $this->belongsTo(
+            InventoryReceipt::class,
+            'inventory_receipt_id',
+        );
     }
 
     public function item(): BelongsTo

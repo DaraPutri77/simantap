@@ -243,7 +243,7 @@
                             {{ $displayNow->translatedFormat('l, d F Y') }}
                         </p>
 
-                        <p class="mt-0.5 text-[10px] font-semibold text-slate-400">
+                        <p class="mt-0.5 text-[10px] font-semibold text-slate-500">
                             {{ $roleLabel }}
                         </p>
                     </div>
@@ -258,7 +258,7 @@
                 </div>
             </header>
 
-            <main class="relative min-h-[calc(100vh-4.75rem)] overflow-hidden p-4 sm:p-6 lg:p-8">
+            <main class="relative min-h-[calc(100vh-4.75rem)] min-w-0 p-4 sm:p-6 lg:p-8">
                 <div
                     class="pointer-events-none absolute inset-0 opacity-[.32] [background-image:radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] [mask-image:linear-gradient(to_bottom,black,transparent_38%)]"
                     aria-hidden="true"

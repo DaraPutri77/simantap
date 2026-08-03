@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use App\Enums\InventoryRequestStatus;
-use App\Models\Concerns\IsImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LogicException;
 
 class InventoryRequestStatusHistory extends Model
 {
-    use IsImmutable;
-
     public $timestamps = false;
+
+    protected $table = 'request_status_histories';
 
     protected $fillable = [
         'inventory_request_id',
@@ -29,6 +29,21 @@ class InventoryRequestStatusHistory extends Model
             'new_status' => InventoryRequestStatus::class,
             'changed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (): never {
+            throw new LogicException(
+                'Riwayat status permintaan tidak boleh diubah.',
+            );
+        });
+
+        static::deleting(function (): never {
+            throw new LogicException(
+                'Riwayat status permintaan tidak boleh dihapus.',
+            );
+        });
     }
 
     public function inventoryRequest(): BelongsTo

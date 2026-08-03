@@ -86,6 +86,8 @@ final class Navigation
                     'item-categories.*',
                     'units.*',
                     'stock.*',
+                    'inventory-receipts.*',
+                    'stock-adjustments.*',
                 ],
                 'permission' => PermissionName::ItemView,
             ],
@@ -159,7 +161,10 @@ final class Navigation
                 'label' => 'Persediaan',
                 'route' => 'items.index',
                 'icon' => 'inventory',
-                'active_patterns' => ['items.*'],
+                'active_patterns' => [
+                    'items.*',
+                    'stock.*',
+                ],
                 'permission' => PermissionName::ItemView,
             ],
             [
