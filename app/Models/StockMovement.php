@@ -93,17 +93,17 @@ class StockMovement extends Model
 
     public function item(): BelongsTo
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(Item::class)->withTrashed();
     }
 
     public function reference(): MorphTo
     {
-        return $this->morphTo();
+        return $this->morphTo()->withTrashed();
     }
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by')->withTrashed();
     }
 
     public function isInbound(): bool
@@ -114,6 +114,31 @@ class StockMovement extends Model
     public function isOutbound(): bool
     {
         return $this->movement_type?->isOutbound() ?? false;
+    }
+
+    public function movementQuantity(): float
+    {
+        return $this->isInbound()
+            ? (float) $this->quantity_in
+            : (float) $this->quantity_out;
+    }
+
+    public function expectedStockAfter(): float
+    {
+        return round(
+            (float) $this->stock_before
+                + (float) $this->quantity_in
+                - (float) $this->quantity_out,
+            2,
+        );
+    }
+
+    public function hasConsistentBalance(): bool
+    {
+        return abs(
+            $this->expectedStockAfter()
+                - (float) $this->stock_after,
+        ) < 0.005;
     }
 
     private function synchronizeNumberColumns(): void

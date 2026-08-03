@@ -5,31 +5,46 @@
 >
     @include('inventory.partials.tabs')
 
-    <section>
-        <p class="eyebrow">Ledger Persediaan</p>
-        <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Kartu Stok
-        </h1>
-        <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
-            Riwayat ini terbentuk otomatis dari stok awal, barang masuk,
-            penyesuaian, dan barang keluar. Kartu stok tidak dapat diinput,
-            diubah, atau dihapus secara manual.
-        </p>
+    <section class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+            <p class="eyebrow">Ledger Persediaan</p>
+            <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                Kartu Stok
+            </h1>
+            <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
+                Seluruh pergerakan terbentuk otomatis dari transaksi sumber.
+                Setiap catatan menyimpan saldo sebelum dan sesudah, petugas,
+                serta jejak dokumen yang dapat ditelusuri.
+            </p>
+        </div>
+        <div class="rounded-2xl bg-slate-950 px-4 py-3 text-xs font-bold leading-5 text-slate-300 sm:max-w-sm">
+            Ledger bersifat permanen: tidak dapat ditambah, diubah, atau
+            dihapus secara manual.
+        </div>
     </section>
 
-    <section class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section class="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-5">
         @foreach ([
             ['label' => 'Transaksi', 'value' => $summary['transactions'], 'tone' => 'bg-sky-50 text-sky-700 ring-sky-100'],
             ['label' => 'Pergerakan Masuk', 'value' => $summary['inbound'], 'tone' => 'bg-emerald-50 text-emerald-700 ring-emerald-100'],
             ['label' => 'Pergerakan Keluar', 'value' => $summary['outbound'], 'tone' => 'bg-red-50 text-red-700 ring-red-100'],
             ['label' => 'Jenis Barang', 'value' => $summary['items'], 'tone' => 'bg-violet-50 text-violet-700 ring-violet-100'],
+            [
+                'label' => 'Validasi Saldo',
+                'value' => $summary['imbalances'] === 0 ? 'Konsisten' : $summary['imbalances'].' anomali',
+                'tone' => $summary['imbalances'] === 0
+                    ? 'bg-teal-50 text-teal-700 ring-teal-100'
+                    : 'bg-amber-50 text-amber-800 ring-amber-200',
+            ],
         ] as $card)
             <article class="stat-card p-4 sm:p-5">
                 <span class="inline-flex rounded-xl px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] ring-1 ring-inset {{ $card['tone'] }}">
                     {{ $card['label'] }}
                 </span>
-                <p class="mt-4 text-3xl font-black tracking-tight text-slate-950">
-                    {{ number_format($card['value'], 0, ',', '.') }}
+                <p class="mt-4 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                    {{ is_numeric($card['value'])
+                        ? number_format($card['value'], 0, ',', '.')
+                        : $card['value'] }}
                 </p>
             </article>
         @endforeach
@@ -69,6 +84,9 @@
                             @selected($filters['itemId'] === $item->id)
                         >
                             {{ $item->item_code }} · {{ $item->name }}
+                            @if (! $item->is_active || $item->trashed())
+                                · Nonaktif
+                            @endif
                         </option>
                     @endforeach
                 </select>
@@ -85,6 +103,18 @@
                             {{ $typeOption->label() }}
                         </option>
                     @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="direction" class="form-label">Arah Pergerakan</label>
+                <select id="direction" name="direction" class="form-input">
+                    <option value="">Semua arah</option>
+                    <option value="inbound" @selected($filters['direction'] === 'inbound')>
+                        Stok masuk
+                    </option>
+                    <option value="outbound" @selected($filters['direction'] === 'outbound')>
+                        Stok keluar
+                    </option>
                 </select>
             </div>
             <div>
@@ -107,7 +137,7 @@
             </div>
         @else
             <div class="hidden overflow-x-auto lg:block">
-                <table class="data-table min-w-[1040px]">
+                <table class="data-table min-w-[1180px]">
                     <thead>
                         <tr>
                             <th>Tanggal & Nomor</th>
@@ -118,7 +148,8 @@
                             <th>Keluar</th>
                             <th>Stok Akhir</th>
                             <th>Petugas</th>
-                            <th>Keterangan</th>
+                            <th>Sumber</th>
+                            <th class="text-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -167,11 +198,31 @@
                                     {{ number_format((float) $movement->stock_after, 2, ',', '.') }}
                                     {{ $movement->item->unit->symbol }}
                                 </td>
-                                <td>{{ $movement->creator->name }}</td>
-                                <td class="max-w-64">
-                                    <p class="line-clamp-2 text-xs leading-5 text-slate-500">
-                                        {{ $movement->description ?: '—' }}
+                                <td>
+                                    <p class="font-extrabold text-slate-900">
+                                        {{ $movement->creator?->name ?: 'Akun tidak tersedia' }}
                                     </p>
+                                    @if ($movement->creator?->employee_number)
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            {{ $movement->creator->employee_number }}
+                                        </p>
+                                    @endif
+                                </td>
+                                <td class="max-w-64">
+                                    <p class="font-extrabold text-slate-800">
+                                        {{ $movement->reference_number ?: $movement->transaction_number }}
+                                    </p>
+                                    <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+                                        {{ $movement->description ?: 'Tanpa keterangan tambahan.' }}
+                                    </p>
+                                </td>
+                                <td class="text-right">
+                                    <a
+                                        href="{{ route('stock.show', $movement) }}"
+                                        class="inline-flex items-center justify-center rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition hover:bg-sky-700"
+                                    >
+                                        Detail
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach
@@ -232,6 +283,23 @@
                                     {{ number_format((float) $movement->stock_after, 2, ',', '.') }}
                                 </p>
                             </div>
+                        </div>
+                        <div class="mt-4 flex items-end justify-between gap-4">
+                            <div class="min-w-0">
+                                <p class="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">
+                                    Sumber · Petugas
+                                </p>
+                                <p class="mt-1 truncate text-xs font-extrabold text-slate-700">
+                                    {{ $movement->reference_number ?: $movement->transaction_number }}
+                                    · {{ $movement->creator?->name ?: 'Akun tidak tersedia' }}
+                                </p>
+                            </div>
+                            <a
+                                href="{{ route('stock.show', $movement) }}"
+                                class="shrink-0 text-xs font-black text-sky-700 hover:text-sky-900"
+                            >
+                                Lihat Detail
+                            </a>
                         </div>
                     </article>
                 @endforeach

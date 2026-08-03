@@ -235,10 +235,16 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::middleware([
                 'role:admin',
                 'permission:stock.view',
-            ])->get(
-                '/kartu-stok',
-                [StockMovementController::class, 'index'],
-            )->name('stock.index');
+            ])->group(function (): void {
+                Route::get(
+                    '/kartu-stok',
+                    [StockMovementController::class, 'index'],
+                )->name('stock.index');
+                Route::get(
+                    '/kartu-stok/{stock_movement}',
+                    [StockMovementController::class, 'show'],
+                )->name('stock.show');
+            });
 
             Route::middleware([
                 'role:admin',
