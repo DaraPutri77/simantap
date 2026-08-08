@@ -1,0 +1,372 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\MaintenanceStatus;
+use App\Enums\VehicleLoanStatus;
+use App\Enums\VehicleStatus;
+use App\Http\Requests\ApproveMaintenanceRecordRequest;
+use App\Http\Requests\CancelMaintenanceRecordRequest;
+use App\Http\Requests\CompleteMaintenanceRecordRequest;
+use App\Http\Requests\StartMaintenanceRecordRequest;
+use App\Http\Requests\StoreMaintenanceRecordRequest;
+use App\Models\Attachment;
+use App\Models\MaintenanceRecord;
+use App\Models\Vehicle;
+use App\Models\VehicleLoan;
+use App\Services\MaintenanceService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class MaintenanceRecordController extends Controller
+{
+    public function index(Request $request): View
+    {
+        Gate::authorize('viewAny', MaintenanceRecord::class);
+
+        $query = MaintenanceRecord::query()
+            ->with([
+                'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,is_active',
+                'reporter:id,name',
+                'handler:id,name',
+                'sourceVehicleLoan:id,public_id,loan_number,status',
+            ]);
+
+        $search = trim((string) $request->query('q', ''));
+        if ($search !== '') {
+            $query->where(function (Builder $builder) use ($search): void {
+                $builder
+                    ->where('maintenance_number', 'like', "%{$search}%")
+                    ->orWhere('maintenance_type', 'like', "%{$search}%")
+                    ->orWhere('complaint', 'like', "%{$search}%")
+                    ->orWhereHas('vehicle', static function (Builder $vehicleQuery) use ($search): void {
+                        $vehicleQuery
+                            ->where('vehicle_code', 'like', "%{$search}%")
+                            ->orWhere('license_plate', 'like', "%{$search}%")
+                            ->orWhere('brand', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $status = (string) $request->query('status', '');
+        if ($status !== '' && in_array($status, MaintenanceStatus::values(), true)) {
+            $query->where('status', $status);
+        }
+
+        $year = (string) $request->query('year', '');
+        if (preg_match('/^\d{4}$/', $year) === 1) {
+            $query->whereYear('reported_date', (int) $year);
+        }
+
+        $records = $query
+            ->latest('reported_date')
+            ->latest('id')
+            ->paginate((int) config('simantap.pagination.per_page', 15))
+            ->withQueryString();
+
+        return view('maintenance-records.index', [
+            'records' => $records,
+            'summary' => $this->summary(),
+            'statusOptions' => MaintenanceStatus::options(),
+        ]);
+    }
+
+    public function create(Request $request): View
+    {
+        Gate::authorize('create', MaintenanceRecord::class);
+
+        return view('maintenance-records.create', [
+            'vehicles' => $this->availableVehicles(),
+            'returnIssues' => $this->eligibleReturnIssues(),
+            'selectedLoan' => null,
+            'displayTimezone' => $this->displayTimezone(),
+        ]);
+    }
+
+    public function createFromLoan(
+        Request $request,
+        VehicleLoan $vehicleLoan,
+    ): View {
+        Gate::authorize('create', MaintenanceRecord::class);
+
+        abort_unless($vehicleLoan->status === VehicleLoanStatus::ReturnIssue, 404);
+        abort_if(
+            MaintenanceRecord::query()
+                ->where('source_vehicle_loan_id', $vehicleLoan->getKey())
+                ->exists(),
+            409,
+        );
+
+        $vehicleLoan->load([
+            'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,is_active',
+            'borrower:id,name,employee_number',
+            'conditionChecks.attachments',
+        ]);
+
+        return view('maintenance-records.create', [
+            'vehicles' => collect([$vehicleLoan->vehicle]),
+            'returnIssues' => collect([$vehicleLoan]),
+            'selectedLoan' => $vehicleLoan,
+            'displayTimezone' => $this->displayTimezone(),
+        ]);
+    }
+
+    public function store(
+        StoreMaintenanceRecordRequest $request,
+        MaintenanceService $service,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $data = $request->validated();
+        $vehicle = Vehicle::query()
+            ->where('public_id', $data['vehicle_public_id'])
+            ->firstOrFail();
+
+        $sourceLoan = null;
+        if (! empty($data['source_vehicle_loan_public_id'])) {
+            $sourceLoan = VehicleLoan::query()
+                ->where('public_id', $data['source_vehicle_loan_public_id'])
+                ->firstOrFail();
+        }
+
+        $record = $service->report(
+            $vehicle,
+            $sourceLoan,
+            $data,
+            $actor,
+            $request,
+        );
+
+        return redirect()
+            ->route('maintenance-records.show', $record)
+            ->with('status', 'Laporan pemeliharaan berhasil dibuat.');
+    }
+
+    public function show(MaintenanceRecord $maintenanceRecord): View
+    {
+        Gate::authorize('view', $maintenanceRecord);
+
+        $maintenanceRecord->load([
+            'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,is_active',
+            'sourceVehicleLoan.borrower:id,name,employee_number',
+            'reporter:id,name,employee_number',
+            'handler:id,name,employee_number',
+            'approver:id,name,employee_number',
+            'canceller:id,name,employee_number',
+            'attachments.uploader:id,name',
+            'statusHistories.changer:id,name',
+        ]);
+
+        return view('maintenance-records.show', [
+            'maintenanceRecord' => $maintenanceRecord,
+            'completionStatuses' => [
+                MaintenanceStatus::Completed,
+                MaintenanceStatus::CompletedWithNotes,
+                MaintenanceStatus::FurtherActionRequired,
+                MaintenanceStatus::SeverelyDamaged,
+                MaintenanceStatus::Unserviceable,
+            ],
+            'displayTimezone' => $this->displayTimezone(),
+        ]);
+    }
+
+    public function approve(
+        ApproveMaintenanceRecordRequest $request,
+        MaintenanceRecord $maintenanceRecord,
+        MaintenanceService $service,
+    ): RedirectResponse {
+        Gate::authorize('approve', $maintenanceRecord);
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $service->approve(
+            $maintenanceRecord,
+            $request->validated(),
+            $actor,
+            $request,
+        );
+
+        return $this->redirectToShow(
+            $maintenanceRecord,
+            'Pemeliharaan disetujui dan siap dimulai.',
+        );
+    }
+
+    public function start(
+        StartMaintenanceRecordRequest $request,
+        MaintenanceRecord $maintenanceRecord,
+        MaintenanceService $service,
+    ): RedirectResponse {
+        Gate::authorize('start', $maintenanceRecord);
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $service->start(
+            $maintenanceRecord,
+            $request->validated(),
+            $actor,
+            $request,
+        );
+
+        return $this->redirectToShow(
+            $maintenanceRecord,
+            'Pengerjaan pemeliharaan telah dimulai.',
+        );
+    }
+
+    public function complete(
+        CompleteMaintenanceRecordRequest $request,
+        MaintenanceRecord $maintenanceRecord,
+        MaintenanceService $service,
+    ): RedirectResponse {
+        Gate::authorize('complete', $maintenanceRecord);
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $result = $service->complete(
+            $maintenanceRecord,
+            $request->validated(),
+            $actor,
+            $request,
+        );
+
+        return $this->redirectToShow(
+            $result,
+            'Hasil pemeliharaan berhasil disimpan dan status kendaraan telah diselaraskan.',
+        );
+    }
+
+    public function cancel(
+        CancelMaintenanceRecordRequest $request,
+        MaintenanceRecord $maintenanceRecord,
+        MaintenanceService $service,
+    ): RedirectResponse {
+        Gate::authorize('cancel', $maintenanceRecord);
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $service->cancel(
+            $maintenanceRecord,
+            $request->validated(),
+            $actor,
+            $request,
+        );
+
+        return $this->redirectToShow(
+            $maintenanceRecord,
+            'Pemeliharaan dibatalkan dan status kendaraan telah diselaraskan.',
+        );
+    }
+
+    public function evidence(
+        MaintenanceRecord $maintenanceRecord,
+        Attachment $attachment,
+    ): StreamedResponse {
+        Gate::authorize('view', $maintenanceRecord);
+
+        $belongsToRecord = $maintenanceRecord->attachments()
+            ->whereKey($attachment->getKey())
+            ->exists();
+        abort_unless($belongsToRecord, 404);
+
+        $disk = Storage::disk($attachment->disk);
+        abort_unless($disk->exists($attachment->file_path), 404);
+
+        return $disk->response(
+            $attachment->file_path,
+            $attachment->original_name,
+            [
+                'Content-Type' => $attachment->mime_type,
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store',
+            ],
+        );
+    }
+
+    /**
+     * @return Collection<int, Vehicle>
+     */
+    private function availableVehicles()
+    {
+        return Vehicle::query()
+            ->where('is_active', true)
+            ->whereIn('status', [
+                VehicleStatus::Available->value,
+                VehicleStatus::Inspection->value,
+                VehicleStatus::Damaged->value,
+                VehicleStatus::Maintenance->value,
+            ])
+            ->whereDoesntHave('maintenanceRecords', static function (Builder $query): void {
+                $query->whereIn('status', [
+                    MaintenanceStatus::Reported->value,
+                    MaintenanceStatus::Approved->value,
+                    MaintenanceStatus::InProgress->value,
+                    MaintenanceStatus::FurtherActionRequired->value,
+                ]);
+            })
+            ->orderBy('vehicle_code')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, VehicleLoan>
+     */
+    private function eligibleReturnIssues()
+    {
+        return VehicleLoan::query()
+            ->where('status', VehicleLoanStatus::ReturnIssue->value)
+            ->whereDoesntHave('maintenanceRecords')
+            ->with([
+                'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,is_active',
+                'borrower:id,name,employee_number',
+            ])
+            ->latest('actual_end_at')
+            ->get();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function summary(): array
+    {
+        return [
+            'reported' => MaintenanceRecord::query()
+                ->where('status', MaintenanceStatus::Reported->value)
+                ->count(),
+            'approved' => MaintenanceRecord::query()
+                ->where('status', MaintenanceStatus::Approved->value)
+                ->count(),
+            'in_progress' => MaintenanceRecord::query()
+                ->where('status', MaintenanceStatus::InProgress->value)
+                ->count(),
+            'further_action' => MaintenanceRecord::query()
+                ->where('status', MaintenanceStatus::FurtherActionRequired->value)
+                ->count(),
+        ];
+    }
+
+    private function redirectToShow(
+        MaintenanceRecord $maintenanceRecord,
+        string $message,
+    ): RedirectResponse {
+        return redirect()
+            ->route('maintenance-records.show', $maintenanceRecord->fresh())
+            ->with('status', $message);
+    }
+
+    private function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
+    }
+}
