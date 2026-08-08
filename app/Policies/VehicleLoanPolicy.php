@@ -45,6 +45,33 @@ class VehicleLoanPolicy
         return $user->can('vehicle-loan.approve');
     }
 
+    public function recordCheckout(User $user, VehicleLoan $vehicleLoan): bool
+    {
+        return $user->can('vehicle-loan.check')
+            && $vehicleLoan->status === VehicleLoanStatus::Approved;
+    }
+
+    public function confirmPickup(User $user, VehicleLoan $vehicleLoan): bool
+    {
+        return $user->can('vehicle-loan.return')
+            && $vehicleLoan->isOwnedBy($user)
+            && $vehicleLoan->status === VehicleLoanStatus::ReadyForPickup;
+    }
+
+    public function requestReturn(User $user, VehicleLoan $vehicleLoan): bool
+    {
+        return $user->can('vehicle-loan.return')
+            && $vehicleLoan->isOwnedBy($user)
+            && $vehicleLoan->status === VehicleLoanStatus::Borrowed;
+    }
+
+    public function inspectReturn(User $user, VehicleLoan $vehicleLoan): bool
+    {
+        return $user->can('vehicle-loan.check')
+            && $vehicleLoan->status
+                === VehicleLoanStatus::AwaitingReturnInspection;
+    }
+
     public function cancel(User $user, VehicleLoan $vehicleLoan): bool
     {
         if ($user->can('vehicle-loan.approve')) {

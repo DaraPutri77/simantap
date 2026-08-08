@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ConditionCheckType;
 use App\Enums\VehicleLoanStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,8 @@ class VehicleLoan extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
+    public const PICKUP_SIGNATURE_PURPOSE = 'vehicle_loan_pickup';
 
     protected $fillable = [
         'loan_number',
@@ -141,6 +144,36 @@ class VehicleLoan extends Model
             ->firstWhere('purpose', 'vehicle_loan_submission');
     }
 
+    public function pickupSignature(): ?DigitalSignature
+    {
+        return $this->signatures
+            ->firstWhere('purpose', self::PICKUP_SIGNATURE_PURPOSE);
+    }
+
+    public function checkoutCheck(): ?VehicleConditionCheck
+    {
+        if ($this->relationLoaded('conditionChecks')) {
+            return $this->conditionChecks
+                ->firstWhere('check_type', ConditionCheckType::Checkout);
+        }
+
+        return $this->conditionChecks()
+            ->where('check_type', ConditionCheckType::Checkout->value)
+            ->first();
+    }
+
+    public function returnCheck(): ?VehicleConditionCheck
+    {
+        if ($this->relationLoaded('conditionChecks')) {
+            return $this->conditionChecks
+                ->firstWhere('check_type', ConditionCheckType::Return);
+        }
+
+        return $this->conditionChecks()
+            ->where('check_type', ConditionCheckType::Return->value)
+            ->first();
+    }
+
     public function isOwnedBy(User $user): bool
     {
         return $this->borrower_id === $user->getKey();
@@ -149,6 +182,11 @@ class VehicleLoan extends Model
     public function isDraft(): bool
     {
         return $this->status === VehicleLoanStatus::Draft;
+    }
+
+    public function isReadyForPickup(): bool
+    {
+        return $this->status === VehicleLoanStatus::ReadyForPickup;
     }
 
     public function isBorrowed(): bool
@@ -165,6 +203,11 @@ class VehicleLoan extends Model
     public function isCompleted(): bool
     {
         return $this->status === VehicleLoanStatus::Completed;
+    }
+
+    public function isReturnIssue(): bool
+    {
+        return $this->status === VehicleLoanStatus::ReturnIssue;
     }
 
     public function wasMarkedOverdue(): bool

@@ -115,6 +115,13 @@ final class Navigation
                 'permission' => PermissionName::VehicleLoanViewAll,
             ],
             [
+                'label' => 'Serah Terima Kendaraan',
+                'route' => 'vehicle-loan-lifecycle.admin.index',
+                'icon' => 'vehicle',
+                'active_patterns' => ['vehicle-loan-lifecycle.admin.*'],
+                'permission' => PermissionName::VehicleLoanCheck,
+            ],
+            [
                 'label' => 'Pemeliharaan',
                 'route' => 'maintenance-records.index',
                 'icon' => 'maintenance',
@@ -193,6 +200,13 @@ final class Navigation
                 'icon' => 'vehicle',
                 'active_patterns' => ['my.vehicle-loans.*'],
                 'permission' => PermissionName::VehicleLoanViewOwn,
+            ],
+            [
+                'label' => 'Pengembalian Kendaraan',
+                'route' => 'vehicle-loan-lifecycle.employee.index',
+                'icon' => 'vehicle',
+                'active_patterns' => ['vehicle-loan-lifecycle.employee.*'],
+                'permission' => PermissionName::VehicleLoanReturn,
             ],
             [
                 'label' => 'Profil',

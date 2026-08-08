@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use LogicException;
 
 class VehicleConditionCheck extends Model
 {
@@ -39,6 +40,33 @@ class VehicleConditionCheck extends Model
             'checked_at' => 'datetime',
             'borrower_confirmed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $conditionCheck): void {
+            $dirty = array_keys($conditionCheck->getDirty());
+            sort($dirty);
+
+            $borrowerConfirmationOnly = $conditionCheck->isCheckout()
+                && $conditionCheck->getOriginal('borrower_confirmed_at') === null
+                && $conditionCheck->borrower_confirmed_at !== null
+                && $dirty === ['borrower_confirmed_at'];
+
+            if ($borrowerConfirmationOnly) {
+                return;
+            }
+
+            throw new LogicException(
+                'Pemeriksaan kondisi kendaraan tidak boleh diubah.',
+            );
+        });
+
+        static::deleting(function (): never {
+            throw new LogicException(
+                'Pemeriksaan kondisi kendaraan tidak boleh dihapus.',
+            );
+        });
     }
 
     public function vehicleLoan(): BelongsTo
