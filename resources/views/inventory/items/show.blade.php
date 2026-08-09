@@ -151,6 +151,12 @@
         </div>
 
         <aside class="space-y-6">
+            @include('qr-codes.preview', [
+                'entityLabel' => 'barang',
+                'svgDownloadUrl' => route('qr-codes.item.svg', $item),
+                'labelDownloadUrl' => route('qr-codes.item.label', $item),
+            ])
+
             <article class="panel p-5 sm:p-6">
                 <h2 class="panel-title">Informasi Barang</h2>
                 <dl class="mt-5 space-y-4 text-sm">

@@ -7,6 +7,7 @@ use App\Enums\VehicleStatus;
 use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
+use App\Services\QrCodeService;
 use App\Services\VehicleService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -204,8 +205,11 @@ class VehicleController extends Controller
             ->with('status', 'Kendaraan berhasil ditambahkan.');
     }
 
-    public function show(Request $request, Vehicle $vehicle): View
-    {
+    public function show(
+        Request $request,
+        Vehicle $vehicle,
+        QrCodeService $qrCodes,
+    ): View {
         $canManage = $request->user()?->can(
             PermissionName::VehicleManage->value,
         ) === true;
@@ -220,6 +224,8 @@ class VehicleController extends Controller
         return view('vehicles.show', [
             'vehicle' => $vehicle,
             'canManage' => $canManage,
+            'qrCodeSvg' => $qrCodes->svg($qrCodes->vehicleUrl($vehicle)),
+            'qrTargetUrl' => $qrCodes->vehicleUrl($vehicle),
             'today' => CarbonImmutable::now(
                 (string) config(
                     'simantap.display_timezone',

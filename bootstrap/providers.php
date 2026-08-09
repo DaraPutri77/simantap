@@ -4,6 +4,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\AuditLogServiceProvider;
 use App\Providers\MaintenanceServiceProvider;
 use App\Providers\NotificationServiceProvider;
+use App\Providers\QrCodeServiceProvider;
 use App\Providers\ReportServiceProvider;
 use App\Providers\VehicleLoanLifecycleServiceProvider;
 
@@ -14,4 +15,5 @@ return [
     MaintenanceServiceProvider::class,
     NotificationServiceProvider::class,
     ReportServiceProvider::class,
+    QrCodeServiceProvider::class,
 ];

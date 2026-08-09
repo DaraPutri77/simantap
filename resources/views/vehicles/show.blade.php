@@ -162,6 +162,12 @@
         </div>
 
         <aside class="space-y-6">
+            @include('qr-codes.preview', [
+                'entityLabel' => 'kendaraan',
+                'svgDownloadUrl' => route('qr-codes.vehicle.svg', $vehicle),
+                'labelDownloadUrl' => route('qr-codes.vehicle.label', $vehicle),
+            ])
+
             <article class="panel p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>

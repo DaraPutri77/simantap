@@ -10,6 +10,7 @@ use App\Models\ItemCategory;
 use App\Models\StockMovement;
 use App\Models\Unit;
 use App\Services\InventoryService;
+use App\Services\QrCodeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -165,8 +166,11 @@ class ItemController extends Controller
             );
     }
 
-    public function show(Request $request, Item $item): View
-    {
+    public function show(
+        Request $request,
+        Item $item,
+        QrCodeService $qrCodes,
+    ): View {
         $canManage = $request->user()?->can(
             PermissionName::ItemManage->value,
         ) === true;
@@ -178,6 +182,8 @@ class ItemController extends Controller
         return view('inventory.items.show', [
             'item' => $item,
             'canManage' => $canManage,
+            'qrCodeSvg' => $qrCodes->svg($qrCodes->itemUrl($item)),
+            'qrTargetUrl' => $qrCodes->itemUrl($item),
             'movements' => StockMovement::query()
                 ->with('creator:id,name')
                 ->where('item_id', $item->getKey())
