@@ -1,6 +1,6 @@
 <x-layouts.app
-    title="Laporan PDF"
-    header="Laporan PDF"
+    title="Pusat Laporan"
+    header="Pusat Laporan"
     eyebrow="Pusat Laporan"
 >
     @php
@@ -13,12 +13,12 @@
         <div>
             <p class="eyebrow">Dokumen Operasional</p>
             <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Pusat Laporan PDF
+                Pusat Laporan PDF & Excel
             </h1>
             <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
                 Pilih jenis laporan, atur periode dan filter, lalu unduh dokumen
                 resmi yang dibentuk langsung dari data transaksi SIMANTAP.
-                Ekspor Excel berada pada tahap berikutnya.
+                Gunakan PDF untuk cetak atau Excel untuk pengolahan lanjutan.
             </p>
         </div>
         <div class="rounded-2xl bg-slate-950 px-4 py-3 text-xs font-bold leading-5 text-slate-300 sm:max-w-sm">
@@ -31,9 +31,9 @@
         <div class="panel-header">
             <div>
                 <h2 class="panel-title">Parameter Laporan</h2>
-                <p class="panel-subtitle">Filter diterapkan pada data PDF yang akan diunduh</p>
+                <p class="panel-subtitle">Filter yang sama diterapkan pada PDF dan Excel</p>
             </div>
-            <span class="status-badge">PDF A4 Landscape</span>
+            <span class="status-badge">PDF A4 · Excel XLSX</span>
         </div>
 
         <form method="GET" action="{{ route('reports.index') }}" class="inventory-filter-grid">
@@ -145,16 +145,20 @@
                     Menampilkan maksimal 25 baris pertama · Periode: {{ $periodLabel }}
                 </p>
             </div>
-            <form method="GET" action="{{ route('reports.pdf', $filters['report']) }}" class="shrink-0">
-                <input type="hidden" name="q" value="{{ $filters['search'] }}">
-                <input type="hidden" name="item" value="{{ $filters['itemId'] ?: '' }}">
-                <input type="hidden" name="movement_type" value="{{ $filters['movementType'] }}">
-                <input type="hidden" name="status" value="{{ $filters['status'] }}">
-                <input type="hidden" name="work_unit" value="{{ $filters['workUnit'] }}">
-                <input type="hidden" name="from" value="{{ $filters['from'] }}">
-                <input type="hidden" name="until" value="{{ $filters['until'] }}">
-                <button type="submit" class="button-primary-inline">Unduh PDF</button>
-            </form>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                @foreach (['pdf' => 'Unduh PDF', 'excel' => 'Unduh Excel'] as $format => $label)
+                    <form method="GET" action="{{ route('reports.'.$format, $filters['report']) }}">
+                        <input type="hidden" name="q" value="{{ $filters['search'] }}">
+                        <input type="hidden" name="item" value="{{ $filters['itemId'] ?: '' }}">
+                        <input type="hidden" name="movement_type" value="{{ $filters['movementType'] }}">
+                        <input type="hidden" name="status" value="{{ $filters['status'] }}">
+                        <input type="hidden" name="work_unit" value="{{ $filters['workUnit'] }}">
+                        <input type="hidden" name="from" value="{{ $filters['from'] }}">
+                        <input type="hidden" name="until" value="{{ $filters['until'] }}">
+                        <button type="submit" class="{{ $format === 'pdf' ? 'secondary-button' : 'button-primary-inline' }}">{{ $label }}</button>
+                    </form>
+                @endforeach
+            </div>
         </div>
 
         @if ($previewRows === [])

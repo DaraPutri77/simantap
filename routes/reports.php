@@ -19,4 +19,8 @@ Route::middleware([
         Route::get('/{report}/pdf', [ReportController::class, 'downloadPdf'])
             ->middleware('permission:report.export')
             ->name('pdf');
+
+        Route::get('/{report}/excel', [ReportController::class, 'downloadExcel'])
+            ->middleware('permission:report.export')
+            ->name('excel');
     });

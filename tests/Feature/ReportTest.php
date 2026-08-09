@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
 use App\Enums\RoleName;
+use App\Exports\ReportExport;
 use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\Unit;
@@ -14,6 +15,9 @@ use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 class ReportTest extends TestCase
@@ -118,6 +122,46 @@ class ReportTest extends TestCase
         $this->actingAs($employee)
             ->get(route('reports.pdf', 'stock'))
             ->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('reports.excel', 'stock'))
+            ->assertForbidden();
+    }
+
+    public function test_administrator_can_download_styled_excel_with_summary_and_filtered_data(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item();
+        Carbon::setTestNow('2026-08-08 17:30:00 UTC');
+        $response = $this->actingAs($admin)
+            ->get(route('reports.excel', ['report' => 'stock', 'item' => $item->id]))
+            ->assertOk();
+
+        $response->assertDownload('LAPORAN-STOCK-20260809-003000.xlsx');
+
+        $data = app(ReportService::class)->build([
+            'report' => 'stock', 'search' => '', 'itemId' => $item->id,
+            'movementType' => '', 'status' => '', 'workUnit' => '',
+            'from' => '', 'until' => '',
+        ]);
+        $raw = Excel::raw(new ReportExport($data), ExcelWriter::XLSX);
+        $temporary = tempnam(sys_get_temp_dir(), 'simantap-report-');
+        file_put_contents($temporary, $raw);
+        $workbook = IOFactory::load($temporary);
+        @unlink($temporary);
+
+        $this->assertSame(['Ringkasan', 'Data'], $workbook->getSheetNames());
+        $this->assertSame('Stok Persediaan', $workbook->getSheetByName('Ringkasan')->getCell('A2')->getValue());
+        $this->assertSame('Kode', $workbook->getSheetByName('Data')->getCell('A1')->getValue());
+        $this->assertSame($item->item_code, $workbook->getSheetByName('Data')->getCell('A2')->getValue());
+        $this->assertSame('A2', $workbook->getSheetByName('Data')->getFreezePane());
+        $this->assertSame('FF0369A1', $workbook->getSheetByName('Data')->getStyle('A1')->getFill()->getStartColor()->getARGB());
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'event' => 'report_downloaded',
+            'module' => 'report',
+        ]);
     }
 
     private function admin(): User

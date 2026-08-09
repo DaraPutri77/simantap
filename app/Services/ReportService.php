@@ -79,12 +79,12 @@ class ReportService
         ];
     }
 
-    public function filename(string $report): string
+    public function filename(string $report, string $extension = 'pdf'): string
     {
         return 'LAPORAN-'.Str::upper(str_replace('-', '_', $report))
             .'-'.now(
                 (string) config('simantap.display_timezone', 'Asia/Jakarta'),
-            )->format('Ymd-His').'.pdf';
+            )->format('Ymd-His').'.'.ltrim($extension, '.');
     }
 
     /**
