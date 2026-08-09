@@ -9,24 +9,9 @@ use Illuminate\Support\Str;
 
 class AuditLogger
 {
-    /**
-     * @var list<string>
-     */
-    private const SENSITIVE_KEYS = [
-        '_token',
-        'authorization',
-        'cookie',
-        'current_password',
-        'new_password',
-        'new_password_confirmation',
-        'password',
-        'password_confirmation',
-        'remember_token',
-        'signature',
-        'signature_data',
-        'token',
-        'token_hash',
-    ];
+    public function __construct(
+        private readonly AuditDataSanitizer $sanitizer,
+    ) {}
 
     /**
      * @param  array<string, mixed>|null  $oldValues
@@ -51,19 +36,15 @@ class AuditLogger
             'module' => $module,
             'auditable_type' => $auditable?->getMorphClass(),
             'auditable_id' => $auditable?->getKey(),
-            'old_values' => $this->sanitize($oldValues),
-            'new_values' => $this->sanitize($newValues),
+            'old_values' => $this->sanitizer->sanitize($oldValues),
+            'new_values' => $this->sanitizer->sanitize($newValues),
             'ip_address' => $request->ip(),
             'user_agent' => Str::limit(
                 (string) $request->userAgent(),
                 2000,
                 '',
             ),
-            'url' => Str::limit(
-                $request->fullUrl(),
-                2048,
-                '',
-            ),
+            'url' => $this->sanitizer->sanitizeUrl($request),
             'http_method' => Str::limit(
                 Str::upper($request->method()),
                 10,
@@ -94,37 +75,5 @@ class AuditLogger
         );
 
         return $requestId;
-    }
-
-    /**
-     * @param  array<array-key, mixed>|null  $values
-     * @return array<array-key, mixed>|null
-     */
-    private function sanitize(?array $values): ?array
-    {
-        if ($values === null) {
-            return null;
-        }
-
-        $sanitized = [];
-
-        foreach ($values as $key => $value) {
-            if (
-                is_string($key)
-                && in_array(
-                    Str::lower($key),
-                    self::SENSITIVE_KEYS,
-                    true,
-                )
-            ) {
-                continue;
-            }
-
-            $sanitized[$key] = is_array($value)
-                ? $this->sanitize($value)
-                : $value;
-        }
-
-        return $sanitized;
     }
 }

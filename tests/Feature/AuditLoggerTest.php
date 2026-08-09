@@ -148,6 +148,44 @@ class AuditLoggerTest extends TestCase
         $this->assertNull($firstAuditLog->auditable_id);
     }
 
+    public function test_audit_logger_removes_nested_credentials_and_url_tokens(): void
+    {
+        $request = Request::create(
+            'https://simantap.test/reset-kata-sandi/token-super-rahasia?email=pegawai%40example.test&api_key=kunci-rahasia',
+            'POST',
+        );
+
+        $auditLog = app(AuditLogger::class)->log(
+            event: 'password_reset_completed',
+            module: 'authentication',
+            newValues: [
+                'profile' => [
+                    'api_token' => 'token-payload',
+                    'name' => 'Pegawai Aman',
+                ],
+                'transaction_hash' => 'hash-transaksi-boleh-disimpan',
+            ],
+            request: $request,
+        );
+
+        $this->assertSame([
+            'profile' => ['name' => 'Pegawai Aman'],
+            'transaction_hash' => 'hash-transaksi-boleh-disimpan',
+        ], $auditLog->new_values);
+        $this->assertSame(
+            'https://simantap.test/reset-kata-sandi/{credential}?email=pegawai%40example.test',
+            $auditLog->url,
+        );
+        $this->assertStringNotContainsString(
+            'token-super-rahasia',
+            $auditLog->url,
+        );
+        $this->assertStringNotContainsString(
+            'kunci-rahasia',
+            $auditLog->url,
+        );
+    }
+
     private function createInventoryRequest(
         User $requester,
     ): InventoryRequest {

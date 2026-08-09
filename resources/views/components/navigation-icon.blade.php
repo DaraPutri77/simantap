@@ -112,6 +112,21 @@
         </svg>
         @break
 
+    @case('audit')
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M12 3 4.5 6v5.5c0 4.3 3 8.1 7.5 9.5 4.5-1.4 7.5-5.2 7.5-9.5V6L12 3Z"/>
+            <path d="m9 12 2 2 4-4"/>
+        </svg>
+        @break
+
     @case('settings')
         <svg
             viewBox="0 0 24 24"

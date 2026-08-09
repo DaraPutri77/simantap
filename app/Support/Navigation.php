@@ -136,13 +136,17 @@ final class Navigation
                 'permission' => PermissionName::ReportView,
             ],
             [
+                'label' => 'Audit Log',
+                'route' => 'audit-logs.index',
+                'icon' => 'audit',
+                'active_patterns' => ['audit-logs.*'],
+                'permission' => PermissionName::AuditLogView,
+            ],
+            [
                 'label' => 'Pengaturan',
                 'route' => 'settings.index',
                 'icon' => 'settings',
-                'active_patterns' => [
-                    'settings.*',
-                    'audit-logs.*',
-                ],
+                'active_patterns' => ['settings.*'],
                 'permission' => PermissionName::SettingManage,
             ],
         ];
