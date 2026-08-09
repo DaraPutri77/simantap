@@ -4,6 +4,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\AuditLogServiceProvider;
 use App\Providers\MaintenanceServiceProvider;
 use App\Providers\NotificationServiceProvider;
+use App\Providers\ReportServiceProvider;
 use App\Providers\VehicleLoanLifecycleServiceProvider;
 
 return [
@@ -12,4 +13,5 @@ return [
     VehicleLoanLifecycleServiceProvider::class,
     MaintenanceServiceProvider::class,
     NotificationServiceProvider::class,
+    ReportServiceProvider::class,
 ];
