@@ -9,6 +9,7 @@
         .header { text-align: center; margin-bottom: 18px; }
         .header h1 { font-size: 15px; margin-top: 5px; }
         .header p { margin-top: 4px; color: #475569; }
+        .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 7px; }
         .section { margin-top: 14px; }
         .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; padding: 6px 8px; background: #e2e8f0; border: 1px solid #cbd5e1; }
         table { width: 100%; border-collapse: collapse; }
@@ -31,7 +32,7 @@
     @endphp
 
     <div class="header">
-        <strong>{{ $institutionName }}</strong>
+        <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
         <h1>FORM SERAH TERIMA DAN PENGEMBALIAN KENDARAAN DINAS</h1>
         <p>{{ $vehicleLoan->loan_number }}</p>
     </div>

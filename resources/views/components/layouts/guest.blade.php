@@ -44,31 +44,11 @@
                         class="inline-flex items-center gap-3.5 rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400/30"
                         aria-label="Beranda SIMANTAP"
                     >
-                        <span class="brand-mark h-13 w-13">
-                            <svg
-                                viewBox="0 0 24 24"
-                                class="h-7 w-7"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="m4 7.5 8-4.5 8 4.5-8 4.5-8-4.5Z"/>
-                                <path d="m4 12.5 8 4.5 8-4.5M4 17l8 4 8-4"/>
-                            </svg>
-                        </span>
-
-                        <span>
-                            <span class="block text-xl font-black tracking-[.1em]">
-                                SIMANTAP
-                            </span>
-
-                            <span class="mt-0.5 block text-[11px] font-semibold tracking-wide text-slate-400">
-                                Sistem Manajemen Aset dan Persediaan
-                            </span>
-                        </span>
+                        <img
+                            src="{{ asset(config('simantap.institution.logo')) }}"
+                            alt="{{ config('simantap.institution.name') }}"
+                            class="h-auto w-[320px] max-w-full"
+                        >
                     </a>
                 </header>
 
@@ -177,32 +157,18 @@
 
             <section class="relative flex min-h-screen items-center justify-center px-4 py-6 sm:px-8 lg:bg-white/[.035] lg:px-10 xl:px-16">
                 <div class="w-full max-w-[560px]">
-                    <div class="mb-6 flex items-center justify-center gap-3.5 text-white lg:hidden">
-                        <span class="brand-mark h-12 w-12">
-                            <svg
-                                viewBox="0 0 24 24"
-                                class="h-6 w-6"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
+                    <div class="mb-6 flex items-center justify-center lg:hidden">
+                        <a
+                            href="{{ url('/') }}"
+                            class="inline-flex max-w-full items-center justify-center rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400/30"
+                            aria-label="Beranda SIMANTAP - {{ config('simantap.institution.name') }}"
+                        >
+                            <img
+                                src="{{ asset(config('simantap.institution.logo')) }}"
+                                alt="{{ config('simantap.institution.name') }}"
+                                class="h-auto w-[250px] max-w-[78vw] sm:w-[300px]"
                             >
-                                <path d="m4 7.5 8-4.5 8 4.5-8 4.5-8-4.5Z"/>
-                                <path d="m4 12.5 8 4.5 8-4.5M4 17l8 4 8-4"/>
-                            </svg>
-                        </span>
-
-                        <span>
-                            <span class="block text-lg font-black tracking-[.1em]">
-                                SIMANTAP
-                            </span>
-
-                            <span class="block text-[10px] font-semibold text-slate-400">
-                                Aset & Persediaan
-                            </span>
-                        </span>
+                        </a>
                     </div>
 
                     <div class="relative overflow-hidden rounded-[2rem] border border-white/40 bg-white p-6 shadow-[0_32px_90px_rgba(2,6,23,.34)] sm:p-9 xl:p-10">

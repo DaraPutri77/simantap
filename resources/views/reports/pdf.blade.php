@@ -9,7 +9,7 @@
         body { margin: 0; color: #0f172a; font-family: DejaVu Sans, sans-serif; font-size: 8pt; line-height: 1.35; }
         h1, h2, p { margin: 0; }
         .header { border-bottom: 2px solid #0f172a; padding-bottom: 9px; text-align: center; }
-        .institution { font-size: 10pt; font-weight: bold; }
+        .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 6px; }
         .header h1 { margin-top: 5px; font-size: 15pt; letter-spacing: .2px; }
         .header p { margin-top: 3px; color: #475569; font-size: 8pt; }
         .meta { width: 100%; margin-top: 11px; border-collapse: collapse; }
@@ -31,7 +31,7 @@
 </head>
 <body>
     <header class="header">
-        <p class="institution">{{ $institutionName ?? config('simantap.institution.name', 'Badan Pusat Statistik') }}</p>
+        <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName ?? config('simantap.institution.name') }}">
         <h1>{{ $title }}</h1>
         <p>{{ $description }}</p>
     </header>

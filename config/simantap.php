@@ -8,11 +8,15 @@ return [
     'institution' => [
         'name' => env(
             'SIMANTAP_INSTITUTION_NAME',
-            'Badan Pusat Statistik',
+            'Badan Pusat Statistik Kabupaten Jombang',
         ),
         'short_name' => env(
             'SIMANTAP_INSTITUTION_SHORT_NAME',
-            'BPS',
+            'BPS Kabupaten Jombang',
+        ),
+        'logo' => env(
+            'SIMANTAP_INSTITUTION_LOGO',
+            'images/bps-kabupaten-jombang.png',
         ),
     ],
 
@@ -88,11 +92,11 @@ return [
         ),
         'name' => env(
             'SIMANTAP_ADMIN_NAME',
-            'Administrator SIMANTAP',
+            'MITHA RAMADHANI PRATIWI',
         ),
         'email' => env(
             'SIMANTAP_ADMIN_EMAIL',
-            'admin@simantap.local',
+            'mitharamadhanipratiwi@bps.go.id',
         ),
         'password' => env(
             'SIMANTAP_ADMIN_PASSWORD',

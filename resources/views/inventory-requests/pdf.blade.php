@@ -41,6 +41,11 @@
             text-align: center;
             line-height: 48px;
         }
+        .institution-logo {
+            display: block;
+            width: 220px;
+            height: auto;
+        }
 
         .institution {
             padding-left: 11px;
@@ -214,10 +219,10 @@
     <table class="header">
         <tr>
             <td style="width: 50px;">
-                <div class="mark">{{ $institutionShortName }}</div>
+                <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
             </td>
             <td class="institution">
-                <strong>{{ mb_strtoupper($institutionName) }}</strong>
+                <!-- Nama instansi sudah tercantum pada logo resmi. -->
                 <span>Sistem Manajemen Aset dan Persediaan</span>
             </td>
             <td class="document-meta">

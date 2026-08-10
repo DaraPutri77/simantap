@@ -50,30 +50,16 @@
                 aria-hidden="true"
             ></div>
             <div class="relative flex h-20 items-center gap-3 border-b border-white/[.08] px-5">
-                <span class="brand-mark h-11 w-11">
-                    <svg
-                        viewBox="0 0 24 24"
-                        class="h-6 w-6"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
+                <div class="min-w-0 flex-1">
+                    <img
+                        src="{{ asset(config('simantap.institution.logo')) }}"
+                        alt="{{ config('simantap.institution.name') }}"
+                        class="h-auto w-full max-w-[215px]"
                     >
-                        <path d="m4 7.5 8-4.5 8 4.5-8 4.5-8-4.5Z"/>
-                        <path d="m4 12.5 8 4.5 8-4.5M4 17l8 4 8-4"/>
-                    </svg>
-                </span>
-                <span class="min-w-0">
-                    <span class="block text-lg font-black tracking-[.1em]">
-                        SIMANTAP
+                    <span class="mt-1 block text-[9px] font-black uppercase tracking-[.16em] text-slate-400">
+                        SIMANTAP | Aset & Persediaan
                     </span>
-
-                    <span class="mt-0.5 block truncate text-[9px] font-bold uppercase tracking-[.13em] text-slate-500">
-                        Aset & Persediaan
-                    </span>
-                </span>
+                </div>
                 <button
                     id="sidebar-close"
                     type="button"

@@ -34,7 +34,7 @@
         @endif
     </summary>
 
-    <div class="absolute right-0 z-50 mt-3 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/15">
+    <div class="fixed inset-x-3 top-[4.75rem] z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/15 lg:absolute lg:inset-x-auto lg:right-0 lg:top-auto lg:mt-3 lg:max-h-[min(70vh,32rem)] lg:w-[min(24rem,calc(100vw-2rem))]">
         <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3.5">
             <div>
                 <p class="text-sm font-black text-slate-950">Notifikasi</p>

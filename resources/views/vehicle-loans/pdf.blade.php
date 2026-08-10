@@ -11,6 +11,7 @@
         .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; }
         .header h1 { font-size: 15pt; margin-top: 5px; }
         .header p { font-size: 9pt; margin-top: 3px; color: #475569; }
+        .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 7px; }
         .meta { width: 100%; margin-top: 18px; border-collapse: collapse; }
         .meta td { padding: 5px 0; vertical-align: top; }
         .meta .label { width: 31%; color: #475569; font-weight: bold; }
@@ -30,9 +31,9 @@
 </head>
 <body>
     <header class="header">
-        <p>{{ $institutionName }}</p>
+        <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
         <h1>FORM PEMINJAMAN KENDARAAN DINAS</h1>
-        <p>{{ $institutionShortName }} · Sistem Manajemen Aset dan Persediaan</p>
+        <p>Sistem Manajemen Aset dan Persediaan</p>
     </header>
 
     <table class="meta">
