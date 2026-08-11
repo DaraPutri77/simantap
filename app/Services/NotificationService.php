@@ -386,6 +386,66 @@ class NotificationService
         );
     }
 
+    public function notifySuspendedLoginAttempt(
+        User $user,
+        ?string $ipAddress,
+    ): void {
+        $ip = $ipAddress ?: 'tidak diketahui';
+
+        $fingerprint = hash(
+            'sha256',
+            (string) $user->getKey().'|'.$ip,
+        );
+
+        $this->notifyAdministratorsOnce(
+            event: 'security_suspended_login_attempt',
+            module: 'authentication',
+            title: 'Percobaan login akun nonaktif',
+            message: sprintf(
+                'Percobaan login terhadap akun nonaktif %s (%s) terdeteksi dari IP %s. Periksa Audit Log sebelum mengambil tindakan.',
+                $user->name,
+                $user->employee_number ?: $user->email,
+                $ip,
+            ),
+            level: 'danger',
+            routeName: 'audit-logs.index',
+            routeParams: [],
+            resourceType: 'authentication_suspended_user',
+            resourceId: $fingerprint,
+            deduplicationMinutes: 15,
+        );
+    }
+
+    public function notifyRateLimitedLogin(
+        string $identifier,
+        ?string $ipAddress,
+        int $retryAfterSeconds,
+    ): void {
+        $ip = $ipAddress ?: 'tidak diketahui';
+        $fingerprint = hash(
+            'sha256',
+            $identifier.'|'.$ip,
+        );
+
+        $this->notifyAdministratorsOnce(
+            event: 'security_login_rate_limited',
+            module: 'authentication',
+            title: 'Percobaan login berulang dibatasi',
+            message: sprintf(
+                'Percobaan login berulang untuk %s dari IP %s telah dibatasi. Akses dapat dicoba kembali dalam %d detik. Periksa Audit Log.',
+                $identifier,
+                $ip,
+                $retryAfterSeconds,
+            ),
+            level: 'danger',
+            routeName: 'audit-logs.index',
+            routeParams: [],
+            resourceType: 'authentication_login',
+            resourceId: $fingerprint,
+            deduplicationMinutes: 15,
+        );
+    }
+
     /**
      * @param  array<string, scalar|null>  $routeParams
      */

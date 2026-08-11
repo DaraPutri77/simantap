@@ -190,6 +190,99 @@ class AuthenticationTest extends TestCase
         ]);
     }
 
+    public function test_suspended_login_attempt_notifies_administrator(): void
+    {
+        $administrator = $this->administrator();
+
+        $suspended = User::factory()->create([
+            'email' => 'suspicious-suspended@example.test',
+            'password' => 'CurrentPassword!123',
+            'status' => AccountStatus::Suspended,
+        ]);
+
+        $this->from(route('login'))->post(
+            route('login.store'),
+            [
+                'login' => $suspended->email,
+                'password' => 'CurrentPassword!123',
+            ],
+        )->assertSessionHasErrors('login');
+
+        $notification = $administrator
+            ->fresh()
+            ->notifications()
+            ->firstOrFail();
+
+        $this->assertSame(
+            'security_suspended_login_attempt',
+            data_get($notification->data, 'event'),
+        );
+
+        $this->assertSame(
+            'danger',
+            data_get($notification->data, 'level'),
+        );
+
+        $this->assertSame(
+            'audit-logs.index',
+            data_get($notification->data, 'route_name'),
+        );
+    }
+
+    public function test_rate_limited_login_notifies_administrator_once(): void
+    {
+        config()->set(
+            'simantap.security.login_max_attempts',
+            2,
+        );
+
+        $administrator = $this->administrator();
+
+        $payload = [
+            'login' => 'security-limited@example.test',
+            'password' => 'WrongPassword!123',
+        ];
+
+        $this->from(route('login'))
+            ->post(route('login.store'), $payload)
+            ->assertSessionHasErrors('login');
+
+        $this->from(route('login'))
+            ->post(route('login.store'), $payload)
+            ->assertSessionHasErrors('login');
+
+        $this->from(route('login'))
+            ->post(route('login.store'), $payload)
+            ->assertSessionHasErrors('login');
+
+        $this->from(route('login'))
+            ->post(route('login.store'), $payload)
+            ->assertSessionHasErrors('login');
+
+        $alerts = $administrator
+            ->fresh()
+            ->notifications
+            ->filter(
+                static fn ($notification): bool => data_get(
+                    $notification->data,
+                    'event',
+                ) === 'security_login_rate_limited',
+            )
+            ->values();
+
+        $this->assertCount(1, $alerts);
+
+        $this->assertSame(
+            'danger',
+            data_get($alerts->first()?->data, 'level'),
+        );
+
+        $this->assertSame(
+            'audit-logs.index',
+            data_get($alerts->first()?->data, 'route_name'),
+        );
+    }
+
     public function test_user_with_temporary_password_must_change_it(): void
     {
         $user = $this->activeEmployee([
@@ -286,6 +379,25 @@ class AuthenticationTest extends TestCase
             'actor_id' => $user->id,
             'event' => 'logout_succeeded',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function administrator(
+        array $attributes = [],
+    ): User {
+        $user = User::factory()->create([
+            'status' => AccountStatus::Active,
+            'must_change_password' => false,
+            ...$attributes,
+        ]);
+
+        $user->assignRole(
+            RoleName::Administrator->value,
+        );
+
+        return $user;
     }
 
     /**

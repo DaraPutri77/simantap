@@ -5,6 +5,7 @@ namespace App\Http\Requests\Auth;
 use App\Enums\AccountStatus;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\NotificationService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -40,9 +41,11 @@ class LoginRequest extends FormRequest
 
     public function authenticate(
         AuditLogger $auditLogger,
+        NotificationService $notificationService,
     ): User {
         $this->ensureIsNotRateLimited(
             $auditLogger,
+            $notificationService,
         );
 
         $field = $this->loginField();
@@ -96,6 +99,13 @@ class LoginRequest extends FormRequest
                 );
             }
 
+            if ($user?->status === AccountStatus::Suspended) {
+                $notificationService->notifySuspendedLoginAttempt(
+                    $user,
+                    $this->ip(),
+                );
+            }
+
             Auth::guard('web')->logout();
 
             RateLimiter::hit(
@@ -121,6 +131,7 @@ class LoginRequest extends FormRequest
 
     public function ensureIsNotRateLimited(
         AuditLogger $auditLogger,
+        NotificationService $notificationService,
     ): void {
         if (! RateLimiter::tooManyAttempts(
             $this->throttleKey(),
@@ -144,6 +155,12 @@ class LoginRequest extends FormRequest
                 'retry_after_seconds' => $seconds,
             ],
             request: $this,
+        );
+
+        $notificationService->notifyRateLimitedLogin(
+            $this->normalizedLogin(),
+            $this->ip(),
+            $seconds,
         );
 
         throw ValidationException::withMessages([
