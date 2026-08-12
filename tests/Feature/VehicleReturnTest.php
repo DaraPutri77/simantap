@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
 use App\Enums\ConditionCheckType;
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\RoleName;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleOverallCondition;
@@ -134,7 +135,7 @@ class VehicleReturnTest extends TestCase
             ->where('check_type', ConditionCheckType::Checkout->value)
             ->firstOrFail();
         $signature = $loan->signatures()
-            ->where('purpose', VehicleLoan::PICKUP_SIGNATURE_PURPOSE)
+            ->where('purpose', DigitalSignaturePurpose::VehicleLoanPickup->value)
             ->firstOrFail();
 
         $this->assertSame(VehicleLoanStatus::Borrowed, $loan->status);
@@ -142,6 +143,11 @@ class VehicleReturnTest extends TestCase
         $this->assertSame(VehicleStatus::Borrowed, $vehicle->refresh()->status);
         $this->assertNotNull($checkout->borrower_confirmed_at);
         $this->assertSame($employee->id, $signature->signer_id);
+        $this->assertSame(
+            DigitalSignaturePurpose::VehicleLoanPickup,
+            $signature->purpose,
+        );
+        $this->assertSame(1, $signature->version);
         Storage::disk('local')->assertExists($signature->image_path);
         $this->assertDatabaseHas('audit_logs', [
             'event' => 'vehicle_loan_pickup_confirmed',

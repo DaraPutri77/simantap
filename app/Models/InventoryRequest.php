@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\InventoryRequestStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -107,19 +108,49 @@ class InventoryRequest extends Model
 
     public function submissionSignature(): ?DigitalSignature
     {
-        return $this->signatures
-            ->firstWhere('purpose', 'inventory_request_submission');
+        if (in_array($this->status, [
+            InventoryRequestStatus::Draft,
+            InventoryRequestStatus::RevisionRequired,
+        ], true)) {
+            return null;
+        }
+
+        return $this->latestSignature(
+            DigitalSignaturePurpose::InventoryRequestSubmission,
+        );
     }
 
     public function approvalSignature(): ?DigitalSignature
     {
-        return $this->signatures
-            ->firstWhere('purpose', 'inventory_request_approval');
+        return $this->latestSignature(
+            DigitalSignaturePurpose::InventoryRequestApproval,
+        );
     }
 
     public function receiptSignature(): ?DigitalSignature
     {
-        return $this->signatures
-            ->firstWhere('purpose', 'inventory_receipt_confirmation');
+        return $this->latestSignature(
+            DigitalSignaturePurpose::InventoryReceiptConfirmation,
+        );
+    }
+
+    private function latestSignature(
+        DigitalSignaturePurpose $purpose,
+    ): ?DigitalSignature {
+        if ($this->relationLoaded('signatures')) {
+            return $this->signatures
+                ->filter(
+                    static fn (DigitalSignature $signature): bool => $signature
+                        ->purpose === $purpose,
+                )
+                ->sortByDesc('version')
+                ->first();
+        }
+
+        return $this->signatures()
+            ->where('purpose', $purpose->value)
+            ->orderByDesc('version')
+            ->orderByDesc('id')
+            ->first();
     }
 }

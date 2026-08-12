@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\DocumentType;
 use App\Enums\InventoryRequestStatus;
 use App\Enums\StockMovementType;
@@ -21,15 +22,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 class InventoryRequestService
 {
-    public const SUBMISSION_SIGNATURE = 'inventory_request_submission';
-
-    public const APPROVAL_SIGNATURE = 'inventory_request_approval';
-
-    public const RECEIPT_SIGNATURE = 'inventory_receipt_confirmation';
-
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly DocumentNumberService $documentNumberService,
@@ -161,61 +157,74 @@ class InventoryRequestService
         User $actor,
         ?Request $httpRequest = null,
     ): InventoryRequest {
-        return DB::transaction(function () use (
+        $signatureFile = $this->storeSignatureFile(
             $inventoryRequest,
-            $data,
-            $actor,
-            $httpRequest,
-        ): InventoryRequest {
-            $locked = $this->lockRequest($inventoryRequest);
-            $this->requireStatus(
-                $locked,
-                [
-                    InventoryRequestStatus::Draft,
-                    InventoryRequestStatus::RevisionRequired,
-                ],
-                'Permintaan pada status ini tidak dapat diajukan.',
-            );
+            (string) $data['signature_data'],
+        );
 
-            if (! $locked->items()->exists()) {
-                throw ValidationException::withMessages([
-                    'items' => 'Permintaan harus memiliki minimal satu barang.',
-                ]);
-            }
-
-            $previousStatus = $locked->status;
-            $this->replaceSignature(
-                $locked,
-                $actor,
-                self::SUBMISSION_SIGNATURE,
-                $data['signature_data'],
-                $httpRequest,
-            );
-            $locked->forceFill([
-                'status' => InventoryRequestStatus::Submitted,
-                'submitted_at' => now(),
-                'revision_note' => null,
-                'rejection_reason' => null,
-                'rejected_at' => null,
-            ])->save();
-            $this->recordStatus(
-                $locked,
-                $previousStatus,
-                InventoryRequestStatus::Submitted,
-                'Permintaan diajukan oleh pegawai.',
-                $actor,
-            );
-            $this->auditTransition(
-                $locked,
-                $previousStatus,
-                InventoryRequestStatus::Submitted,
-                'inventory_request_submitted',
+        try {
+            return DB::transaction(function () use (
+                $inventoryRequest,
                 $actor,
                 $httpRequest,
+                $signatureFile,
+            ): InventoryRequest {
+                $locked = $this->lockRequest($inventoryRequest);
+                $this->requireStatus(
+                    $locked,
+                    [
+                        InventoryRequestStatus::Draft,
+                        InventoryRequestStatus::RevisionRequired,
+                    ],
+                    'Permintaan pada status ini tidak dapat diajukan.',
+                );
+
+                if (! $locked->items()->exists()) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Permintaan harus memiliki minimal satu barang.',
+                    ]);
+                }
+
+                $previousStatus = $locked->status;
+                $locked->forceFill([
+                    'status' => InventoryRequestStatus::Submitted,
+                    'submitted_at' => now(),
+                    'revision_note' => null,
+                    'rejection_reason' => null,
+                    'rejected_at' => null,
+                ])->save();
+                $this->recordStatus(
+                    $locked,
+                    $previousStatus,
+                    InventoryRequestStatus::Submitted,
+                    'Permintaan diajukan oleh pegawai.',
+                    $actor,
+                );
+                $this->auditTransition(
+                    $locked,
+                    $previousStatus,
+                    InventoryRequestStatus::Submitted,
+                    'inventory_request_submitted',
+                    $actor,
+                    $httpRequest,
+                );
+                $this->appendSignature(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::InventoryRequestSubmission,
+                    $signatureFile,
+                    $httpRequest,
+                );
+
+                return $this->loadRequest($locked);
+            }, 3);
+        } catch (Throwable $exception) {
+            Storage::disk($this->signatureDisk())->delete(
+                $signatureFile['path'],
             );
 
-            return $this->loadRequest($locked);
-        }, 3);
+            throw $exception;
+        }
     }
 
     public function startReview(
@@ -273,103 +282,117 @@ class InventoryRequestService
         User $actor,
         ?Request $httpRequest = null,
     ): InventoryRequest {
-        return DB::transaction(function () use (
+        $signatureFile = $this->storeSignatureFile(
             $inventoryRequest,
-            $data,
-            $actor,
-            $httpRequest,
-        ): InventoryRequest {
-            $locked = $this->lockRequest($inventoryRequest);
-            $this->requireStatus(
-                $locked,
-                [InventoryRequestStatus::UnderReview],
-                'Permintaan harus berada pada tahap pemeriksaan sebelum disetujui.',
-            );
-            $requestItems = $this->lockRequestItems($locked);
-            $masterItems = $this->lockMasterItems($requestItems);
-            $allApproved = true;
+            (string) $data['signature_data'],
+        );
 
-            foreach ($requestItems as $line) {
-                $input = $data['items'][$line->getKey()];
-                $approved = $this->quantity(
-                    $input['approved_quantity'],
+        try {
+            return DB::transaction(function () use (
+                $inventoryRequest,
+                $data,
+                $actor,
+                $httpRequest,
+                $signatureFile,
+            ): InventoryRequest {
+                $locked = $this->lockRequest($inventoryRequest);
+                $this->requireStatus(
+                    $locked,
+                    [InventoryRequestStatus::UnderReview],
+                    'Permintaan harus berada pada tahap pemeriksaan sebelum disetujui.',
                 );
-                $requested = $this->quantity(
-                    $line->requested_quantity,
-                );
-                $item = $masterItems->get($line->item_id);
+                $requestItems = $this->lockRequestItems($locked);
+                $masterItems = $this->lockMasterItems($requestItems);
+                $allApproved = true;
 
-                if (! $item instanceof Item) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Salah satu barang tidak ditemukan.',
-                    ]);
+                foreach ($requestItems as $line) {
+                    $input = $data['items'][$line->getKey()];
+                    $approved = $this->quantity(
+                        $input['approved_quantity'],
+                    );
+                    $requested = $this->quantity(
+                        $line->requested_quantity,
+                    );
+                    $item = $masterItems->get($line->item_id);
+
+                    if (! $item instanceof Item) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Salah satu barang tidak ditemukan.',
+                        ]);
+                    }
+
+                    $available = $this->quantity(
+                        (float) $item->current_stock
+                        - (float) $item->reserved_stock,
+                    );
+
+                    if ($approved > $available) {
+                        throw ValidationException::withMessages([
+                            "items.{$line->getKey()}.approved_quantity" => sprintf(
+                                'Stok tersedia hanya %s %s.',
+                                $this->formatQuantity($available),
+                                $line->unit_snapshot,
+                            ),
+                        ]);
+                    }
+
+                    $item->reserved_stock = $this->quantity(
+                        (float) $item->reserved_stock + $approved,
+                    );
+                    $item->save();
+
+                    $line->forceFill([
+                        'approved_quantity' => $approved,
+                        'reserved_quantity' => $approved,
+                        'delivered_quantity' => null,
+                        'admin_notes' => $input['admin_notes'] ?? null,
+                    ])->save();
+                    $allApproved = $allApproved && $approved === $requested;
                 }
 
-                $available = $this->quantity(
-                    (float) $item->current_stock
-                    - (float) $item->reserved_stock,
-                );
+                $newStatus = $allApproved
+                    ? InventoryRequestStatus::Approved
+                    : InventoryRequestStatus::PartiallyApproved;
+                $previousStatus = $locked->status;
 
-                if ($approved > $available) {
-                    throw ValidationException::withMessages([
-                        "items.{$line->getKey()}.approved_quantity" => sprintf(
-                            'Stok tersedia hanya %s %s.',
-                            $this->formatQuantity($available),
-                            $line->unit_snapshot,
-                        ),
-                    ]);
-                }
-
-                $item->reserved_stock = $this->quantity(
-                    (float) $item->reserved_stock + $approved,
-                );
-                $item->save();
-
-                $line->forceFill([
-                    'approved_quantity' => $approved,
-                    'reserved_quantity' => $approved,
-                    'delivered_quantity' => null,
-                    'admin_notes' => $input['admin_notes'] ?? null,
+                $locked->forceFill([
+                    'status' => $newStatus,
+                    'approved_by' => $actor->getKey(),
+                    'approved_at' => now(),
+                    'admin_notes' => $data['admin_notes'] ?? null,
                 ])->save();
-                $allApproved = $allApproved && $approved === $requested;
-            }
+                $this->recordStatus(
+                    $locked,
+                    $previousStatus,
+                    $newStatus,
+                    $data['admin_notes'] ?? 'Permintaan disetujui.',
+                    $actor,
+                );
+                $this->auditTransition(
+                    $locked,
+                    $previousStatus,
+                    $newStatus,
+                    'inventory_request_approved',
+                    $actor,
+                    $httpRequest,
+                );
+                $this->appendSignature(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::InventoryRequestApproval,
+                    $signatureFile,
+                    $httpRequest,
+                );
 
-            $newStatus = $allApproved
-                ? InventoryRequestStatus::Approved
-                : InventoryRequestStatus::PartiallyApproved;
-            $previousStatus = $locked->status;
-
-            $this->replaceSignature(
-                $locked,
-                $actor,
-                self::APPROVAL_SIGNATURE,
-                $data['signature_data'],
-                $httpRequest,
-            );
-            $locked->forceFill([
-                'status' => $newStatus,
-                'approved_by' => $actor->getKey(),
-                'approved_at' => now(),
-                'admin_notes' => $data['admin_notes'] ?? null,
-            ])->save();
-            $this->recordStatus(
-                $locked,
-                $previousStatus,
-                $newStatus,
-                $data['admin_notes'] ?? 'Permintaan disetujui.',
-                $actor,
-            );
-            $this->auditTransition(
-                $locked,
-                $previousStatus,
-                $newStatus,
-                'inventory_request_approved',
-                $actor,
-                $httpRequest,
+                return $this->loadRequest($locked);
+            }, 3);
+        } catch (Throwable $exception) {
+            Storage::disk($this->signatureDisk())->delete(
+                $signatureFile['path'],
             );
 
-            return $this->loadRequest($locked);
-        }, 3);
+            throw $exception;
+        }
     }
 
     public function requestRevision(
@@ -392,10 +415,6 @@ class InventoryRequestService
             );
             $previousStatus = $locked->status;
 
-            $this->deleteSignatures(
-                $locked,
-                self::SUBMISSION_SIGNATURE,
-            );
             $locked->forceFill([
                 'status' => InventoryRequestStatus::RevisionRequired,
                 'revision_note' => $note,
@@ -704,54 +723,67 @@ class InventoryRequestService
         User $actor,
         ?Request $httpRequest = null,
     ): InventoryRequest {
-        return DB::transaction(function () use (
+        $signatureFile = $this->storeSignatureFile(
             $inventoryRequest,
-            $data,
-            $actor,
-            $httpRequest,
-        ): InventoryRequest {
-            $locked = $this->lockRequest($inventoryRequest);
-            $this->requireStatus(
-                $locked,
-                [InventoryRequestStatus::Delivered],
-                'Penerimaan hanya dapat dikonfirmasi setelah barang diserahkan.',
-            );
+            (string) $data['signature_data'],
+        );
 
-            if ($locked->requested_by !== $actor->getKey()) {
-                abort(403);
-            }
-
-            $previousStatus = $locked->status;
-            $this->replaceSignature(
-                $locked,
-                $actor,
-                self::RECEIPT_SIGNATURE,
-                $data['signature_data'],
-                $httpRequest,
-            );
-            $locked->forceFill([
-                'status' => InventoryRequestStatus::Completed,
-                'received_at' => now(),
-                'completed_at' => now(),
-            ])->save();
-            $this->recordStatus(
-                $locked,
-                $previousStatus,
-                InventoryRequestStatus::Completed,
-                'Penerimaan barang dikonfirmasi oleh pegawai.',
-                $actor,
-            );
-            $this->auditTransition(
-                $locked,
-                $previousStatus,
-                InventoryRequestStatus::Completed,
-                'inventory_request_completed',
+        try {
+            return DB::transaction(function () use (
+                $inventoryRequest,
                 $actor,
                 $httpRequest,
+                $signatureFile,
+            ): InventoryRequest {
+                $locked = $this->lockRequest($inventoryRequest);
+                $this->requireStatus(
+                    $locked,
+                    [InventoryRequestStatus::Delivered],
+                    'Penerimaan hanya dapat dikonfirmasi setelah barang diserahkan.',
+                );
+
+                if ($locked->requested_by !== $actor->getKey()) {
+                    abort(403);
+                }
+
+                $previousStatus = $locked->status;
+                $locked->forceFill([
+                    'status' => InventoryRequestStatus::Completed,
+                    'received_at' => now(),
+                    'completed_at' => now(),
+                ])->save();
+                $this->recordStatus(
+                    $locked,
+                    $previousStatus,
+                    InventoryRequestStatus::Completed,
+                    'Penerimaan barang dikonfirmasi oleh pegawai.',
+                    $actor,
+                );
+                $this->auditTransition(
+                    $locked,
+                    $previousStatus,
+                    InventoryRequestStatus::Completed,
+                    'inventory_request_completed',
+                    $actor,
+                    $httpRequest,
+                );
+                $this->appendSignature(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::InventoryReceiptConfirmation,
+                    $signatureFile,
+                    $httpRequest,
+                );
+
+                return $this->loadRequest($locked);
+            }, 3);
+        } catch (Throwable $exception) {
+            Storage::disk($this->signatureDisk())->delete(
+                $signatureFile['path'],
             );
 
-            return $this->loadRequest($locked);
-        }, 3);
+            throw $exception;
+        }
     }
 
     public function cancel(
@@ -909,13 +941,13 @@ class InventoryRequestService
         }
     }
 
-    private function replaceSignature(
+    /**
+     * @return array{path: string, checksum: string}
+     */
+    private function storeSignatureFile(
         InventoryRequest $inventoryRequest,
-        User $actor,
-        string $purpose,
         string $dataUrl,
-        ?Request $httpRequest,
-    ): DigitalSignature {
+    ): array {
         $binary = $this->signatureBinary($dataUrl);
         $checksum = hash(
             (string) config(
@@ -929,15 +961,35 @@ class InventoryRequestService
             $inventoryRequest->getKey(),
             Str::uuid(),
         );
-        $disk = Storage::disk($this->signatureDisk());
 
-        if (! $disk->put($path, $binary)) {
+        $stored = Storage::disk($this->signatureDisk())
+            ->put($path, $binary);
+
+        if (! $stored) {
             throw new RuntimeException(
                 'Tanda tangan digital tidak dapat disimpan.',
             );
         }
 
-        $this->deleteSignatures($inventoryRequest, $purpose);
+        return [
+            'path' => $path,
+            'checksum' => $checksum,
+        ];
+    }
+
+    /**
+     * @param  array{path: string, checksum: string}  $signatureFile
+     */
+    private function appendSignature(
+        InventoryRequest $inventoryRequest,
+        User $actor,
+        DigitalSignaturePurpose $purpose,
+        array $signatureFile,
+        ?Request $httpRequest,
+    ): DigitalSignature {
+        $version = 1 + (int) $inventoryRequest->signatures()
+            ->where('purpose', $purpose->value)
+            ->max('version');
         $signedAt = now();
 
         return $inventoryRequest->signatures()->create([
@@ -945,18 +997,20 @@ class InventoryRequestService
             'signer_name_snapshot' => $actor->name,
             'employee_number_snapshot' => $actor->employee_number,
             'purpose' => $purpose,
-            'image_path' => $path,
+            'version' => $version,
+            'image_path' => $signatureFile['path'],
             'transaction_hash' => hash(
                 'sha256',
                 implode('|', [
                     $inventoryRequest->request_number,
-                    $purpose,
+                    $purpose->value,
+                    $version,
                     $actor->getKey(),
-                    $checksum,
+                    $signatureFile['checksum'],
                     $signedAt->toIso8601String(),
                 ]),
             ),
-            'image_checksum' => $checksum,
+            'image_checksum' => $signatureFile['checksum'],
             'ip_address' => $httpRequest?->ip(),
             'user_agent' => Str::limit(
                 (string) $httpRequest?->userAgent(),
@@ -965,23 +1019,6 @@ class InventoryRequestService
             ),
             'signed_at' => $signedAt,
         ]);
-    }
-
-    private function deleteSignatures(
-        InventoryRequest $inventoryRequest,
-        string $purpose,
-    ): void {
-        $signatures = $inventoryRequest->signatures()
-            ->where('purpose', $purpose)
-            ->get();
-        $disk = Storage::disk($this->signatureDisk());
-
-        foreach ($signatures as $signature) {
-            $disk->delete($signature->image_path);
-            DigitalSignature::query()
-                ->whereKey($signature->getKey())
-                ->delete();
-        }
     }
 
     private function signatureBinary(string $dataUrl): string

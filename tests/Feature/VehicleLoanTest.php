@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\RoleName;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleStatus;
+use App\Models\DigitalSignature;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
@@ -105,9 +107,10 @@ class VehicleLoanTest extends TestCase
         $this->assertSame(VehicleLoanStatus::Submitted, $vehicleLoan->status);
         $this->assertNotNull($vehicleLoan->submitted_at);
         $this->assertSame(
-            'vehicle_loan_submission',
+            DigitalSignaturePurpose::VehicleLoanSubmission,
             $signature->purpose,
         );
+        $this->assertSame(1, $signature->version);
         $this->assertSame($employee->name, $signature->signer_name_snapshot);
         Storage::disk('local')->assertExists($signature->image_path);
         $this->assertDatabaseHas('vehicle_loan_status_histories', [
@@ -119,6 +122,82 @@ class VehicleLoanTest extends TestCase
             'event' => 'vehicle_loan_submitted',
             'auditable_id' => $vehicleLoan->id,
         ]);
+    }
+
+    public function test_submission_cleans_signature_file_when_transaction_rolls_back_after_signature_create(): void
+    {
+        $employee = $this->employee([
+            'employee_number' => 'PEG-VEH-SIGN-ROLLBACK-001',
+            'email' => 'signature.rollback.vehicle@example.test',
+        ]);
+        $vehicle = $this->vehicle([
+            'vehicle_code' => 'VEH-SIGN-ROLLBACK-001',
+            'license_plate' => 'S 9001 RB',
+        ]);
+        $vehicleLoan = $this->vehicleLoan($employee, $vehicle);
+
+        $signatureObservedBeforeFailure = false;
+        $shouldFail = true;
+
+        User::retrieved(function (User $retrieved) use (
+            $employee,
+            $vehicleLoan,
+            &$signatureObservedBeforeFailure,
+            &$shouldFail,
+        ): void {
+            if (! $shouldFail || $retrieved->id !== $employee->id) {
+                return;
+            }
+
+            $signatureObservedBeforeFailure = DigitalSignature::query()
+                ->where('signable_type', $vehicleLoan->getMorphClass())
+                ->where('signable_id', $vehicleLoan->id)
+                ->where(
+                    'purpose',
+                    DigitalSignaturePurpose::VehicleLoanSubmission->value,
+                )
+                ->exists();
+
+            if (! $signatureObservedBeforeFailure) {
+                return;
+            }
+
+            $shouldFail = false;
+
+            throw new \RuntimeException(
+                'SIMANTAP vehicle signature rollback probe.',
+            );
+        });
+
+        try {
+            app(VehicleLoanService::class)->submit(
+                $vehicleLoan,
+                $this->signaturePayload(),
+                $employee,
+            );
+
+            $this->fail(
+                'Transaction rollback probe seharusnya melempar exception.',
+            );
+        } catch (\RuntimeException $exception) {
+            $this->assertSame(
+                'SIMANTAP vehicle signature rollback probe.',
+                $exception->getMessage(),
+            );
+        }
+
+        $this->assertTrue($signatureObservedBeforeFailure);
+        $this->assertSame(
+            VehicleLoanStatus::Draft,
+            $vehicleLoan->refresh()->status,
+        );
+        $this->assertDatabaseCount('digital_signatures', 0);
+        $this->assertSame(
+            [],
+            Storage::disk('local')->allFiles(
+                'signatures/vehicle-loans/'.$vehicleLoan->public_id,
+            ),
+        );
     }
 
     public function test_schedule_validation_rejects_past_reverse_and_excessive_duration(): void
@@ -248,7 +327,7 @@ class VehicleLoanTest extends TestCase
         $this->assertDatabaseMissing('digital_signatures', [
             'signable_type' => $vehicleLoan->getMorphClass(),
             'signable_id' => $vehicleLoan->id,
-            'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+            'purpose' => DigitalSignaturePurpose::VehicleLoanApproval->value,
         ]);
     }
 
@@ -282,7 +361,7 @@ class VehicleLoanTest extends TestCase
         $this->assertDatabaseMissing('digital_signatures', [
             'signable_type' => $vehicleLoan->getMorphClass(),
             'signable_id' => $vehicleLoan->id,
-            'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+            'purpose' => DigitalSignaturePurpose::VehicleLoanApproval->value,
         ]);
     }
 
@@ -315,7 +394,7 @@ class VehicleLoanTest extends TestCase
         $vehicleLoan->refresh();
 
         $approvalSignature = $vehicleLoan->signatures()
-            ->where('purpose', VehicleLoan::APPROVAL_SIGNATURE_PURPOSE)
+            ->where('purpose', DigitalSignaturePurpose::VehicleLoanApproval->value)
             ->firstOrFail();
 
         $this->assertSame(
@@ -331,6 +410,11 @@ class VehicleLoanTest extends TestCase
             $approvalSignature->employee_number_snapshot,
         );
         $this->assertNotNull($approvalSignature->signed_at);
+        $this->assertSame(1, $approvalSignature->version);
+        $this->assertSame(
+            DigitalSignaturePurpose::VehicleLoanApproval,
+            $approvalSignature->purpose,
+        );
         $this->assertTrue(
             $vehicleLoan->approved_at->equalTo(
                 $approvalSignature->signed_at,
@@ -361,7 +445,8 @@ class VehicleLoanTest extends TestCase
                 'sha256',
                 implode('|', [
                     $vehicleLoan->loan_number,
-                    VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                    DigitalSignaturePurpose::VehicleLoanApproval->value,
+                    $approvalSignature->version,
                     $admin->id,
                     $expectedChecksum,
                     $approvalSignature->signed_at->toIso8601String(),
@@ -436,7 +521,7 @@ class VehicleLoanTest extends TestCase
         $this->assertDatabaseMissing('digital_signatures', [
             'signable_type' => $reviewedLoan->getMorphClass(),
             'signable_id' => $reviewedLoan->id,
-            'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+            'purpose' => DigitalSignaturePurpose::VehicleLoanApproval->value,
         ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ConditionCheckType;
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\VehicleLoanStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,10 +17,6 @@ class VehicleLoan extends Model
 {
     use HasFactory;
     use SoftDeletes;
-
-    public const PICKUP_SIGNATURE_PURPOSE = 'vehicle_loan_pickup';
-
-    public const APPROVAL_SIGNATURE_PURPOSE = 'vehicle_loan_approval';
 
     protected $fillable = [
         'loan_number',
@@ -142,28 +139,42 @@ class VehicleLoan extends Model
 
     public function submissionSignature(): ?DigitalSignature
     {
-        return $this->signatures
-            ->firstWhere('purpose', 'vehicle_loan_submission');
+        return $this->latestSignature(
+            DigitalSignaturePurpose::VehicleLoanSubmission,
+        );
     }
 
     public function pickupSignature(): ?DigitalSignature
     {
-        return $this->signatures
-            ->firstWhere('purpose', self::PICKUP_SIGNATURE_PURPOSE);
+        return $this->latestSignature(
+            DigitalSignaturePurpose::VehicleLoanPickup,
+        );
     }
 
     public function approvalSignature(): ?DigitalSignature
     {
+        return $this->latestSignature(
+            DigitalSignaturePurpose::VehicleLoanApproval,
+        );
+    }
+
+    private function latestSignature(
+        DigitalSignaturePurpose $purpose,
+    ): ?DigitalSignature {
         if ($this->relationLoaded('signatures')) {
             return $this->signatures
-                ->firstWhere(
-                    'purpose',
-                    self::APPROVAL_SIGNATURE_PURPOSE,
-                );
+                ->filter(
+                    static fn (DigitalSignature $signature): bool => $signature
+                        ->purpose === $purpose,
+                )
+                ->sortByDesc('version')
+                ->first();
         }
 
         return $this->signatures()
-            ->where('purpose', self::APPROVAL_SIGNATURE_PURPOSE)
+            ->where('purpose', $purpose->value)
+            ->orderByDesc('version')
+            ->orderByDesc('id')
             ->first();
     }
 

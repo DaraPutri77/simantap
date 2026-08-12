@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AttachmentCategory;
 use App\Enums\ConditionCheckType;
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleOverallCondition;
 use App\Enums\VehicleStatus;
@@ -198,7 +199,7 @@ class VehicleLoanLifecycleService
                 $existingSignature = DigitalSignature::query()
                     ->where('signable_type', $locked->getMorphClass())
                     ->where('signable_id', $locked->getKey())
-                    ->where('purpose', VehicleLoan::PICKUP_SIGNATURE_PURPOSE)
+                    ->where('purpose', DigitalSignaturePurpose::VehicleLoanPickup->value)
                     ->lockForUpdate()
                     ->first();
 
@@ -208,18 +209,26 @@ class VehicleLoanLifecycleService
                     ]);
                 }
 
+                $version = 1 + (int) $locked->signatures()
+                    ->where(
+                        'purpose',
+                        DigitalSignaturePurpose::VehicleLoanPickup->value,
+                    )
+                    ->max('version');
                 $signedAt = now();
                 $locked->signatures()->create([
                     'signer_id' => $actor->getKey(),
                     'signer_name_snapshot' => $actor->name,
                     'employee_number_snapshot' => $actor->employee_number,
-                    'purpose' => VehicleLoan::PICKUP_SIGNATURE_PURPOSE,
+                    'purpose' => DigitalSignaturePurpose::VehicleLoanPickup,
+                    'version' => $version,
                     'image_path' => $signatureFile['path'],
                     'transaction_hash' => hash(
                         'sha256',
                         implode('|', [
                             $locked->loan_number,
-                            VehicleLoan::PICKUP_SIGNATURE_PURPOSE,
+                            DigitalSignaturePurpose::VehicleLoanPickup->value,
+                            $version,
                             $actor->getKey(),
                             $signatureFile['checksum'],
                             $signedAt->toIso8601String(),

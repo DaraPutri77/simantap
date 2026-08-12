@@ -14,6 +14,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use LogicException;
 use Tests\TestCase;
@@ -103,9 +104,8 @@ class SystemSupportModelTest extends TestCase
             'signer_id' => $requester->id,
             'signer_name_snapshot' => $requester->name,
             'employee_number_snapshot' => $requester->employee_number,
-            'purpose' => DigitalSignaturePurpose::from(
-                'inventory_request_submission',
-            ),
+            'purpose' => DigitalSignaturePurpose::InventoryRequestSubmission,
+            'version' => 1,
             'image_path' => 'signatures/inventory-request-001.png',
             'transaction_hash' => hash(
                 'sha256',
@@ -120,7 +120,7 @@ class SystemSupportModelTest extends TestCase
             'signed_at' => now(),
         ]);
 
-        $signature->load([
+        $signature->refresh()->load([
             'signable',
             'signer',
         ]);
@@ -128,11 +128,10 @@ class SystemSupportModelTest extends TestCase
         $inventoryRequest->load('digitalSignatures');
 
         $this->assertSame(
-            DigitalSignaturePurpose::from(
-                'inventory_request_submission',
-            ),
+            DigitalSignaturePurpose::InventoryRequestSubmission,
             $signature->purpose,
         );
+        $this->assertSame(1, $signature->version);
         $this->assertInstanceOf(
             CarbonImmutable::class,
             $signature->signed_at,
@@ -165,6 +164,113 @@ class SystemSupportModelTest extends TestCase
                 'signer_name_snapshot' => 'Nama penanda tangan tidak boleh berubah',
             ],
         );
+    }
+
+    public function test_legacy_digital_signature_purposes_remain_cast_compatible(): void
+    {
+        $requester = User::factory()->create([
+            'employee_number' => 'PGW-SIGN-LEGACY-001',
+        ]);
+        $inventoryRequest = $this->createInventoryRequest($requester);
+
+        foreach ([
+            DigitalSignaturePurpose::VehicleCheckoutConfirmation,
+            DigitalSignaturePurpose::VehicleReturnConfirmation,
+        ] as $purpose) {
+            $signature = DigitalSignature::query()->create([
+                'signable_type' => $inventoryRequest->getMorphClass(),
+                'signable_id' => $inventoryRequest->id,
+                'signer_id' => $requester->id,
+                'signer_name_snapshot' => $requester->name,
+                'employee_number_snapshot' => $requester->employee_number,
+                'purpose' => $purpose->value,
+                'version' => 1,
+                'image_path' => 'signatures/legacy-'.$purpose->value.'.png',
+                'transaction_hash' => hash(
+                    'sha256',
+                    'legacy-'.$purpose->value,
+                ),
+                'image_checksum' => hash(
+                    'sha256',
+                    'legacy-image-'.$purpose->value,
+                ),
+                'signed_at' => now(),
+            ]);
+
+            $this->assertSame(
+                $purpose,
+                $signature->refresh()->purpose,
+            );
+        }
+    }
+
+    public function test_digital_signature_versions_are_append_only_and_unique_per_purpose_version(): void
+    {
+        $requester = User::factory()->create([
+            'employee_number' => 'PGW-SIGN-VER-001',
+        ]);
+        $otherSigner = User::factory()->create([
+            'employee_number' => 'PGW-SIGN-VER-002',
+        ]);
+        $inventoryRequest = $this->createInventoryRequest($requester);
+
+        foreach ([1, 2] as $version) {
+            DigitalSignature::query()->create([
+                'signable_type' => $inventoryRequest->getMorphClass(),
+                'signable_id' => $inventoryRequest->id,
+                'signer_id' => $requester->id,
+                'signer_name_snapshot' => $requester->name,
+                'employee_number_snapshot' => $requester->employee_number,
+                'purpose' => DigitalSignaturePurpose::InventoryRequestSubmission,
+                'version' => $version,
+                'image_path' => "signatures/version-{$version}.png",
+                'transaction_hash' => hash(
+                    'sha256',
+                    "signature-version-{$version}",
+                ),
+                'image_checksum' => hash(
+                    'sha256',
+                    "image-version-{$version}",
+                ),
+                'signed_at' => now()->addSeconds($version),
+            ]);
+        }
+
+        $this->assertSame(
+            [1, 2],
+            DigitalSignature::query()
+                ->where('signable_type', $inventoryRequest->getMorphClass())
+                ->where('signable_id', $inventoryRequest->id)
+                ->where(
+                    'purpose',
+                    DigitalSignaturePurpose::InventoryRequestSubmission->value,
+                )
+                ->orderBy('version')
+                ->pluck('version')
+                ->all(),
+        );
+
+        $this->expectException(QueryException::class);
+
+        DigitalSignature::query()->create([
+            'signable_type' => $inventoryRequest->getMorphClass(),
+            'signable_id' => $inventoryRequest->id,
+            'signer_id' => $otherSigner->id,
+            'signer_name_snapshot' => $otherSigner->name,
+            'employee_number_snapshot' => $otherSigner->employee_number,
+            'purpose' => DigitalSignaturePurpose::InventoryRequestSubmission,
+            'version' => 2,
+            'image_path' => 'signatures/duplicate-version.png',
+            'transaction_hash' => hash(
+                'sha256',
+                'duplicate-signature-version',
+            ),
+            'image_checksum' => hash(
+                'sha256',
+                'duplicate-image-version',
+            ),
+            'signed_at' => now()->addMinute(),
+        ]);
     }
 
     public function test_document_sequence_and_setting_use_expected_casts(): void

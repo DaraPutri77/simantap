@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DigitalSignaturePurpose;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -16,6 +17,7 @@ class DigitalSignature extends Model
         'signer_name_snapshot',
         'employee_number_snapshot',
         'purpose',
+        'version',
         'image_path',
         'transaction_hash',
         'image_checksum',
@@ -27,6 +29,8 @@ class DigitalSignature extends Model
     protected function casts(): array
     {
         return [
+            'purpose' => DigitalSignaturePurpose::class,
+            'version' => 'integer',
             'signed_at' => 'immutable_datetime',
         ];
     }

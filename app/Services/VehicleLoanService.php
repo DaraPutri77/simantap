@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DigitalSignaturePurpose;
 use App\Enums\DocumentType;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleStatus;
@@ -22,8 +23,6 @@ use Throwable;
 
 class VehicleLoanService
 {
-    public const SUBMISSION_SIGNATURE = 'vehicle_loan_submission';
-
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly DocumentNumberService $documentNumberService,
@@ -195,68 +194,81 @@ class VehicleLoanService
         User $actor,
         ?Request $httpRequest = null,
     ): VehicleLoan {
-        return DB::transaction(function () use (
+        $signatureFile = $this->storeSubmissionSignatureFile(
             $vehicleLoan,
-            $data,
-            $actor,
-            $httpRequest,
-        ): VehicleLoan {
-            $locked = $this->lockLoan($vehicleLoan);
-            $this->requireStatus(
-                $locked,
-                [VehicleLoanStatus::Draft],
-                'Peminjaman pada status ini tidak dapat diajukan.',
-            );
-            $vehicle = $this->lockVehicle($locked->vehicle_id);
-            $this->assertVehicleCanBeScheduled(
-                $vehicle,
-                CarbonImmutable::instance($locked->planned_end_at),
-            );
-            $this->assertNoScheduleConflict(
-                $vehicle,
-                CarbonImmutable::instance($locked->planned_start_at),
-                CarbonImmutable::instance($locked->planned_end_at),
-                $locked,
-            );
-            $previousStatus = $locked->status;
+            (string) $data['signature_data'],
+        );
 
-            $this->replaceSignature(
-                $locked,
-                $actor,
-                $data['signature_data'],
-                $httpRequest,
-            );
-            $locked->forceFill([
-                'status' => VehicleLoanStatus::Submitted,
-                'submitted_at' => now(),
-                'reviewed_by' => null,
-                'reviewed_at' => null,
-                'approved_by' => null,
-                'approved_at' => null,
-                'rejected_at' => null,
-                'rejection_reason' => null,
-                'cancelled_at' => null,
-                'cancellation_reason' => null,
-                'admin_notes' => null,
-            ])->save();
-            $this->recordStatus(
-                $locked,
-                $previousStatus,
-                VehicleLoanStatus::Submitted,
-                'Peminjaman diajukan oleh pegawai.',
-                $actor,
-            );
-            $this->auditTransition(
-                $locked,
-                $previousStatus,
-                VehicleLoanStatus::Submitted,
-                'vehicle_loan_submitted',
+        try {
+            return DB::transaction(function () use (
+                $vehicleLoan,
                 $actor,
                 $httpRequest,
+                $signatureFile,
+            ): VehicleLoan {
+                $locked = $this->lockLoan($vehicleLoan);
+                $this->requireStatus(
+                    $locked,
+                    [VehicleLoanStatus::Draft],
+                    'Peminjaman pada status ini tidak dapat diajukan.',
+                );
+                $vehicle = $this->lockVehicle($locked->vehicle_id);
+                $this->assertVehicleCanBeScheduled(
+                    $vehicle,
+                    CarbonImmutable::instance($locked->planned_end_at),
+                );
+                $this->assertNoScheduleConflict(
+                    $vehicle,
+                    CarbonImmutable::instance($locked->planned_start_at),
+                    CarbonImmutable::instance($locked->planned_end_at),
+                    $locked,
+                );
+                $previousStatus = $locked->status;
+
+                $locked->forceFill([
+                    'status' => VehicleLoanStatus::Submitted,
+                    'submitted_at' => now(),
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'approved_by' => null,
+                    'approved_at' => null,
+                    'rejected_at' => null,
+                    'rejection_reason' => null,
+                    'cancelled_at' => null,
+                    'cancellation_reason' => null,
+                    'admin_notes' => null,
+                ])->save();
+                $this->recordStatus(
+                    $locked,
+                    $previousStatus,
+                    VehicleLoanStatus::Submitted,
+                    'Peminjaman diajukan oleh pegawai.',
+                    $actor,
+                );
+                $this->auditTransition(
+                    $locked,
+                    $previousStatus,
+                    VehicleLoanStatus::Submitted,
+                    'vehicle_loan_submitted',
+                    $actor,
+                    $httpRequest,
+                );
+                $this->appendSubmissionSignature(
+                    $locked,
+                    $actor,
+                    $signatureFile,
+                    $httpRequest,
+                );
+
+                return $this->loadLoan($locked);
+            }, 3);
+        } catch (Throwable $exception) {
+            Storage::disk($this->signatureDisk())->delete(
+                $signatureFile['path'],
             );
 
-            return $this->loadLoan($locked);
-        }, 3);
+            throw $exception;
+        }
     }
 
     public function startReview(
@@ -337,7 +349,7 @@ class VehicleLoanService
                     ->where('signable_id', $locked->getKey())
                     ->where(
                         'purpose',
-                        VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                        DigitalSignaturePurpose::VehicleLoanApproval->value,
                     )
                     ->lockForUpdate()
                     ->first();
@@ -363,6 +375,12 @@ class VehicleLoanService
                 );
 
                 $previousStatus = $locked->status;
+                $version = 1 + (int) $locked->signatures()
+                    ->where(
+                        'purpose',
+                        DigitalSignaturePurpose::VehicleLoanApproval->value,
+                    )
+                    ->max('version');
                 $signedAt = now();
 
                 $locked->forceFill([
@@ -402,13 +420,15 @@ class VehicleLoanService
                     'signer_id' => $actor->getKey(),
                     'signer_name_snapshot' => $actor->name,
                     'employee_number_snapshot' => $actor->employee_number,
-                    'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                    'purpose' => DigitalSignaturePurpose::VehicleLoanApproval,
+                    'version' => $version,
                     'image_path' => $signatureFile['path'],
                     'transaction_hash' => hash(
                         'sha256',
                         implode('|', [
                             $locked->loan_number,
-                            VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                            DigitalSignaturePurpose::VehicleLoanApproval->value,
+                            $version,
                             $actor->getKey(),
                             $signatureFile['checksum'],
                             $signedAt->toIso8601String(),
@@ -605,12 +625,13 @@ class VehicleLoanService
         ];
     }
 
-    private function replaceSignature(
+    /**
+     * @return array{path: string, checksum: string}
+     */
+    private function storeSubmissionSignatureFile(
         VehicleLoan $vehicleLoan,
-        User $actor,
         string $dataUrl,
-        ?Request $httpRequest,
-    ): DigitalSignature {
+    ): array {
         $binary = $this->signatureBinary($dataUrl);
         $checksum = hash(
             (string) config(
@@ -624,34 +645,56 @@ class VehicleLoanService
             $vehicleLoan->public_id,
             Str::uuid(),
         );
-        $disk = Storage::disk($this->signatureDisk());
 
-        if (! $disk->put($path, $binary)) {
+        $stored = Storage::disk($this->signatureDisk())
+            ->put($path, $binary);
+
+        if (! $stored) {
             throw new RuntimeException(
                 'Tanda tangan digital tidak dapat disimpan.',
             );
         }
 
-        $this->deleteSubmissionSignatures($vehicleLoan);
+        return [
+            'path' => $path,
+            'checksum' => $checksum,
+        ];
+    }
+
+    /**
+     * @param  array{path: string, checksum: string}  $signatureFile
+     */
+    private function appendSubmissionSignature(
+        VehicleLoan $vehicleLoan,
+        User $actor,
+        array $signatureFile,
+        ?Request $httpRequest,
+    ): DigitalSignature {
+        $purpose = DigitalSignaturePurpose::VehicleLoanSubmission;
+        $version = 1 + (int) $vehicleLoan->signatures()
+            ->where('purpose', $purpose->value)
+            ->max('version');
         $signedAt = now();
 
         return $vehicleLoan->signatures()->create([
             'signer_id' => $actor->getKey(),
             'signer_name_snapshot' => $actor->name,
             'employee_number_snapshot' => $actor->employee_number,
-            'purpose' => self::SUBMISSION_SIGNATURE,
-            'image_path' => $path,
+            'purpose' => $purpose,
+            'version' => $version,
+            'image_path' => $signatureFile['path'],
             'transaction_hash' => hash(
                 'sha256',
                 implode('|', [
                     $vehicleLoan->loan_number,
-                    self::SUBMISSION_SIGNATURE,
+                    $purpose->value,
+                    $version,
                     $actor->getKey(),
-                    $checksum,
+                    $signatureFile['checksum'],
                     $signedAt->toIso8601String(),
                 ]),
             ),
-            'image_checksum' => $checksum,
+            'image_checksum' => $signatureFile['checksum'],
             'ip_address' => $httpRequest?->ip(),
             'user_agent' => Str::limit(
                 (string) $httpRequest?->userAgent(),
@@ -660,22 +703,6 @@ class VehicleLoanService
             ),
             'signed_at' => $signedAt,
         ]);
-    }
-
-    private function deleteSubmissionSignatures(
-        VehicleLoan $vehicleLoan,
-    ): void {
-        $signatures = $vehicleLoan->signatures()
-            ->where('purpose', self::SUBMISSION_SIGNATURE)
-            ->get();
-        $disk = Storage::disk($this->signatureDisk());
-
-        foreach ($signatures as $signature) {
-            $disk->delete($signature->image_path);
-            DigitalSignature::query()
-                ->whereKey($signature->getKey())
-                ->delete();
-        }
     }
 
     private function signatureBinary(string $dataUrl): string
