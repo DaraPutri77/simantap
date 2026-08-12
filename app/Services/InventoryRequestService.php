@@ -12,6 +12,7 @@ use App\Models\InventoryRequestStatusHistory;
 use App\Models\Item;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Support\SignaturePayload;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -816,9 +817,16 @@ class InventoryRequestService
             return null;
         }
 
-        return 'data:image/png;base64,'.base64_encode(
-            $disk->get($signature->image_path),
-        );
+        $binary = $disk->get($signature->image_path);
+
+        if (! SignaturePayload::checksumMatches(
+            $binary,
+            (string) $signature->image_checksum,
+        )) {
+            return null;
+        }
+
+        return 'data:image/png;base64,'.base64_encode($binary);
     }
 
     /**
@@ -978,29 +986,7 @@ class InventoryRequestService
 
     private function signatureBinary(string $dataUrl): string
     {
-        $prefix = 'data:image/png;base64,';
-
-        if (! str_starts_with($dataUrl, $prefix)) {
-            throw ValidationException::withMessages([
-                'signature_data' => 'Format tanda tangan digital tidak valid.',
-            ]);
-        }
-
-        $binary = base64_decode(
-            substr($dataUrl, strlen($prefix)),
-            true,
-        );
-
-        if (
-            $binary === false
-            || ! str_starts_with($binary, "\x89PNG\r\n\x1a\n")
-        ) {
-            throw ValidationException::withMessages([
-                'signature_data' => 'Berkas tanda tangan digital tidak valid.',
-            ]);
-        }
-
-        return $binary;
+        return SignaturePayload::decode($dataUrl);
     }
 
     private function signatureDisk(): string

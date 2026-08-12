@@ -9,6 +9,7 @@ use App\Enums\VehicleStatus;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use App\Services\VehicleLoanService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -217,6 +218,74 @@ class VehicleLoanTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_admin_approval_requires_signature_and_consent(): void
+    {
+        $admin = $this->admin();
+        $employee = $this->employee();
+        $vehicle = $this->vehicle();
+        $vehicleLoan = $this->vehicleLoan($employee, $vehicle, [
+            'status' => VehicleLoanStatus::UnderReview,
+            'submitted_at' => now(),
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('vehicle-loans.show', $vehicleLoan))
+            ->post(route('vehicle-loans.approve', $vehicleLoan), [
+                'admin_notes' => 'Tanpa tanda tangan.',
+            ])
+            ->assertRedirect(route('vehicle-loans.show', $vehicleLoan))
+            ->assertSessionHasErrors([
+                'signature_data',
+                'approval_consent',
+            ]);
+
+        $this->assertSame(
+            VehicleLoanStatus::UnderReview,
+            $vehicleLoan->refresh()->status,
+        );
+        $this->assertDatabaseMissing('digital_signatures', [
+            'signable_type' => $vehicleLoan->getMorphClass(),
+            'signable_id' => $vehicleLoan->id,
+            'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+        ]);
+    }
+
+    public function test_admin_approval_rejects_malformed_png_signature(): void
+    {
+        $admin = $this->admin();
+        $employee = $this->employee();
+        $vehicle = $this->vehicle();
+        $vehicleLoan = $this->vehicleLoan($employee, $vehicle, [
+            'status' => VehicleLoanStatus::UnderReview,
+            'submitted_at' => now(),
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('vehicle-loans.show', $vehicleLoan))
+            ->post(route('vehicle-loans.approve', $vehicleLoan), [
+                'signature_data' => 'data:image/png;base64,'.base64_encode(
+                    "\x89PNG\r\n\x1a\nNOT-A-REAL-PNG",
+                ),
+                'approval_consent' => '1',
+            ])
+            ->assertRedirect(route('vehicle-loans.show', $vehicleLoan))
+            ->assertSessionHasErrors('signature_data');
+
+        $this->assertSame(
+            VehicleLoanStatus::UnderReview,
+            $vehicleLoan->refresh()->status,
+        );
+        $this->assertDatabaseMissing('digital_signatures', [
+            'signable_type' => $vehicleLoan->getMorphClass(),
+            'signable_id' => $vehicleLoan->id,
+            'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+        ]);
+    }
+
     public function test_admin_review_and_approval_reserve_vehicle_atomically(): void
     {
         $admin = $this->admin();
@@ -238,11 +307,84 @@ class VehicleLoanTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('vehicle-loans.approve', $vehicleLoan), [
+                ...$this->approvalSignaturePayload(),
                 'admin_notes' => 'Kendaraan dapat digunakan sesuai jadwal.',
             ])
             ->assertRedirect(route('vehicle-loans.show', $vehicleLoan));
 
         $vehicleLoan->refresh();
+
+        $approvalSignature = $vehicleLoan->signatures()
+            ->where('purpose', VehicleLoan::APPROVAL_SIGNATURE_PURPOSE)
+            ->firstOrFail();
+
+        $this->assertSame(
+            $admin->id,
+            $approvalSignature->signer_id,
+        );
+        $this->assertSame(
+            $admin->name,
+            $approvalSignature->signer_name_snapshot,
+        );
+        $this->assertSame(
+            $admin->employee_number,
+            $approvalSignature->employee_number_snapshot,
+        );
+        $this->assertNotNull($approvalSignature->signed_at);
+        $this->assertTrue(
+            $vehicleLoan->approved_at->equalTo(
+                $approvalSignature->signed_at,
+            ),
+        );
+
+        Storage::disk('local')->assertExists(
+            $approvalSignature->image_path,
+        );
+
+        $storedSignature = Storage::disk('local')->get(
+            $approvalSignature->image_path,
+        );
+        $expectedChecksum = hash(
+            (string) config(
+                'simantap.signature.hash_algorithm',
+                'sha256',
+            ),
+            $storedSignature,
+        );
+
+        $this->assertSame(
+            $expectedChecksum,
+            $approvalSignature->image_checksum,
+        );
+        $this->assertSame(
+            hash(
+                'sha256',
+                implode('|', [
+                    $vehicleLoan->loan_number,
+                    VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                    $admin->id,
+                    $expectedChecksum,
+                    $approvalSignature->signed_at->toIso8601String(),
+                ]),
+            ),
+            $approvalSignature->transaction_hash,
+        );
+
+        $service = app(VehicleLoanService::class);
+
+        $this->assertNotNull(
+            $service->signatureDataUri($approvalSignature),
+        );
+
+        Storage::disk('local')->put(
+            $approvalSignature->image_path,
+            'tampered-signature',
+        );
+
+        $this->assertNull(
+            $service->signatureDataUri($approvalSignature),
+        );
+
         $this->assertSame(VehicleLoanStatus::Approved, $vehicleLoan->status);
         $this->assertSame($admin->id, $vehicleLoan->approved_by);
         $this->assertNotNull($vehicleLoan->approved_at);
@@ -276,7 +418,7 @@ class VehicleLoanTest extends TestCase
 
         $this->actingAs($admin)
             ->from(route('vehicle-loans.show', $reviewedLoan))
-            ->post(route('vehicle-loans.approve', $reviewedLoan))
+            ->post(route('vehicle-loans.approve', $reviewedLoan), $this->approvalSignaturePayload())
             ->assertRedirect(route('vehicle-loans.show', $reviewedLoan))
             ->assertSessionHasErrors('planned_start_at');
 
@@ -285,6 +427,17 @@ class VehicleLoanTest extends TestCase
             $reviewedLoan->refresh()->status,
         );
         $this->assertSame(VehicleStatus::Available, $vehicle->refresh()->status);
+        $this->assertSame(
+            [],
+            Storage::disk('local')->allFiles(
+                'signatures/vehicle-loans/'.$reviewedLoan->public_id,
+            ),
+        );
+        $this->assertDatabaseMissing('digital_signatures', [
+            'signable_type' => $reviewedLoan->getMorphClass(),
+            'signable_id' => $reviewedLoan->id,
+            'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+        ]);
     }
 
     public function test_admin_can_reject_reviewed_loan_without_reserving_vehicle(): void
@@ -524,13 +677,26 @@ class VehicleLoanTest extends TestCase
     /**
      * @return array<string, mixed>
      */
+    private function approvalSignaturePayload(): array
+    {
+        return [
+            'signature_data' => $this->signatureDataUrl(),
+            'approval_consent' => '1',
+        ];
+    }
+
     private function signaturePayload(): array
     {
         return [
-            'signature_data' => 'data:image/png;base64,'.base64_encode(
-                "\x89PNG\r\n\x1a\nSIMANTAP",
-            ),
+            'signature_data' => $this->signatureDataUrl(),
             'signature_consent' => '1',
         ];
+    }
+
+    private function signatureDataUrl(): string
+    {
+        return 'data:image/png;base64,'
+            .'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+            .'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     }
 }

@@ -114,15 +114,19 @@
                     <img src="{{ $submissionSignature }}" alt="Tanda tangan peminjam">
                 @endif
             </td>
-            <td class="signature-space"></td>
+            <td class="signature-space">
+                @if ($approvalSignature)
+                    <img src="{{ $approvalSignature }}" alt="Tanda tangan Administrator">
+                @endif
+            </td>
         </tr>
         <tr>
             <td><span class="name">{{ $vehicleLoan->borrower_name_snapshot }}</span></td>
-            <td><span class="name">{{ $vehicleLoan->approver?->name ?: '................................' }}</span></td>
+            <td><span class="name">{{ $approvalSignerName ?: '................................' }}</span></td>
         </tr>
         <tr>
             <td>{{ $vehicleLoan->employee_number_snapshot ?: '-' }}</td>
-            <td>{{ $vehicleLoan->approver?->position ?: '' }}</td>
+            <td>{{ $approvalSignerEmployeeNumber ?: '' }}</td>
         </tr>
     </table>
 

@@ -19,6 +19,8 @@ class VehicleLoan extends Model
 
     public const PICKUP_SIGNATURE_PURPOSE = 'vehicle_loan_pickup';
 
+    public const APPROVAL_SIGNATURE_PURPOSE = 'vehicle_loan_approval';
+
     protected $fillable = [
         'loan_number',
         'borrower_id',
@@ -148,6 +150,21 @@ class VehicleLoan extends Model
     {
         return $this->signatures
             ->firstWhere('purpose', self::PICKUP_SIGNATURE_PURPOSE);
+    }
+
+    public function approvalSignature(): ?DigitalSignature
+    {
+        if ($this->relationLoaded('signatures')) {
+            return $this->signatures
+                ->firstWhere(
+                    'purpose',
+                    self::APPROVAL_SIGNATURE_PURPOSE,
+                );
+        }
+
+        return $this->signatures()
+            ->where('purpose', self::APPROVAL_SIGNATURE_PURPOSE)
+            ->first();
     }
 
     public function checkoutCheck(): ?VehicleConditionCheck

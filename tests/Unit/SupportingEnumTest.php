@@ -90,6 +90,7 @@ class SupportingEnumTest extends TestCase
                     'inventory_request_submission',
                     'inventory_receipt_confirmation',
                     'vehicle_loan_submission',
+                    'vehicle_loan_approval',
                     'vehicle_checkout_confirmation',
                     'vehicle_return_confirmation',
                 ],

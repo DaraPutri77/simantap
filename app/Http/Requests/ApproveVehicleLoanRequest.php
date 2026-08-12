@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\SignatureDataUrl;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ApproveVehicleLoanRequest extends FormRequest
@@ -18,6 +19,8 @@ class ApproveVehicleLoanRequest extends FormRequest
     {
         return [
             'admin_notes' => ['nullable', 'string', 'max:2000'],
+            'signature_data' => ['required', new SignatureDataUrl],
+            'approval_consent' => ['accepted'],
         ];
     }
 }

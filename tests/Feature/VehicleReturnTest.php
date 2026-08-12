@@ -588,10 +588,15 @@ class VehicleReturnTest extends TestCase
     private function signaturePayload(): array
     {
         return [
-            'signature_data' => 'data:image/png;base64,'.base64_encode(
-                "\x89PNG\r\n\x1a\nSIMANTAP-PICKUP",
-            ),
+            'signature_data' => $this->signatureDataUrl(),
             'pickup_consent' => '1',
         ];
+    }
+
+    private function signatureDataUrl(): string
+    {
+        return 'data:image/png;base64,'
+            .'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+            .'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     }
 }

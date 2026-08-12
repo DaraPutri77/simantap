@@ -317,7 +317,7 @@ class VehicleLoanController extends Controller
 
         abort_if($actor === null, 401);
 
-        $service->approve(
+        $service->approveWithSignature(
             $vehicleLoan,
             $request->validated(),
             $actor,
@@ -390,11 +390,18 @@ class VehicleLoanController extends Controller
         Gate::authorize('view', $vehicleLoan);
         $this->loadLoan($vehicleLoan);
 
+        $approvalSignatureRecord = $vehicleLoan->approvalSignature();
+
         $pdf = Pdf::loadView('vehicle-loans.pdf', [
             'vehicleLoan' => $vehicleLoan,
             'submissionSignature' => $service->signatureDataUri(
                 $vehicleLoan->submissionSignature(),
             ),
+            'approvalSignature' => $service->signatureDataUri(
+                $approvalSignatureRecord,
+            ),
+            'approvalSignerName' => $approvalSignatureRecord?->signer_name_snapshot,
+            'approvalSignerEmployeeNumber' => $approvalSignatureRecord?->employee_number_snapshot,
             'institutionName' => (string) config(
                 'simantap.institution.name',
                 'Badan Pusat Statistik',

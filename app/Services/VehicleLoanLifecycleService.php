@@ -14,6 +14,7 @@ use App\Models\Vehicle;
 use App\Models\VehicleConditionCheck;
 use App\Models\VehicleLoan;
 use App\Models\VehicleLoanStatusHistory;
+use App\Support\SignaturePayload;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -528,9 +529,16 @@ class VehicleLoanLifecycleService
             return null;
         }
 
-        return 'data:image/png;base64,'.base64_encode(
-            $disk->get($signature->image_path),
-        );
+        $binary = $disk->get($signature->image_path);
+
+        if (! SignaturePayload::checksumMatches(
+            $binary,
+            (string) $signature->image_checksum,
+        )) {
+            return null;
+        }
+
+        return 'data:image/png;base64,'.base64_encode($binary);
     }
 
     public function attachmentDataUri(Attachment $attachment): ?string
@@ -852,29 +860,7 @@ class VehicleLoanLifecycleService
 
     private function signatureBinary(string $dataUrl): string
     {
-        $prefix = 'data:image/png;base64,';
-
-        if (! str_starts_with($dataUrl, $prefix)) {
-            throw ValidationException::withMessages([
-                'signature_data' => 'Format tanda tangan digital tidak valid.',
-            ]);
-        }
-
-        $binary = base64_decode(
-            substr($dataUrl, strlen($prefix)),
-            true,
-        );
-
-        if (
-            $binary === false
-            || ! str_starts_with($binary, "\x89PNG\r\n\x1a\n")
-        ) {
-            throw ValidationException::withMessages([
-                'signature_data' => 'Berkas tanda tangan digital tidak valid.',
-            ]);
-        }
-
-        return $binary;
+        return SignaturePayload::decode($dataUrl);
     }
 
     private function recordStatus(

@@ -325,6 +325,7 @@
                     method="POST"
                     action="{{ route('vehicle-loans.approve', $vehicleLoan) }}"
                     class="panel p-5 sm:p-6"
+                    data-signature-form
                 >
                     @csrf
                     <p class="eyebrow">Persetujuan</p>
@@ -341,8 +342,17 @@
                         class="form-input min-h-24 py-4"
                         placeholder="Opsional"
                     >{{ old('admin_notes') }}</textarea>
-                    <button type="submit" class="primary-button mt-4">
-                        Setujui Peminjaman
+
+                    <div class="mt-5">
+                        @include('inventory-requests.partials.signature-pad', [
+                            'padId' => 'vehicle_loan_approval',
+                            'consentName' => 'approval_consent',
+                            'consentText' => 'Saya menyatakan telah memeriksa dan menyetujui peminjaman ini serta tanda tangan ini dibubuhkan oleh saya.',
+                        ])
+                    </div>
+
+                    <button type="submit" class="primary-button mt-5">
+                        Tanda Tangani dan Setujui Peminjaman
                     </button>
                 </form>
 

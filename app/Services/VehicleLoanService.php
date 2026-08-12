@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
 use App\Models\VehicleLoanStatusHistory;
+use App\Support\SignaturePayload;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Throwable;
 
 class VehicleLoanService
 {
@@ -303,71 +305,136 @@ class VehicleLoanService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function approve(
+    public function approveWithSignature(
         VehicleLoan $vehicleLoan,
         array $data,
         User $actor,
         ?Request $httpRequest = null,
     ): VehicleLoan {
-        return DB::transaction(function () use (
+        $signatureFile = $this->storeApprovalSignatureFile(
             $vehicleLoan,
-            $data,
-            $actor,
-            $httpRequest,
-        ): VehicleLoan {
-            $locked = $this->lockLoan($vehicleLoan);
-            $this->requireStatus(
-                $locked,
-                [VehicleLoanStatus::UnderReview],
-                'Peminjaman harus diperiksa sebelum disetujui.',
-            );
-            $vehicle = $this->lockVehicle($locked->vehicle_id);
-            $this->assertVehicleCanBeScheduled(
-                $vehicle,
-                CarbonImmutable::instance($locked->planned_end_at),
-            );
-            $this->assertNoScheduleConflict(
-                $vehicle,
-                CarbonImmutable::instance($locked->planned_start_at),
-                CarbonImmutable::instance($locked->planned_end_at),
-                $locked,
-            );
-            $previousStatus = $locked->status;
+            (string) $data['signature_data'],
+        );
 
-            $locked->forceFill([
-                'status' => VehicleLoanStatus::Approved,
-                'approved_by' => $actor->getKey(),
-                'approved_at' => now(),
-                'rejected_at' => null,
-                'rejection_reason' => null,
-                'admin_notes' => $data['admin_notes'] ?? null,
-            ])->save();
-
-            if ($vehicle->status === VehicleStatus::Available) {
-                $vehicle->forceFill([
-                    'status' => VehicleStatus::Reserved,
-                ])->save();
-            }
-
-            $this->recordStatus(
-                $locked,
-                $previousStatus,
-                VehicleLoanStatus::Approved,
-                $data['admin_notes'] ?? 'Peminjaman disetujui.',
-                $actor,
-            );
-            $this->auditTransition(
-                $locked,
-                $previousStatus,
-                VehicleLoanStatus::Approved,
-                'vehicle_loan_approved',
+        try {
+            $result = DB::transaction(function () use (
+                $vehicleLoan,
+                $data,
                 $actor,
                 $httpRequest,
-                ['vehicle_status' => $vehicle->status->value],
+                $signatureFile,
+            ): VehicleLoan {
+                $locked = $this->lockLoan($vehicleLoan);
+
+                $this->requireStatus(
+                    $locked,
+                    [VehicleLoanStatus::UnderReview],
+                    'Peminjaman harus diperiksa sebelum disetujui.',
+                );
+
+                $existingSignature = DigitalSignature::query()
+                    ->where('signable_type', $locked->getMorphClass())
+                    ->where('signable_id', $locked->getKey())
+                    ->where(
+                        'purpose',
+                        VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingSignature !== null) {
+                    throw ValidationException::withMessages([
+                        'signature_data' => 'Tanda tangan persetujuan Administrator sudah tersimpan.',
+                    ]);
+                }
+
+                $vehicle = $this->lockVehicle($locked->vehicle_id);
+
+                $this->assertVehicleCanBeScheduled(
+                    $vehicle,
+                    CarbonImmutable::instance($locked->planned_end_at),
+                );
+
+                $this->assertNoScheduleConflict(
+                    $vehicle,
+                    CarbonImmutable::instance($locked->planned_start_at),
+                    CarbonImmutable::instance($locked->planned_end_at),
+                    $locked,
+                );
+
+                $previousStatus = $locked->status;
+                $signedAt = now();
+
+                $locked->forceFill([
+                    'status' => VehicleLoanStatus::Approved,
+                    'approved_by' => $actor->getKey(),
+                    'approved_at' => $signedAt,
+                    'rejected_at' => null,
+                    'rejection_reason' => null,
+                    'admin_notes' => $data['admin_notes'] ?? null,
+                ])->save();
+
+                if ($vehicle->status === VehicleStatus::Available) {
+                    $vehicle->forceFill([
+                        'status' => VehicleStatus::Reserved,
+                    ])->save();
+                }
+
+                $this->recordStatus(
+                    $locked,
+                    $previousStatus,
+                    VehicleLoanStatus::Approved,
+                    $data['admin_notes'] ?? 'Peminjaman disetujui.',
+                    $actor,
+                );
+
+                $this->auditTransition(
+                    $locked,
+                    $previousStatus,
+                    VehicleLoanStatus::Approved,
+                    'vehicle_loan_approved',
+                    $actor,
+                    $httpRequest,
+                    ['vehicle_status' => $vehicle->status->value],
+                );
+
+                $locked->signatures()->create([
+                    'signer_id' => $actor->getKey(),
+                    'signer_name_snapshot' => $actor->name,
+                    'employee_number_snapshot' => $actor->employee_number,
+                    'purpose' => VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                    'image_path' => $signatureFile['path'],
+                    'transaction_hash' => hash(
+                        'sha256',
+                        implode('|', [
+                            $locked->loan_number,
+                            VehicleLoan::APPROVAL_SIGNATURE_PURPOSE,
+                            $actor->getKey(),
+                            $signatureFile['checksum'],
+                            $signedAt->toIso8601String(),
+                        ]),
+                    ),
+                    'image_checksum' => $signatureFile['checksum'],
+                    'ip_address' => $httpRequest?->ip(),
+                    'user_agent' => Str::limit(
+                        (string) $httpRequest?->userAgent(),
+                        2000,
+                        '',
+                    ),
+                    'signed_at' => $signedAt,
+                ]);
+
+                return $locked;
+            }, 3);
+        } catch (Throwable $exception) {
+            Storage::disk($this->signatureDisk())->delete(
+                $signatureFile['path'],
             );
 
-            return $this->loadLoan($locked);
-        }, 3);
+            throw $exception;
+        }
+
+        return $this->loadLoan($result);
     }
 
     public function reject(
@@ -490,9 +557,52 @@ class VehicleLoanService
             return null;
         }
 
-        return 'data:image/png;base64,'.base64_encode(
-            $disk->get($signature->image_path),
+        $binary = $disk->get($signature->image_path);
+
+        if (! SignaturePayload::checksumMatches(
+            $binary,
+            (string) $signature->image_checksum,
+        )) {
+            return null;
+        }
+
+        return 'data:image/png;base64,'.base64_encode($binary);
+    }
+
+    /**
+     * @return array{path: string, checksum: string}
+     */
+    private function storeApprovalSignatureFile(
+        VehicleLoan $vehicleLoan,
+        string $dataUrl,
+    ): array {
+        $binary = $this->signatureBinary($dataUrl);
+        $checksum = hash(
+            (string) config(
+                'simantap.signature.hash_algorithm',
+                'sha256',
+            ),
+            $binary,
         );
+        $path = sprintf(
+            'signatures/vehicle-loans/%s/%s.png',
+            $vehicleLoan->public_id,
+            Str::uuid(),
+        );
+
+        $stored = Storage::disk($this->signatureDisk())
+            ->put($path, $binary);
+
+        if (! $stored) {
+            throw new RuntimeException(
+                'Tanda tangan persetujuan Administrator tidak dapat disimpan.',
+            );
+        }
+
+        return [
+            'path' => $path,
+            'checksum' => $checksum,
+        ];
     }
 
     private function replaceSignature(
@@ -570,29 +680,7 @@ class VehicleLoanService
 
     private function signatureBinary(string $dataUrl): string
     {
-        $prefix = 'data:image/png;base64,';
-
-        if (! str_starts_with($dataUrl, $prefix)) {
-            throw ValidationException::withMessages([
-                'signature_data' => 'Format tanda tangan digital tidak valid.',
-            ]);
-        }
-
-        $binary = base64_decode(
-            substr($dataUrl, strlen($prefix)),
-            true,
-        );
-
-        if (
-            $binary === false
-            || ! str_starts_with($binary, "\x89PNG\r\n\x1a\n")
-        ) {
-            throw ValidationException::withMessages([
-                'signature_data' => 'Berkas tanda tangan digital tidak valid.',
-            ]);
-        }
-
-        return $binary;
+        return SignaturePayload::decode($dataUrl);
     }
 
     private function recordStatus(
