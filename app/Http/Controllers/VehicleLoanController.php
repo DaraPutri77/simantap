@@ -390,6 +390,9 @@ class VehicleLoanController extends Controller
         Gate::authorize('view', $vehicleLoan);
         $this->loadLoan($vehicleLoan);
 
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
         $approvalSignatureRecord = $vehicleLoan->approvalSignature();
 
         $pdf = Pdf::loadView('vehicle-loans.pdf', [
@@ -412,6 +415,12 @@ class VehicleLoanController extends Controller
             ),
             'displayTimezone' => $this->displayTimezone(),
         ])->setPaper('a4', 'portrait');
+
+        $service->auditPdfDownload(
+            $vehicleLoan,
+            $actor,
+            $request,
+        );
 
         return $pdf->download(
             str_replace('/', '-', $vehicleLoan->loan_number).'.pdf',

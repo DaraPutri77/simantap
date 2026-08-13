@@ -106,7 +106,7 @@
     <table class="signature-table">
         <tr>
             <td>Peminjam,</td>
-            <td>Administrator,</td>
+            <td>Penyetuju/Pengelola,</td>
         </tr>
         <tr>
             <td class="signature-space">
@@ -116,7 +116,7 @@
             </td>
             <td class="signature-space">
                 @if ($approvalSignature)
-                    <img src="{{ $approvalSignature }}" alt="Tanda tangan Administrator">
+                    <img src="{{ $approvalSignature }}" alt="Tanda tangan Penyetuju/Pengelola">
                 @endif
             </td>
         </tr>

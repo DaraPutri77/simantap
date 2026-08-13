@@ -26,6 +26,8 @@ class VehicleConditionCheck extends Model
         'equipment_condition',
         'damage_notes',
         'checked_by',
+        'checker_name_snapshot',
+        'checker_employee_number_snapshot',
         'checked_at',
         'borrower_confirmed_at',
     ];

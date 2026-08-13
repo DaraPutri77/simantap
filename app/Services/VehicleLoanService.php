@@ -729,6 +729,25 @@ class VehicleLoanService
     /**
      * @param  array<string, mixed>  $extraValues
      */
+    public function auditPdfDownload(
+        VehicleLoan $vehicleLoan,
+        User $actor,
+        ?Request $httpRequest = null,
+    ): void {
+        $this->auditLogger->log(
+            event: 'vehicle_loan_pdf_downloaded',
+            module: 'vehicle_loan',
+            auditable: $vehicleLoan,
+            oldValues: [],
+            newValues: [
+                'document_type' => 'vehicle_loan_pdf',
+                'status' => $vehicleLoan->status->value,
+            ],
+            request: $httpRequest,
+            actorId: $actor->getKey(),
+        );
+    }
+
     private function auditTransition(
         VehicleLoan $vehicleLoan,
         VehicleLoanStatus $previous,

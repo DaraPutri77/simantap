@@ -21,6 +21,24 @@
         .evidence-cell img { max-width: 100%; max-height: 135px; }
         .evidence-label { margin-top: 4px; font-size: 8px; color: #475569; }
         .signature { max-height: 85px; max-width: 220px; }
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: avoid;
+        }
+        .signature-table td {
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
+        }
+        .signature-space {
+            height: 72px;
+            vertical-align: middle !important;
+        }
+        .signature-space img {
+            max-height: 65px;
+            max-width: 180px;
+        }
         .muted { color: #64748b; }
         .page-break { page-break-before: always; }
     </style>
@@ -86,7 +104,18 @@
             @if ($block['check'])
                 @php $check = $block['check']; @endphp
                 <table>
-                    <tr><th>Diperiksa Oleh</th><td>{{ $check->checker?->name ?: '-' }}</td></tr>
+                    <tr>
+                        <th>Diperiksa Oleh</th>
+                        <td>
+                            {{ $check->checker_name_snapshot ?: ($check->checker?->name ?: '-') }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>NIP/Nomor Pegawai Pemeriksa</th>
+                        <td>
+                            {{ $check->checker_employee_number_snapshot ?: ($check->checker?->employee_number ?: '-') }}
+                        </td>
+                    </tr>
                     <tr><th>Waktu Pemeriksaan</th><td>{{ $check->checked_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB</td></tr>
                     <tr><th>Odometer</th><td>{{ number_format((float) $check->odometer, 1, ',', '.') }} km</td></tr>
                     <tr><th>Bahan Bakar</th><td>{{ $check->fuel_level }}%</td></tr>
@@ -133,26 +162,116 @@
         </div>
     @endforeach
 
+    @php
+        $checkoutCheckerName =
+            $checkout?->checker_name_snapshot
+            ?: $checkout?->checker?->name;
+
+        $checkoutCheckerEmployeeNumber =
+            $checkout?->checker_employee_number_snapshot
+            ?: $checkout?->checker?->employee_number;
+
+        $returnCheckerName =
+            $return?->checker_name_snapshot
+            ?: $return?->checker?->name;
+
+        $returnCheckerEmployeeNumber =
+            $return?->checker_employee_number_snapshot
+            ?: $return?->checker?->employee_number;
+    @endphp
+
     <div class="section">
-        <div class="section-title">Tanda Tangan Serah Terima Peminjam</div>
-        <table>
+        <div class="section-title">Pertanggungjawaban Serah Terima</div>
+
+        <table class="signature-table">
             <tr>
-                <th>Peminjam</th>
-                <td>{{ $vehicleLoan->borrower_name_snapshot }}</td>
+                <td><strong>Peminjam</strong></td>
+                <td><strong>Petugas/Pengelola</strong></td>
             </tr>
+
             <tr>
-                <th>Tanda Tangan</th>
-                <td>
+                <td class="signature-space">
                     @if ($pickupSignature)
-                        <img class="signature" src="{{ $pickupSignature }}" alt="Tanda tangan serah terima">
-                    @else
-                        <span class="muted">Belum tersedia.</span>
+                        <img
+                            class="signature"
+                            src="{{ $pickupSignature }}"
+                            alt="Tanda tangan peminjam"
+                        >
                     @endif
+                </td>
+
+                <td class="signature-space">
+                    {{-- Ruang tanda tangan basah Petugas/Pengelola --}}
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    <strong>{{ $vehicleLoan->borrower_name_snapshot }}</strong>
+                </td>
+                <td>
+                    <strong>
+                        {{ $checkoutCheckerName ?: '................................' }}
+                    </strong>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    NIP/Nomor Pegawai:
+                    {{ $vehicleLoan->employee_number_snapshot ?: '-' }}
+                </td>
+                <td>
+                    NIP/Nomor Pegawai:
+                    {{ $checkoutCheckerEmployeeNumber ?: '................................' }}
                 </td>
             </tr>
         </table>
     </div>
 
+    @if ($return)
+        <div class="section">
+            <div class="section-title">Pertanggungjawaban Pengembalian</div>
+
+            <table class="signature-table">
+                <tr>
+                    <td><strong>Peminjam</strong></td>
+                    <td><strong>Pemeriksa/Pengelola</strong></td>
+                </tr>
+
+                <tr>
+                    <td class="signature-space">
+                        {{-- Ruang tanda tangan basah peminjam --}}
+                    </td>
+                    <td class="signature-space">
+                        {{-- Ruang tanda tangan basah Pemeriksa/Pengelola --}}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <strong>{{ $vehicleLoan->borrower_name_snapshot }}</strong>
+                    </td>
+                    <td>
+                        <strong>
+                            {{ $returnCheckerName ?: '................................' }}
+                        </strong>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        NIP/Nomor Pegawai:
+                        {{ $vehicleLoan->employee_number_snapshot ?: '-' }}
+                    </td>
+                    <td>
+                        NIP/Nomor Pegawai:
+                        {{ $returnCheckerEmployeeNumber ?: '................................' }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    @endif
     <div class="section page-break">
         <div class="section-title">Riwayat Status</div>
         <table>

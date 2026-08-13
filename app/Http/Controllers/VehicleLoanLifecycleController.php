@@ -205,6 +205,7 @@ class VehicleLoanLifecycleController extends Controller
         Request $request,
         VehicleLoan $vehicleLoan,
         Attachment $attachment,
+        VehicleLoanLifecycleService $service,
     ): StreamedResponse {
         Gate::authorize('view', $vehicleLoan);
 
@@ -221,6 +222,16 @@ class VehicleLoanLifecycleController extends Controller
 
         $disk = Storage::disk($attachment->disk);
         abort_unless($disk->exists($attachment->file_path), 404);
+
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $service->auditEvidenceDownload(
+            $vehicleLoan,
+            $attachment,
+            $actor,
+            $request,
+        );
 
         return $disk->response(
             $attachment->file_path,
@@ -241,7 +252,17 @@ class VehicleLoanLifecycleController extends Controller
         Gate::authorize('view', $vehicleLoan);
         $vehicleLoan->load($this->lifecycleRelations());
 
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        abort_if(
+            $vehicleLoan->checkoutCheck() === null,
+            409,
+            'Dokumen operasional kendaraan belum tersedia sebelum pemeriksaan kondisi awal.',
+        );
+
         $evidenceData = [];
+
         foreach ($vehicleLoan->conditionChecks as $conditionCheck) {
             foreach ($conditionCheck->attachments as $attachment) {
                 $evidenceData[$attachment->getKey()] = $service
@@ -266,6 +287,12 @@ class VehicleLoanLifecycleController extends Controller
             'displayTimezone' => $this->displayTimezone(),
         ])->setPaper('a4', 'portrait');
 
+        $service->auditLifecyclePdfDownload(
+            $vehicleLoan,
+            $actor,
+            $request,
+        );
+
         return $pdf->download(
             str_replace('/', '-', $vehicleLoan->loan_number)
                 .'-SERAH-TERIMA.pdf',
@@ -280,7 +307,7 @@ class VehicleLoanLifecycleController extends Controller
         return [
             'borrower:id,employee_number,name,phone,work_unit,position',
             'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,registration_expiry_date,storage_location,responsible_person',
-            'conditionChecks.checker:id,name',
+            'conditionChecks.checker:id,name,employee_number',
             'conditionChecks.attachments',
             'statusHistories.changer:id,name',
             'signatures.signer:id,name',

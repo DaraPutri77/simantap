@@ -12,6 +12,7 @@ use App\Enums\VehicleStatus;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use App\Services\VehicleLoanLifecycleService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -407,6 +408,287 @@ class VehicleReturnTest extends TestCase
             ->get(route('vehicle-loan-lifecycle.pdf', $loan))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_lifecycle_pdf_requires_checkout_and_denies_other_employee(): void
+    {
+        $admin = $this->admin();
+        $owner = $this->employee();
+        $otherEmployee = $this->employee();
+
+        $vehicle = $this->vehicle([
+            'status' => VehicleStatus::Reserved,
+        ]);
+
+        $loan = $this->approvedLoan(
+            $owner,
+            $vehicle,
+            $admin,
+        );
+
+        $this->actingAs($owner)
+            ->get(route('vehicle-loan-lifecycle.pdf', $loan))
+            ->assertStatus(409);
+
+        $this->actingAs($otherEmployee)
+            ->get(route('vehicle-loan-lifecycle.pdf', $loan))
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'event' => 'vehicle_loan_lifecycle_pdf_downloaded',
+            'auditable_id' => $loan->id,
+        ]);
+    }
+
+    public function test_lifecycle_pdf_uses_checker_snapshot_and_wet_signature_fallback(): void
+    {
+        $admin = $this->admin([
+            'name' => 'Petugas Checkout Historis',
+            'employee_number' => 'PEG-CHECKER-OLD-001',
+        ]);
+
+        $employee = $this->employee();
+
+        $vehicle = $this->vehicle([
+            'status' => VehicleStatus::Reserved,
+        ]);
+
+        $loan = $this->approvedLoan(
+            $employee,
+            $vehicle,
+            $admin,
+        );
+
+        $this->checkout($admin, $loan);
+
+        $checkout = $loan->checkoutCheck();
+
+        $this->assertNotNull($checkout);
+
+        $this->assertSame(
+            'Petugas Checkout Historis',
+            $checkout->checker_name_snapshot,
+        );
+
+        $this->assertSame(
+            'PEG-CHECKER-OLD-001',
+            $checkout->checker_employee_number_snapshot,
+        );
+
+        $admin->forceFill([
+            'name' => 'Petugas Master Setelah Berubah',
+            'employee_number' => 'PEG-CHECKER-NEW-001',
+        ])->save();
+
+        $checkout->refresh();
+
+        $this->assertSame(
+            'Petugas Checkout Historis',
+            $checkout->checker_name_snapshot,
+        );
+
+        $this->assertSame(
+            'PEG-CHECKER-OLD-001',
+            $checkout->checker_employee_number_snapshot,
+        );
+
+        $loan = $loan->fresh();
+
+        $loan->load([
+            'borrower:id,employee_number,name,phone,work_unit,position',
+            'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,registration_expiry_date,storage_location,responsible_person',
+            'conditionChecks.checker:id,name,employee_number',
+            'conditionChecks.attachments',
+            'statusHistories.changer:id,name',
+            'signatures.signer:id,name',
+        ]);
+
+        $htmlBeforePickup = view(
+            'vehicle-loans.lifecycle.pdf',
+            [
+                'vehicleLoan' => $loan,
+                'pickupSignature' => null,
+                'evidenceData' => [],
+                'institutionName' => 'Badan Pusat Statistik Kabupaten Jombang',
+                'institutionShortName' => 'BPS Kabupaten Jombang',
+                'displayTimezone' => 'Asia/Jakarta',
+            ],
+        )->render();
+
+        $this->assertStringContainsString(
+            'Pertanggungjawaban Serah Terima',
+            $htmlBeforePickup,
+        );
+
+        $this->assertStringContainsString(
+            'Petugas Checkout Historis',
+            $htmlBeforePickup,
+        );
+
+        $this->assertStringContainsString(
+            'PEG-CHECKER-OLD-001',
+            $htmlBeforePickup,
+        );
+
+        $this->assertSame(
+            1,
+            preg_match(
+                '/Pertanggungjawaban Serah Terima(.*?)Riwayat Status/s',
+                $htmlBeforePickup,
+                $accountabilityMatches,
+            ),
+        );
+
+        $accountabilityHtml = $accountabilityMatches[1];
+
+        $this->assertStringContainsString(
+            'class="signature-space"',
+            $accountabilityHtml,
+        );
+
+        $this->assertStringNotContainsString(
+            'Belum tersedia',
+            $accountabilityHtml,
+        );
+
+        $this->assertStringNotContainsString(
+            'alt="Tanda tangan peminjam"',
+            $accountabilityHtml,
+        );
+
+        $this->actingAs($employee)
+            ->post(
+                route(
+                    'vehicle-loan-lifecycle.employee.confirm-pickup',
+                    $loan,
+                ),
+                $this->signaturePayload(),
+            )
+            ->assertRedirect(
+                route('vehicle-loan-lifecycle.employee.index'),
+            );
+
+        $loan->refresh();
+
+        $loan->load([
+            'borrower:id,employee_number,name,phone,work_unit,position',
+            'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,registration_expiry_date,storage_location,responsible_person',
+            'conditionChecks.checker:id,name,employee_number',
+            'conditionChecks.attachments',
+            'statusHistories.changer:id,name',
+            'signatures.signer:id,name',
+        ]);
+
+        $pickupSignature = app(
+            VehicleLoanLifecycleService::class,
+        )->signatureDataUri(
+            $loan->pickupSignature(),
+        );
+
+        $this->assertNotNull($pickupSignature);
+
+        $htmlAfterPickup = view(
+            'vehicle-loans.lifecycle.pdf',
+            [
+                'vehicleLoan' => $loan,
+                'pickupSignature' => $pickupSignature,
+                'evidenceData' => [],
+                'institutionName' => 'Badan Pusat Statistik Kabupaten Jombang',
+                'institutionShortName' => 'BPS Kabupaten Jombang',
+                'displayTimezone' => 'Asia/Jakarta',
+            ],
+        )->render();
+
+        $this->assertStringContainsString(
+            'alt="Tanda tangan peminjam"',
+            $htmlAfterPickup,
+        );
+    }
+
+    public function test_lifecycle_and_evidence_downloads_are_audited_and_owned(): void
+    {
+        $admin = $this->admin();
+        $employee = $this->employee();
+        $otherEmployee = $this->employee();
+
+        $vehicle = $this->vehicle([
+            'status' => VehicleStatus::Reserved,
+        ]);
+
+        $loan = $this->approvedLoan(
+            $employee,
+            $vehicle,
+            $admin,
+        );
+
+        $this->checkout($admin, $loan);
+
+        $this->actingAs($employee)
+            ->get(route('vehicle-loan-lifecycle.pdf', $loan))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'vehicle_loan_lifecycle_pdf_downloaded',
+            'module' => 'vehicle_loan',
+            'auditable_id' => $loan->id,
+            'actor_id' => $employee->id,
+        ]);
+
+        $checkout = $loan->checkoutCheck();
+
+        $this->assertNotNull($checkout);
+
+        $attachment = $checkout
+            ->attachments()
+            ->firstOrFail();
+
+        $this->actingAs($employee)
+            ->get(
+                route(
+                    'vehicle-loan-lifecycle.evidence',
+                    [
+                        'vehicleLoan' => $loan,
+                        'attachment' => $attachment,
+                    ],
+                ),
+            )
+            ->assertOk();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'vehicle_condition_evidence_downloaded',
+            'module' => 'vehicle_loan',
+            'auditable_id' => $loan->id,
+            'actor_id' => $employee->id,
+        ]);
+
+        $this->actingAs($otherEmployee)
+            ->get(route('vehicle-loan-lifecycle.pdf', $loan))
+            ->assertForbidden();
+
+        $this->actingAs($otherEmployee)
+            ->get(
+                route(
+                    'vehicle-loan-lifecycle.evidence',
+                    [
+                        'vehicleLoan' => $loan,
+                        'attachment' => $attachment,
+                    ],
+                ),
+            )
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'event' => 'vehicle_loan_lifecycle_pdf_downloaded',
+            'auditable_id' => $loan->id,
+            'actor_id' => $otherEmployee->id,
+        ]);
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'event' => 'vehicle_condition_evidence_downloaded',
+            'auditable_id' => $loan->id,
+            'actor_id' => $otherEmployee->id,
+        ]);
     }
 
     /**

@@ -653,6 +653,52 @@ class VehicleLoanTest extends TestCase
             ->assertHeader('content-type', 'application/pdf');
     }
 
+    public function test_loan_pdf_download_is_audited_and_wrong_employee_is_denied(): void
+    {
+        $admin = $this->admin();
+        $owner = $this->employee();
+        $otherEmployee = $this->employee();
+
+        $loan = $this->vehicleLoan(
+            $owner,
+            $this->vehicle(),
+        );
+
+        $this->actingAs($owner)
+            ->get(route('my.vehicle-loans.pdf', $loan))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'vehicle_loan_pdf_downloaded',
+            'module' => 'vehicle_loan',
+            'auditable_id' => $loan->id,
+            'actor_id' => $owner->id,
+        ]);
+
+        $this->actingAs($otherEmployee)
+            ->get(route('my.vehicle-loans.pdf', $loan))
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('audit_logs', [
+            'event' => 'vehicle_loan_pdf_downloaded',
+            'auditable_id' => $loan->id,
+            'actor_id' => $otherEmployee->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('vehicle-loans.pdf', $loan))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'vehicle_loan_pdf_downloaded',
+            'module' => 'vehicle_loan',
+            'auditable_id' => $loan->id,
+            'actor_id' => $admin->id,
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

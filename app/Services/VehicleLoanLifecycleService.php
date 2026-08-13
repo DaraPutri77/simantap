@@ -589,6 +589,8 @@ class VehicleLoanLifecycleService
             'equipment_condition' => $data['equipment_condition'],
             'damage_notes' => $data['damage_notes'] ?? null,
             'checked_by' => $actor->getKey(),
+            'checker_name_snapshot' => $actor->name,
+            'checker_employee_number_snapshot' => $actor->employee_number,
             'checked_at' => now(),
         ]);
     }
@@ -891,6 +893,46 @@ class VehicleLoanLifecycleService
     /**
      * @param  array<string, mixed>  $extraValues
      */
+    public function auditLifecyclePdfDownload(
+        VehicleLoan $vehicleLoan,
+        User $actor,
+        ?Request $httpRequest = null,
+    ): void {
+        $this->auditLogger->log(
+            event: 'vehicle_loan_lifecycle_pdf_downloaded',
+            module: 'vehicle_loan',
+            auditable: $vehicleLoan,
+            oldValues: [],
+            newValues: [
+                'document_type' => 'vehicle_loan_lifecycle_pdf',
+                'status' => $vehicleLoan->status->value,
+            ],
+            request: $httpRequest,
+            actorId: $actor->getKey(),
+        );
+    }
+
+    public function auditEvidenceDownload(
+        VehicleLoan $vehicleLoan,
+        Attachment $attachment,
+        User $actor,
+        ?Request $httpRequest = null,
+    ): void {
+        $this->auditLogger->log(
+            event: 'vehicle_condition_evidence_downloaded',
+            module: 'vehicle_loan',
+            auditable: $vehicleLoan,
+            oldValues: [],
+            newValues: [
+                'document_type' => 'vehicle_condition_evidence',
+                'attachment_id' => $attachment->getKey(),
+                'category' => $attachment->file_category->value,
+            ],
+            request: $httpRequest,
+            actorId: $actor->getKey(),
+        );
+    }
+
     private function auditTransition(
         VehicleLoan $vehicleLoan,
         VehicleLoanStatus $previous,
