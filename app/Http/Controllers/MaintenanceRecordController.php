@@ -15,6 +15,7 @@ use App\Models\MaintenanceRecord;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
 use App\Services\MaintenanceService;
+use App\Support\AttachmentIntegrity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -279,6 +280,14 @@ class MaintenanceRecordController extends Controller
 
         $disk = Storage::disk($attachment->disk);
         abort_unless($disk->exists($attachment->file_path), 404);
+
+        abort_unless(
+            AttachmentIntegrity::checksumMatches(
+                $attachment,
+            ),
+            409,
+            'Integritas bukti pemeliharaan tidak valid.',
+        );
 
         return $disk->response(
             $attachment->file_path,

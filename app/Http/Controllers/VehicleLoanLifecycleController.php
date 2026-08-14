@@ -12,6 +12,7 @@ use App\Models\VehicleLoan;
 use App\Services\DocumentVerificationService;
 use App\Services\QrCodeService;
 use App\Services\VehicleLoanLifecycleService;
+use App\Support\AttachmentIntegrity;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -224,6 +225,14 @@ class VehicleLoanLifecycleController extends Controller
 
         $disk = Storage::disk($attachment->disk);
         abort_unless($disk->exists($attachment->file_path), 404);
+
+        abort_unless(
+            AttachmentIntegrity::checksumMatches(
+                $attachment,
+            ),
+            409,
+            'Integritas bukti kondisi kendaraan tidak valid.',
+        );
 
         $actor = $request->user();
         abort_if($actor === null, 401);
