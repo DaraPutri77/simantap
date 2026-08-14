@@ -8,13 +8,16 @@ use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
 use App\Services\QrCodeService;
+use App\Services\VehicleControlCardService;
 use App\Services\VehicleService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class VehicleController extends Controller
 {
@@ -237,6 +240,37 @@ class VehicleController extends Controller
                 'Asia/Jakarta',
             ),
         ]);
+    }
+
+    public function downloadControlCard(
+        Request $request,
+        Vehicle $vehicle,
+        VehicleControlCardService $service,
+    ): Response {
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+        abort_unless(
+            $actor->can(PermissionName::VehicleManage->value),
+            403,
+        );
+
+        $data = $service->build($vehicle);
+
+        $pdf = Pdf::loadView(
+            'vehicles.control-card-pdf',
+            $data,
+        )->setPaper('a4', 'landscape');
+
+        $service->auditDownload(
+            $vehicle,
+            $actor,
+            $data['recordCount'],
+            $request,
+        );
+
+        return $pdf->download(
+            $service->filename($vehicle),
+        );
     }
 
     public function edit(Vehicle $vehicle): View

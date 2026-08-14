@@ -83,6 +83,9 @@
                     Kembali
                 </a>
                 @if ($canManage)
+                    <a href="{{ route('vehicles.control-card', $vehicle) }}" class="button-secondary-dark">
+                        Kartu Kendali
+                    </a>
                     <a href="{{ route('vehicles.edit', $vehicle) }}" class="button-primary-inline">
                         Edit Kendaraan
                     </a>

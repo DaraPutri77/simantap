@@ -597,6 +597,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     '/{vehicle}/aktifkan',
                     [VehicleController::class, 'activate'],
                 )->name('vehicles.activate');
+                Route::get(
+                    '/{vehicle}/kartu-kendali',
+                    [VehicleController::class, 'downloadControlCard'],
+                )->name('vehicles.control-card');
             });
 
             Route::middleware('permission:vehicle.view')
