@@ -9,6 +9,8 @@ use App\Http\Requests\RequestVehicleReturnRequest;
 use App\Http\Requests\StoreVehicleConditionCheckRequest;
 use App\Models\Attachment;
 use App\Models\VehicleLoan;
+use App\Services\DocumentVerificationService;
+use App\Services\QrCodeService;
 use App\Services\VehicleLoanLifecycleService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -248,6 +250,8 @@ class VehicleLoanLifecycleController extends Controller
         Request $request,
         VehicleLoan $vehicleLoan,
         VehicleLoanLifecycleService $service,
+        DocumentVerificationService $verificationService,
+        QrCodeService $qrCodes,
     ): Response {
         Gate::authorize('view', $vehicleLoan);
         $vehicleLoan->load($this->lifecycleRelations());
@@ -265,16 +269,56 @@ class VehicleLoanLifecycleController extends Controller
 
         foreach ($vehicleLoan->conditionChecks as $conditionCheck) {
             foreach ($conditionCheck->attachments as $attachment) {
-                $evidenceData[$attachment->getKey()] = $service
-                    ->attachmentDataUri($attachment);
+                $dataUri = $service->attachmentDataUri(
+                    $attachment,
+                );
+
+                abort_if(
+                    $attachment->isImage()
+                        && $dataUri === null,
+                    409,
+                    'Integritas bukti kondisi kendaraan gagal diverifikasi.',
+                );
+
+                $evidenceData[$attachment->getKey()] = $dataUri;
             }
         }
 
+        $pickupSignatureRecord =
+            $vehicleLoan->pickupSignature();
+
+        $pickupSignature = $service->signatureDataUri(
+            $pickupSignatureRecord,
+        );
+
+        abort_if(
+            $pickupSignatureRecord !== null
+                && $pickupSignature === null,
+            409,
+            'Integritas tanda tangan serah terima gagal diverifikasi.',
+        );
+
+        $documentVerification = $verificationService->issue(
+            verifiable: $vehicleLoan,
+            documentType: 'vehicle_loan_lifecycle',
+            documentLabel: 'Form Serah Terima dan Pengembalian Kendaraan Dinas',
+            documentReference: $vehicleLoan->loan_number,
+            payload: $verificationService
+                ->vehicleLoanLifecyclePayload($vehicleLoan),
+            actor: $actor,
+            httpRequest: $request,
+        );
+
+        $verificationQrDataUri = $verificationService->qrDataUri(
+            $documentVerification,
+            $qrCodes,
+        );
+
         $pdf = Pdf::loadView('vehicle-loans.lifecycle.pdf', [
             'vehicleLoan' => $vehicleLoan,
-            'pickupSignature' => $service->signatureDataUri(
-                $vehicleLoan->pickupSignature(),
-            ),
+            'documentVerification' => $documentVerification,
+            'verificationQrDataUri' => $verificationQrDataUri,
+            'pickupSignature' => $pickupSignature,
             'evidenceData' => $evidenceData,
             'institutionName' => (string) config(
                 'simantap.institution.name',

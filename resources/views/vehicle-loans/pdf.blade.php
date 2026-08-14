@@ -8,7 +8,7 @@
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; color: #0f172a; font-size: 10pt; }
         h1, h2, p { margin: 0; }
-        .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; }
+        .header { position: relative; min-height: 86px; text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; }
         .header h1 { font-size: 15pt; margin-top: 5px; }
         .header p { font-size: 9pt; margin-top: 3px; color: #475569; }
         .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 7px; }
@@ -27,6 +27,31 @@
         .signature-space img { max-width: 170px; max-height: 70px; }
         .name { font-weight: bold; text-decoration: underline; }
         .footer { position: fixed; bottom: -12mm; left: 0; right: 0; text-align: center; font-size: 8pt; color: #64748b; }
+        .document-verification {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 125px;
+            margin: 0;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        .document-verification img {
+            display: block;
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 3px;
+        }
+        .document-verification-title {
+            font-size: 6.8pt;
+            font-weight: bold;
+        }
+        .document-verification-meta {
+            margin-top: 2px;
+            color: #64748b;
+            font-size: 6pt;
+            line-height: 1.25;
+        }
     </style>
 </head>
 <body>
@@ -34,6 +59,21 @@
         <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
         <h1>FORM PEMINJAMAN KENDARAAN DINAS</h1>
         <p>Sistem Manajemen Aset dan Persediaan</p>
+            <div class="document-verification">
+            <img
+                src="{{ $verificationQrDataUri }}"
+                alt="QR verifikasi dokumen"
+            >
+            <div class="document-verification-title">
+                Verifikasi SIMANTAP
+            </div>
+            <div class="document-verification-meta">
+                Versi {{ $documentVerification->version }}
+                · {{ substr($documentVerification->payload_hash, 0, 12) }}
+                <br>
+                QR bukan tanda tangan digital
+            </div>
+        </div>
     </header>
 
     <table class="meta">
@@ -47,7 +87,7 @@
         </tr>
         <tr>
             <td class="label">Tanggal Cetak</td>
-            <td>: {{ now()->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
+            <td>: {{ $documentVerification->issued_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
         </tr>
     </table>
 

@@ -7,6 +7,7 @@ use App\Enums\VehicleStatus;
 use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
+use App\Services\DocumentVerificationService;
 use App\Services\QrCodeService;
 use App\Services\VehicleControlCardService;
 use App\Services\VehicleService;
@@ -246,6 +247,8 @@ class VehicleController extends Controller
         Request $request,
         Vehicle $vehicle,
         VehicleControlCardService $service,
+        DocumentVerificationService $verificationService,
+        QrCodeService $qrCodes,
     ): Response {
         $actor = $request->user();
         abort_if($actor === null, 401);
@@ -255,6 +258,27 @@ class VehicleController extends Controller
         );
 
         $data = $service->build($vehicle);
+
+        $documentVerification = $verificationService->issue(
+            verifiable: $vehicle,
+            documentType: 'vehicle_control_card',
+            documentLabel: 'Kartu Kendali Kendaraan',
+            documentReference: $vehicle->vehicle_code,
+            payload: $verificationService
+                ->vehicleControlCardPayload(
+                    $vehicle,
+                    $data,
+                ),
+            actor: $actor,
+            httpRequest: $request,
+        );
+
+        $data['documentVerification'] = $documentVerification;
+        $data['verificationQrDataUri'] = $verificationService
+            ->qrDataUri(
+                $documentVerification,
+                $qrCodes,
+            );
 
         $pdf = Pdf::loadView(
             'vehicles.control-card-pdf',

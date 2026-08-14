@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\InventoryReceiptController;
 use App\Http\Controllers\InventoryRequestApprovalController;
 use App\Http\Controllers\InventoryRequestController;
@@ -20,6 +21,14 @@ use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\VehicleLoanApprovalController;
 use App\Http\Controllers\VehicleLoanController;
 use Illuminate\Support\Facades\Route;
+
+Route::get(
+    '/verifikasi-dokumen/{token}',
+    DocumentVerificationController::class,
+)
+    ->where('token', '[A-Fa-f0-9]{64}')
+    ->middleware('throttle:60,1')
+    ->name('document-verifications.show');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])

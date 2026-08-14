@@ -507,6 +507,11 @@ class VehicleReturnTest extends TestCase
             'vehicle-loans.lifecycle.pdf',
             [
                 'vehicleLoan' => $loan,
+                'documentVerification' => (object) [
+                    'version' => 1,
+                    'payload_hash' => str_repeat('a', 64),
+                ],
+                'verificationQrDataUri' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==',
                 'pickupSignature' => null,
                 'evidenceData' => [],
                 'institutionName' => 'Badan Pusat Statistik Kabupaten Jombang',
@@ -591,6 +596,11 @@ class VehicleReturnTest extends TestCase
             'vehicle-loans.lifecycle.pdf',
             [
                 'vehicleLoan' => $loan,
+                'documentVerification' => (object) [
+                    'version' => 1,
+                    'payload_hash' => str_repeat('a', 64),
+                ],
+                'verificationQrDataUri' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==',
                 'pickupSignature' => $pickupSignature,
                 'evidenceData' => [],
                 'institutionName' => 'Badan Pusat Statistik Kabupaten Jombang',

@@ -213,6 +213,33 @@
             font-size: 7pt;
             text-align: center;
         }
+        .document-verification {
+            width: 130px;
+            margin-top: 5px;
+            margin-left: auto;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+
+        .document-verification img {
+            display: block;
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 3px;
+        }
+
+        .document-verification-title {
+            color: #0f172a;
+            font-size: 6.8pt;
+            font-weight: bold;
+        }
+
+        .document-verification-meta {
+            margin-top: 2px;
+            color: #64748b;
+            font-size: 6pt;
+            line-height: 1.25;
+        }
     </style>
 </head>
 <body>
@@ -236,7 +263,22 @@
                         <td>: {{ $inventoryRequest->request_date->copy()->timezone($displayTimezone)->translatedFormat('d F Y') }}</td>
                     </tr>
                 </table>
-            </td>
+                            <div class="document-verification">
+                    <img
+                        src="{{ $verificationQrDataUri }}"
+                        alt="QR verifikasi dokumen"
+                    >
+                    <div class="document-verification-title">
+                        Verifikasi SIMANTAP
+                    </div>
+                    <div class="document-verification-meta">
+                        Versi {{ $documentVerification->version }}
+                        · {{ substr($documentVerification->payload_hash, 0, 12) }}
+                        <br>
+                        QR bukan tanda tangan digital
+                    </div>
+                </div>
+</td>
         </tr>
     </table>
 
@@ -377,7 +419,7 @@
 
     <div class="footer">
         {{ $inventoryRequest->request_number }}
-        · Dicetak {{ now()->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB
+        · Dicetak {{ $documentVerification->issued_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB
         · Dokumen elektronik SIMANTAP
     </div>
 </body>

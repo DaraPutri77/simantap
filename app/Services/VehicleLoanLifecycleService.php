@@ -562,10 +562,23 @@ class VehicleLoanLifecycleService
             return null;
         }
 
+        $binary = $disk->get($attachment->file_path);
+        $expectedChecksum = trim((string) $attachment->checksum);
+
+        if (
+            $expectedChecksum === ''
+            || ! hash_equals(
+                $expectedChecksum,
+                hash('sha256', $binary),
+            )
+        ) {
+            return null;
+        }
+
         return sprintf(
             'data:%s;base64,%s',
             $attachment->mime_type,
-            base64_encode($disk->get($attachment->file_path)),
+            base64_encode($binary),
         );
     }
 

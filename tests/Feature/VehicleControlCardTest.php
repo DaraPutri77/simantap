@@ -68,7 +68,14 @@ class VehicleControlCardTest extends TestCase
 
         $html = view(
             'vehicles.control-card-pdf',
-            $data,
+            [
+                ...$data,
+                'documentVerification' => (object) [
+                    'version' => 1,
+                    'payload_hash' => str_repeat('b', 64),
+                ],
+                'verificationQrDataUri' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==',
+            ],
         )->render();
 
         $this->assertSame(
@@ -104,13 +111,20 @@ class VehicleControlCardTest extends TestCase
             'Mohammad Farikhin',
             $html,
         );
-        $this->assertStringNotContainsString(
-            'Mitha Ramadhani Pratiwi',
-            $html,
+        $this->assertSame(
+            2,
+            substr_count(
+                $html,
+                'alt="QR verifikasi dokumen"',
+            ),
         );
-        $this->assertStringNotContainsString(
-            'QR',
-            $html,
+
+        $this->assertSame(
+            2,
+            substr_count(
+                $html,
+                'QR bukan tanda tangan digital',
+            ),
         );
 
         $this->actingAs($admin)
@@ -231,7 +245,14 @@ class VehicleControlCardTest extends TestCase
 
         $html = view(
             'vehicles.control-card-pdf',
-            $data,
+            [
+                ...$data,
+                'documentVerification' => (object) [
+                    'version' => 1,
+                    'payload_hash' => str_repeat('b', 64),
+                ],
+                'verificationQrDataUri' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==',
+            ],
         )->render();
 
         $this->assertSame(

@@ -50,11 +50,13 @@
         }
 
         .card {
+            position: relative;
             width: 100%;
         }
 
         .title {
-            margin: 0 0 4mm 0;
+            min-height: 12mm;
+            margin: 0 24mm 1.5mm;
             text-align: center;
             font-size: 11pt;
             font-weight: bold;
@@ -192,6 +194,31 @@
             min-height: 4mm;
             line-height: 1.2;
         }
+        .document-verification {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 23mm;
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .document-verification img {
+            display: block;
+            width: 9mm;
+            height: 9mm;
+            margin: 0 auto 0.5mm;
+        }
+
+        .document-verification-meta {
+            display: block;
+            margin: 0;
+            color: #222;
+            font-size: 4.3pt;
+            line-height: 1.08;
+            text-align: center;
+            white-space: normal;
+        }
     </style>
 </head>
 
@@ -204,6 +231,31 @@
                         @foreach ([1, 2] as $copy)
                             <td class="{{ $copy === 1 ? 'card-cell-left' : 'card-cell-right' }}">
                                 <div class="card">
+                                    <div class="document-verification">
+                                        <img
+                                            src="{{ $verificationQrDataUri }}"
+                                            alt="QR verifikasi dokumen"
+                                        >
+                                        <div class="document-verification-meta">
+                                            <strong>
+                                                Verifikasi SIMANTAP
+                                            </strong>
+                                            <br>
+                                            Versi
+                                            {{ $documentVerification->version }}
+                                            ·
+                                            {{
+                                                substr(
+                                                    $documentVerification
+                                                        ->payload_hash,
+                                                    0,
+                                                    12,
+                                                )
+                                            }}
+                                            <br>
+                                            QR bukan tanda tangan digital
+                                        </div>
+                                    </div>
                                     <div class="title">
                                         KARTU KENDALI KENDARAAN
                                     </div>
@@ -329,6 +381,8 @@
                                             </tr>
                                         </tbody>
                                     </table>
+
+
                                 </div>
                             </td>
                         @endforeach

@@ -6,7 +6,7 @@
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #0f172a; }
         h1, h2, h3, p { margin: 0; }
-        .header { text-align: center; margin-bottom: 18px; }
+        .header { position: relative; min-height: 84px; text-align: center; margin-bottom: 18px; }
         .header h1 { font-size: 15px; margin-top: 5px; }
         .header p { margin-top: 4px; color: #475569; }
         .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 7px; }
@@ -41,6 +41,31 @@
         }
         .muted { color: #64748b; }
         .page-break { page-break-before: always; }
+        .document-verification {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 125px;
+            margin: 0;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        .document-verification img {
+            display: block;
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 3px;
+        }
+        .document-verification-title {
+            font-size: 6.8pt;
+            font-weight: bold;
+        }
+        .document-verification-meta {
+            margin-top: 2px;
+            color: #64748b;
+            font-size: 6pt;
+            line-height: 1.25;
+        }
     </style>
 </head>
 <body>
@@ -53,6 +78,21 @@
         <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
         <h1>FORM SERAH TERIMA DAN PENGEMBALIAN KENDARAAN DINAS</h1>
         <p>{{ $vehicleLoan->loan_number }}</p>
+            <div class="document-verification">
+            <img
+                src="{{ $verificationQrDataUri }}"
+                alt="QR verifikasi dokumen"
+            >
+            <div class="document-verification-title">
+                Verifikasi SIMANTAP
+            </div>
+            <div class="document-verification-meta">
+                Versi {{ $documentVerification->version }}
+                · {{ substr($documentVerification->payload_hash, 0, 12) }}
+                <br>
+                QR bukan tanda tangan digital
+            </div>
+        </div>
     </div>
 
     <div class="section">
@@ -297,5 +337,5 @@
             </tbody>
         </table>
     </div>
-</body>
+    </body>
 </html>

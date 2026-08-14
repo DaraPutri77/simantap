@@ -12,6 +12,8 @@ use App\Http\Requests\StoreVehicleLoanRequest;
 use App\Http\Requests\SubmitVehicleLoanRequest;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use App\Services\DocumentVerificationService;
+use App\Services\QrCodeService;
 use App\Services\VehicleLoanService;
 use App\Support\DisplayDateRange;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -386,6 +388,8 @@ class VehicleLoanController extends Controller
         Request $request,
         VehicleLoan $vehicleLoan,
         VehicleLoanService $service,
+        DocumentVerificationService $verificationService,
+        QrCodeService $qrCodes,
     ): Response {
         Gate::authorize('view', $vehicleLoan);
         $this->loadLoan($vehicleLoan);
@@ -393,16 +397,56 @@ class VehicleLoanController extends Controller
         $actor = $request->user();
         abort_if($actor === null, 401);
 
-        $approvalSignatureRecord = $vehicleLoan->approvalSignature();
+        $submissionSignatureRecord =
+            $vehicleLoan->submissionSignature();
+
+        $approvalSignatureRecord =
+            $vehicleLoan->approvalSignature();
+
+        $submissionSignature = $service->signatureDataUri(
+            $submissionSignatureRecord,
+        );
+
+        $approvalSignature = $service->signatureDataUri(
+            $approvalSignatureRecord,
+        );
+
+        abort_if(
+            $submissionSignatureRecord !== null
+                && $submissionSignature === null,
+            409,
+            'Integritas tanda tangan peminjam gagal diverifikasi.',
+        );
+
+        abort_if(
+            $approvalSignatureRecord !== null
+                && $approvalSignature === null,
+            409,
+            'Integritas tanda tangan persetujuan gagal diverifikasi.',
+        );
+
+        $documentVerification = $verificationService->issue(
+            verifiable: $vehicleLoan,
+            documentType: 'vehicle_loan',
+            documentLabel: 'Form Peminjaman Kendaraan Dinas',
+            documentReference: $vehicleLoan->loan_number,
+            payload: $verificationService
+                ->vehicleLoanPayload($vehicleLoan),
+            actor: $actor,
+            httpRequest: $request,
+        );
+
+        $verificationQrDataUri = $verificationService->qrDataUri(
+            $documentVerification,
+            $qrCodes,
+        );
 
         $pdf = Pdf::loadView('vehicle-loans.pdf', [
             'vehicleLoan' => $vehicleLoan,
-            'submissionSignature' => $service->signatureDataUri(
-                $vehicleLoan->submissionSignature(),
-            ),
-            'approvalSignature' => $service->signatureDataUri(
-                $approvalSignatureRecord,
-            ),
+            'documentVerification' => $documentVerification,
+            'verificationQrDataUri' => $verificationQrDataUri,
+            'submissionSignature' => $submissionSignature,
+            'approvalSignature' => $approvalSignature,
             'approvalSignerName' => $approvalSignatureRecord?->signer_name_snapshot,
             'approvalSignerEmployeeNumber' => $approvalSignatureRecord?->employee_number_snapshot,
             'institutionName' => (string) config(

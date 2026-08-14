@@ -15,7 +15,9 @@ use App\Http\Requests\StoreInventoryRequestRequest;
 use App\Http\Requests\SubmitInventoryRequestRequest;
 use App\Models\InventoryRequest;
 use App\Models\Item;
+use App\Services\DocumentVerificationService;
 use App\Services\InventoryRequestService;
+use App\Services\QrCodeService;
 use App\Support\DisplayDateRange;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -534,21 +536,80 @@ class InventoryRequestController extends Controller
         Request $request,
         InventoryRequest $inventoryRequest,
         InventoryRequestService $service,
+        DocumentVerificationService $verificationService,
+        QrCodeService $qrCodes,
     ): Response {
         Gate::authorize('view', $inventoryRequest);
         $this->loadRequest($inventoryRequest);
 
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $submissionSignatureRecord =
+            $inventoryRequest->submissionSignature();
+
+        $approvalSignatureRecord =
+            $inventoryRequest->approvalSignature();
+
+        $receiptSignatureRecord =
+            $inventoryRequest->receiptSignature();
+
+        $submissionSignature = $service->signatureDataUri(
+            $submissionSignatureRecord,
+        );
+
+        $approvalSignature = $service->signatureDataUri(
+            $approvalSignatureRecord,
+        );
+
+        $receiptSignature = $service->signatureDataUri(
+            $receiptSignatureRecord,
+        );
+
+        abort_if(
+            $submissionSignatureRecord !== null
+                && $submissionSignature === null,
+            409,
+            'Integritas tanda tangan pemohon gagal diverifikasi.',
+        );
+
+        abort_if(
+            $approvalSignatureRecord !== null
+                && $approvalSignature === null,
+            409,
+            'Integritas tanda tangan persetujuan gagal diverifikasi.',
+        );
+
+        abort_if(
+            $receiptSignatureRecord !== null
+                && $receiptSignature === null,
+            409,
+            'Integritas tanda tangan penerimaan gagal diverifikasi.',
+        );
+
+        $documentVerification = $verificationService->issue(
+            verifiable: $inventoryRequest,
+            documentType: 'inventory_request',
+            documentLabel: 'Form Permintaan Persediaan',
+            documentReference: $inventoryRequest->request_number,
+            payload: $verificationService
+                ->inventoryRequestPayload($inventoryRequest),
+            actor: $actor,
+            httpRequest: $request,
+        );
+
+        $verificationQrDataUri = $verificationService->qrDataUri(
+            $documentVerification,
+            $qrCodes,
+        );
+
         $pdf = Pdf::loadView('inventory-requests.pdf', [
             'inventoryRequest' => $inventoryRequest,
-            'submissionSignature' => $service->signatureDataUri(
-                $inventoryRequest->submissionSignature(),
-            ),
-            'approvalSignature' => $service->signatureDataUri(
-                $inventoryRequest->approvalSignature(),
-            ),
-            'receiptSignature' => $service->signatureDataUri(
-                $inventoryRequest->receiptSignature(),
-            ),
+            'documentVerification' => $documentVerification,
+            'verificationQrDataUri' => $verificationQrDataUri,
+            'submissionSignature' => $submissionSignature,
+            'approvalSignature' => $approvalSignature,
+            'receiptSignature' => $receiptSignature,
             'institutionName' => (string) config(
                 'simantap.institution.name',
                 'Badan Pusat Statistik',
