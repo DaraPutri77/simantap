@@ -90,9 +90,9 @@
 >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h3 class="font-black text-slate-950">Hasil Pemeriksaan Fisik</h3>
+            <h3 class="font-black text-slate-950">Daftar Barang Hasil Pemeriksaan Fisik</h3>
             <p class="mt-1 text-xs leading-5 text-slate-500">
-                Masukkan jumlah fisik aktual. Sistem menghitung selisih otomatis.
+                Pilih barang lalu masukkan jumlah fisik aktual yang benar. Jangan memasukkan angka selisih; sistem menghitung selisih otomatis.
             </p>
         </div>
         <button
@@ -100,7 +100,7 @@
             class="secondary-button sm:w-auto"
             data-add-inventory-line
         >
-            Tambah Baris
+            Tambah Barang
         </button>
     </div>
 
@@ -148,7 +148,7 @@
 
                     <div>
                         <label class="form-label" for="items_{{ $lineIndex }}_physical_quantity">
-                            Jumlah Fisik
+                            Jumlah Fisik Aktual
                         </label>
                         <input
                             id="items_{{ $lineIndex }}_physical_quantity"
@@ -233,7 +233,7 @@
                 </div>
                 <div>
                     <label class="form-label" for="items___INDEX___physical_quantity">
-                        Jumlah Fisik
+                        Jumlah Fisik Aktual
                     </label>
                     <input
                         id="items___INDEX___physical_quantity"

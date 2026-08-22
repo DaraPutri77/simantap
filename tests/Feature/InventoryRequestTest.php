@@ -663,6 +663,240 @@ class InventoryRequestTest extends TestCase
         }
     }
 
+    public function test_batch3a_request_form_displays_category_and_minimum_stock_warning(): void
+    {
+        $employee = $this->employee();
+
+        $category = ItemCategory::query()->create([
+            'name' => 'Kategori Batch 3A',
+            'description' => null,
+            'is_active' => true,
+        ]);
+
+        $this->item([
+            'item_code' => 'BRG-B3A-CAT',
+            'name' => 'Tinta Printer Batch 3A',
+            'category_id' => $category->id,
+            'current_stock' => 5,
+            'reserved_stock' => 0,
+            'minimum_stock' => 5,
+        ]);
+
+        $this->actingAs($employee)
+            ->get(route('my.inventory-requests.create'))
+            ->assertOk()
+            ->assertSee('BRG-B3A-CAT')
+            ->assertSee('Tinta Printer Batch 3A')
+            ->assertSee('Kategori Batch 3A')
+            ->assertSee('STOK MINIMUM');
+    }
+
+    public function test_batch3a_item_at_minimum_stock_cannot_be_requested(): void
+    {
+        $employee = $this->employee();
+
+        $item = $this->item([
+            'item_code' => 'BRG-B3A-MIN',
+            'name' => 'Barang Batas Minimum',
+            'current_stock' => 5,
+            'reserved_stock' => 0,
+            'minimum_stock' => 5,
+        ]);
+
+        $this->actingAs($employee)
+            ->post(
+                route('my.inventory-requests.store'),
+                $this->draftPayload($item, 1),
+            )
+            ->assertSessionHasErrors([
+                'items.0.item_id',
+            ]);
+
+        $this->assertDatabaseCount(
+            'inventory_requests',
+            0,
+        );
+
+        $this->assertSame(
+            '5.00',
+            $item->refresh()->current_stock,
+        );
+
+        $this->assertSame(
+            '0.00',
+            $item->reserved_stock,
+        );
+
+        $this->assertDatabaseCount(
+            'stock_movements',
+            0,
+        );
+    }
+
+    public function test_batch3a_submit_rechecks_minimum_stock(): void
+    {
+        $employee = $this->employee();
+
+        $item = $this->item([
+            'item_code' => 'BRG-B3A-SUBMIT',
+            'name' => 'Barang Minimum Saat Submit',
+            'current_stock' => 10,
+            'reserved_stock' => 0,
+            'minimum_stock' => 5,
+        ]);
+
+        $inventoryRequest = $this->draftRequest(
+            $employee,
+            $item,
+            1,
+        );
+
+        $item->forceFill([
+            'current_stock' => 5,
+        ])->save();
+
+        $this->actingAs($employee)
+            ->post(
+                route(
+                    'my.inventory-requests.submit',
+                    $inventoryRequest,
+                ),
+                $this->signaturePayload(),
+            )
+            ->assertSessionHasErrors([
+                'items',
+            ]);
+
+        $this->assertSame(
+            InventoryRequestStatus::Draft,
+            $inventoryRequest->refresh()->status,
+        );
+
+        $this->assertDatabaseCount(
+            'digital_signatures',
+            0,
+        );
+
+        $this->assertDatabaseCount(
+            'stock_movements',
+            0,
+        );
+
+        $disk = (string) config(
+            'simantap.uploads.disk',
+            'local',
+        );
+
+        $this->assertSame(
+            [],
+            Storage::disk($disk)
+                ->allFiles(
+                    'signatures/inventory-requests/'
+                    .$inventoryRequest->id,
+                ),
+        );
+    }
+
+    public function test_batch3a_revision_note_remains_after_resubmission(): void
+    {
+        $admin = $this->admin();
+        $employee = $this->employee();
+        $item = $this->item();
+
+        $inventoryRequest = $this->submittedRequest(
+            $employee,
+            $item,
+            3,
+        );
+
+        $this->actingAs($admin)
+            ->post(
+                route(
+                    'inventory-requests.review',
+                    $inventoryRequest,
+                ),
+            )
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->post(
+                route(
+                    'inventory-requests.revision',
+                    $inventoryRequest,
+                ),
+                [
+                    'revision_note' => 'Perbaiki rincian kebutuhan barang.',
+                ],
+            )
+            ->assertRedirect();
+
+        $this->assertSame(
+            'Perbaiki rincian kebutuhan barang.',
+            $inventoryRequest->refresh()->revision_note,
+        );
+
+        $this->assertDatabaseHas(
+            'request_status_histories',
+            [
+                'inventory_request_id' => $inventoryRequest->id,
+                'new_status' => InventoryRequestStatus::RevisionRequired->value,
+                'notes' => 'Perbaiki rincian kebutuhan barang.',
+            ],
+        );
+
+        $payload = $this->draftPayload(
+            $item,
+            2,
+        );
+
+        $payload['purpose'] = 'Keperluan setelah diperbaiki.';
+
+        $this->actingAs($employee)
+            ->put(
+                route(
+                    'my.inventory-requests.update',
+                    $inventoryRequest,
+                ),
+                $payload,
+            )
+            ->assertRedirect();
+
+        $this->actingAs($employee)
+            ->post(
+                route(
+                    'my.inventory-requests.submit',
+                    $inventoryRequest,
+                ),
+                $this->signaturePayload(),
+            )
+            ->assertRedirect();
+
+        $inventoryRequest->refresh();
+
+        $this->assertSame(
+            InventoryRequestStatus::Submitted,
+            $inventoryRequest->status,
+        );
+
+        $this->assertSame(
+            'Perbaiki rincian kebutuhan barang.',
+            $inventoryRequest->revision_note,
+        );
+
+        $this->actingAs($employee)
+            ->get(
+                route(
+                    'my.inventory-requests.show',
+                    $inventoryRequest,
+                ),
+            )
+            ->assertOk()
+            ->assertSee('Catatan Perbaikan Terakhir')
+            ->assertSee(
+                'Perbaiki rincian kebutuhan barang.',
+            );
+    }
+
     private function admin(): User
     {
         $admin = $this->activeUser([

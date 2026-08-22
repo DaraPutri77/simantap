@@ -14,65 +14,100 @@
             box-sizing: border-box;
         }
 
+        html,
         body {
             margin: 0;
             padding: 0;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 7.6pt;
+        }
+
+        body {
             color: #000;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 6.8pt;
         }
 
-        .page {
+        .sheet {
+            position: relative;
             width: 100%;
+            height: 194mm;
+            overflow: hidden;
         }
 
-        .page-break {
+        .sheet.page-break {
             page-break-after: always;
         }
 
-        .pair {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
+        .card-copy {
+            position: absolute;
+            top: 0;
+            width: 137.5mm;
+            height: 191mm;
+            overflow: hidden;
         }
 
-        .pair > tbody > tr > td {
-            width: 50%;
-            vertical-align: top;
+        .card-left {
+            left: 0;
         }
 
-        .card-cell-left {
-            padding-right: 2.5mm;
+        .card-right {
+            right: 0;
         }
 
-        .card-cell-right {
-            padding-left: 2.5mm;
-        }
-
-        .card {
+        .header {
             position: relative;
-            width: 100%;
+            height: 16mm;
+        }
+
+        .institution-logo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 34mm;
+            height: auto;
         }
 
         .title {
-            min-height: 12mm;
-            margin: 0 24mm 1.5mm;
-            text-align: center;
-            font-size: 11pt;
+            margin: 0 25mm 0 36mm;
+            padding-top: 3mm;
+            font-size: 9.5pt;
             font-weight: bold;
+            text-align: center;
             text-decoration: underline;
+            line-height: 1.15;
+        }
+
+        .document-verification {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 23mm;
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .document-verification img {
+            display: block;
+            width: 8.5mm;
+            height: 8.5mm;
+            margin: 0 auto 0.3mm;
+        }
+
+        .document-verification-meta {
+            color: #222;
+            font-size: 3.8pt;
+            line-height: 1.05;
         }
 
         .identity {
             width: 100%;
-            margin-bottom: 3mm;
+            margin: 1mm 0 2mm;
             border-collapse: collapse;
         }
 
         .identity td {
-            padding: 0.55mm 0;
+            padding: 0.35mm 0;
+            line-height: 1.15;
             vertical-align: top;
-            line-height: 1.25;
         }
 
         .identity-label {
@@ -83,13 +118,12 @@
 
         .identity-colon {
             width: 4%;
-            text-align: center;
             font-weight: bold;
+            text-align: center;
         }
 
         .identity-value {
             width: 65%;
-            font-weight: normal;
         }
 
         .history {
@@ -101,22 +135,24 @@
         .history th,
         .history td {
             border: 0.25mm solid #000;
-            text-align: center;
             vertical-align: middle;
-            padding: 0.7mm 0.6mm;
         }
 
         .history th {
-            font-size: 6.6pt;
-            line-height: 1.15;
+            height: 8mm;
+            padding: 0.45mm;
+            font-size: 5.7pt;
             font-weight: bold;
-            height: 9mm;
+            line-height: 1.05;
+            text-align: center;
         }
 
         .history td {
-            height: 5.1mm;
-            font-size: 6.8pt;
-            line-height: 1.1;
+            height: 4.45mm;
+            padding: 0.35mm 0.5mm;
+            font-size: 5.9pt;
+            line-height: 1.05;
+            text-align: center;
         }
 
         .history .col-no {
@@ -141,16 +177,13 @@
 
         .history .text-left {
             text-align: left;
-            padding-left: 1mm;
-            padding-right: 1mm;
         }
 
         .knowing {
-            width: 50%;
-            margin-top: 3mm;
+            margin-top: 2mm;
             margin-bottom: 1mm;
+            font-size: 6.3pt;
             text-align: center;
-            font-size: 7.4pt;
         }
 
         .signatures {
@@ -161,235 +194,211 @@
 
         .signatures td {
             width: 50%;
-            vertical-align: top;
+            padding: 0 2mm;
             text-align: center;
-            padding: 0;
-        }
-
-        .signatures .left {
-            padding-right: 5mm;
-        }
-
-        .signatures .right {
-            padding-left: 5mm;
+            vertical-align: top;
         }
 
         .role {
-            min-height: 9mm;
-            line-height: 1.25;
+            min-height: 7mm;
+            font-size: 6.2pt;
+            line-height: 1.15;
         }
 
         .signature-space {
-            height: 15mm;
+            height: 9mm;
         }
 
-        .signer-name {
-            min-height: 4mm;
-            font-weight: bold;
-            line-height: 1.2;
+        .signer-line {
+            min-height: 3mm;
+            font-size: 6pt;
+            line-height: 1.1;
         }
 
         .nip {
-            margin-top: 1mm;
-            min-height: 4mm;
-            line-height: 1.2;
-        }
-        .document-verification {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 23mm;
-            text-align: center;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-
-        .document-verification img {
-            display: block;
-            width: 9mm;
-            height: 9mm;
-            margin: 0 auto 0.5mm;
-        }
-
-        .document-verification-meta {
-            display: block;
-            margin: 0;
-            color: #222;
-            font-size: 4.3pt;
-            line-height: 1.08;
-            text-align: center;
-            white-space: normal;
+            margin-top: 0.5mm;
+            font-size: 5.8pt;
         }
     </style>
 </head>
 
 <body>
     @foreach ($pages as $pageIndex => $rows)
-        <div class="page {{ ! $loop->last ? 'page-break' : '' }}">
-            <table class="pair">
-                <tbody>
-                    <tr>
-                        @foreach ([1, 2] as $copy)
-                            <td class="{{ $copy === 1 ? 'card-cell-left' : 'card-cell-right' }}">
-                                <div class="card">
-                                    <div class="document-verification">
-                                        <img
-                                            src="{{ $verificationQrDataUri }}"
-                                            alt="QR verifikasi dokumen"
-                                        >
-                                        <div class="document-verification-meta">
-                                            <strong>
-                                                Verifikasi SIMANTAP
-                                            </strong>
-                                            <br>
-                                            Versi
-                                            {{ $documentVerification->version }}
-                                            ·
-                                            {{
-                                                substr(
-                                                    $documentVerification
-                                                        ->payload_hash,
-                                                    0,
-                                                    12,
-                                                )
-                                            }}
-                                            <br>
-                                            QR bukan tanda tangan digital
-                                        </div>
+        <section class="sheet {{ ! $loop->last ? 'page-break' : '' }}">
+            @foreach ([1, 2] as $copy)
+                <div
+                    class="card-copy {{ $copy === 1 ? 'card-left' : 'card-right' }}"
+                    data-card-copy="{{ $copy }}"
+                >
+                    <header class="header">
+                        <img
+                            class="institution-logo"
+                            src="{{ public_path(config('simantap.institution.logo')) }}"
+                            alt="Badan Pusat Statistik Kabupaten Jombang"
+                        >
+
+                        <div class="title">
+                            KARTU KENDALI KENDARAAN
+                        </div>
+
+                        <div class="document-verification">
+                            <img
+                                src="{{ $verificationQrDataUri }}"
+                                alt="QR verifikasi dokumen"
+                            >
+
+                            <div class="document-verification-meta">
+                                <strong>Verifikasi SIMANTAP</strong>
+                                <br>
+                                Versi {{ $documentVerification->version }}
+                                ·
+                                {{ substr($documentVerification->payload_hash, 0, 12) }}
+                                <br>
+                                QR bukan tanda tangan digital
+                            </div>
+                        </div>
+                    </header>
+
+                    <table class="identity">
+                        <tbody>
+                            <tr>
+                                <td class="identity-label">
+                                    NAMA KENDARAAN
+                                </td>
+                                <td class="identity-colon">:</td>
+                                <td class="identity-value">
+                                    {{ $vehicle->displayName() }}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="identity-label">
+                                    NOMOR POLISI
+                                </td>
+                                <td class="identity-colon">:</td>
+                                <td class="identity-value">
+                                    {{ $vehicle->license_plate }}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="identity-label">
+                                    MERK/TYPE
+                                </td>
+                                <td class="identity-colon">:</td>
+                                <td class="identity-value">
+                                    {{ trim($vehicle->brand.' '.$vehicle->model) }}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="identity-label">
+                                    PENANGGUNG JAWAB
+                                </td>
+                                <td class="identity-colon">:</td>
+                                <td class="identity-value">
+                                    {{ $vehicle->responsible_person ?: '' }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table class="history">
+                        <thead>
+                            <tr>
+                                <th class="col-no">No</th>
+                                <th class="col-date">Tgl</th>
+                                <th class="col-type">
+                                    Jenis<br>Pemeliharaan
+                                </th>
+                                <th class="col-place">
+                                    Tempat<br>Pemeliharaan
+                                </th>
+                                <th class="col-sign">
+                                    Paraf<br>Pelaksana
+                                </th>
+                                <th class="col-sign">
+                                    Paraf<br>Pengelola
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($rows as $index => $row)
+                                <tr data-control-row="1">
+                                    <td>
+                                        {{
+                                            $row !== null
+                                                ? (($pageIndex * $rowsPerCard) + $index + 1)
+                                                : ''
+                                        }}
+                                    </td>
+
+                                    <td>
+                                        {{ $row['date'] ?? '' }}
+                                    </td>
+
+                                    <td class="text-left">
+                                        {{ $row['maintenance_type'] ?? '' }}
+                                    </td>
+
+                                    <td class="text-left">
+                                        {{ $row['service_provider'] ?? '' }}
+                                    </td>
+
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <div class="knowing">
+                        Mengetahui,
+                    </div>
+
+                    <table class="signatures">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="role">
+                                        Kepala Badan Pusat Statistik
+                                        <br>
+                                        Kabupaten Jombang
                                     </div>
-                                    <div class="title">
-                                        KARTU KENDALI KENDARAAN
+
+                                    <div class="signature-space"></div>
+
+                                    <div class="signer-line">
+                                        &nbsp;
                                     </div>
 
-                                    <table class="identity">
-                                        <tbody>
-                                            <tr>
-                                                <td class="identity-label">NAMA KENDARAAN</td>
-                                                <td class="identity-colon">:</td>
-                                                <td class="identity-value">
-                                                    {{ $vehicle->displayName() }}
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="identity-label">NOMOR POLISI</td>
-                                                <td class="identity-colon">:</td>
-                                                <td class="identity-value">
-                                                    {{ $vehicle->license_plate }}
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="identity-label">MERK/TYPE</td>
-                                                <td class="identity-colon">:</td>
-                                                <td class="identity-value">
-                                                    {{ trim($vehicle->brand.' '.$vehicle->model) }}
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="identity-label">PENANGGUNG JAWAB</td>
-                                                <td class="identity-colon">:</td>
-                                                <td class="identity-value">
-                                                    {{ $vehicle->responsible_person ?: '' }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                    <div class="nip">
+                                        NIP. ....................................
+                                    </div>
+                                </td>
 
-                                    <table class="history">
-                                        <thead>
-                                            <tr>
-                                                <th class="col-no">No</th>
-                                                <th class="col-date">Tgl</th>
-                                                <th class="col-type">
-                                                    Jenis<br>
-                                                    Pemeliharaan
-                                                </th>
-                                                <th class="col-place">
-                                                    Tempat<br>
-                                                    Pemeliharaan
-                                                </th>
-                                                <th class="col-sign">
-                                                    Paraf<br>
-                                                    Pelaksana
-                                                </th>
-                                                <th class="col-sign">
-                                                    Paraf<br>
-                                                    Pengelola
-                                                </th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            @foreach ($rows as $index => $row)
-                                                <tr data-control-row="1">
-                                                    <td>
-                                                        {{ $row !== null ? (($pageIndex * $rowsPerCard) + $index + 1) : '' }}
-                                                    </td>
-                                                    <td>
-                                                        {{ $row['date'] ?? '' }}
-                                                    </td>
-                                                    <td class="text-left">
-                                                        {{ $row['maintenance_type'] ?? '' }}
-                                                    </td>
-                                                    <td class="text-left">
-                                                        {{ $row['service_provider'] ?? '' }}
-                                                    </td>
-                                                    <td>&nbsp;</td>
-                                                    <td>&nbsp;</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-
-                                    <div class="knowing">
-                                        Mengetahui,
+                                <td>
+                                    <div class="role">
+                                        Pengelola Barang
                                     </div>
 
-                                    <table class="signatures">
-                                        <tbody>
-                                            <tr>
-                                                <td class="left">
-                                                    <div class="role">
-                                                        Kepala Badan Pusat Statistik<br>
-                                                        Kabupaten Jombang
-                                                    </div>
+                                    <div class="signature-space"></div>
 
-                                                    <div class="signature-space"></div>
+                                    <div class="signer-line">
+                                        &nbsp;
+                                    </div>
 
-                                                    <div class="signer-name">
-                                                        &nbsp;
-                                                    </div>
-
-                                                    <div class="nip">
-                                                        NIP. ....................................
-                                                    </div>
-                                                </td>
-
-                                                <td class="right">
-                                                    <div class="role">
-                                                        Pengelola Barang
-                                                    </div>
-
-                                                    <div class="signature-space"></div>
-
-                                                    <div class="signer-name">
-                                                        &nbsp;
-                                                    </div>
-
-                                                    <div class="nip">
-                                                        NIP. ....................................
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-
-
-                                </div>
-                            </td>
-                        @endforeach
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                                    <div class="nip">
+                                        NIP. ....................................
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            @endforeach
+        </section>
     @endforeach
 </body>
 </html>

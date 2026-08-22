@@ -20,7 +20,7 @@ class ReportSummarySheet implements FromArray, WithEvents, WithTitle
     public function array(): array
     {
         $filters = $this->report['filters'];
-        $filterRows = array_filter([
+        $filterRows = $this->report['filterRows'] ?? array_filter([
             ['Pencarian', $filters['search']],
             ['ID Barang', $filters['itemId'] > 0 ? (string) $filters['itemId'] : ''],
             ['Jenis Transaksi', $filters['movementType']],

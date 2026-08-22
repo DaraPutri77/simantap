@@ -182,7 +182,7 @@
         <div>
             <label for="registration_expiry_date" class="form-label">
                 Masa Berlaku STNK
-                <span class="font-medium text-slate-500">(opsional)</span>
+                <span class="font-medium text-amber-700">(wajib agar kendaraan dapat dipinjam)</span>
             </label>
             <input
                 id="registration_expiry_date"
@@ -195,7 +195,7 @@
                 <p class="form-error">{{ $message }}</p>
             @enderror
             <p class="mt-2 text-xs font-medium text-slate-500">
-                Sistem menandai dokumen yang kedaluwarsa atau berakhir dalam 30 hari.
+                Kendaraan tanpa masa berlaku STNK atau dengan STNK kedaluwarsa tidak dapat diajukan untuk peminjaman. Sistem juga menandai dokumen yang berakhir dalam 30 hari.
             </p>
         </div>
 

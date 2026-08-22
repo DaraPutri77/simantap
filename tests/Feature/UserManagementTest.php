@@ -205,6 +205,23 @@ class UserManagementTest extends TestCase
         ]);
     }
 
+
+    public function test_admin_is_prompted_to_complete_incomplete_employee_data(): void
+    {
+        $admin = $this->admin();
+        $employee = $this->employee([
+            'work_unit' => 'BPS Kabupaten Jombang',
+            'position' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('users.show', $employee))
+            ->assertOk()
+            ->assertSee('Data kepegawaian belum lengkap')
+            ->assertSee('Lengkapi Data Kepegawaian')
+            ->assertSee('Jabatan belum diisi');
+    }
+
     public function test_admin_account_cannot_be_managed_from_employee_routes(): void
     {
         $admin = $this->admin();

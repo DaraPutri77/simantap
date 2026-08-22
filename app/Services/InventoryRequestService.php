@@ -185,11 +185,29 @@ class InventoryRequestService
                     ]);
                 }
 
+                $requestItems = $this->lockRequestItems($locked);
+                $masterItems = $this->lockMasterItems($requestItems);
+
+                foreach ($requestItems as $line) {
+                    $item = $masterItems->get($line->item_id);
+
+                    if (! $item instanceof Item) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Salah satu barang tidak ditemukan.',
+                        ]);
+                    }
+
+                    $this->assertItemRequestable(
+                        $item,
+                        'items',
+                    );
+                }
+
                 $previousStatus = $locked->status;
                 $locked->forceFill([
                     'status' => InventoryRequestStatus::Submitted,
                     'submitted_at' => now(),
-                    'revision_note' => null,
+
                     'rejection_reason' => null,
                     'rejected_at' => null,
                 ])->save();
@@ -887,6 +905,19 @@ class InventoryRequestService
             ]);
         }
 
+        foreach ($lines as $index => $line) {
+            $item = $masterItems->get((int) $line['item_id']);
+
+            if (! $item instanceof Item) {
+                continue;
+            }
+
+            $this->assertItemRequestable(
+                $item,
+                "items.{$index}.item_id",
+            );
+        }
+
         $inventoryRequest->items()->delete();
 
         foreach ($lines as $line) {
@@ -911,6 +942,28 @@ class InventoryRequestService
                 'admin_notes' => null,
             ]);
         }
+    }
+
+    private function assertItemRequestable(
+        Item $item,
+        string $field,
+    ): void {
+        $available = (float) $item->available_stock;
+        $minimum = (float) $item->minimum_stock;
+
+        if ($available > $minimum) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => sprintf(
+                'Barang %s · %s tidak dapat diminta karena stok tersedia %s sudah mencapai batas minimum %s.',
+                $item->item_code,
+                $item->name,
+                number_format($available, 2, ',', '.'),
+                number_format($minimum, 2, ',', '.'),
+            ),
+        ]);
     }
 
     private function releaseReservations(

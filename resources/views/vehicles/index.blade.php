@@ -227,12 +227,22 @@
                                     </p>
                                 </td>
                                 <td class="text-right">
-                                    <a
-                                        href="{{ route('vehicles.show', $vehicle) }}"
-                                        class="text-xs font-black text-sky-700 hover:text-sky-900"
-                                    >
-                                        Lihat Detail
-                                    </a>
+                                    <div class="flex flex-wrap items-center justify-end gap-3">
+                                        @if ($canManage)
+                                            <a
+                                                href="{{ route('vehicles.edit', $vehicle) }}"
+                                                class="text-xs font-black text-amber-700 hover:text-amber-900"
+                                            >
+                                                {{ $registrationState === 'missing' ? 'Lengkapi Data / STNK' : 'Edit' }}
+                                            </a>
+                                        @endif
+                                        <a
+                                            href="{{ route('vehicles.show', $vehicle) }}"
+                                            class="text-xs font-black text-sky-700 hover:text-sky-900"
+                                        >
+                                            Lihat Detail
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -293,12 +303,22 @@
                                 </dd>
                             </div>
                         </dl>
-                        <a
-                            href="{{ route('vehicles.show', $vehicle) }}"
-                            class="secondary-button mt-4"
-                        >
-                            Lihat Detail
-                        </a>
+                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                            @if ($canManage)
+                                <a
+                                    href="{{ route('vehicles.edit', $vehicle) }}"
+                                    class="button-primary-inline justify-center"
+                                >
+                                    {{ $registrationState === 'missing' ? 'Lengkapi Data / STNK' : 'Edit Kendaraan' }}
+                                </a>
+                            @endif
+                            <a
+                                href="{{ route('vehicles.show', $vehicle) }}"
+                                class="secondary-button"
+                            >
+                                Lihat Detail
+                            </a>
+                        </div>
                     </article>
                 @endforeach
             </div>

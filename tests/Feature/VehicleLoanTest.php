@@ -297,6 +297,100 @@ class VehicleLoanTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_employee_index_uses_simple_status_groups_and_clear_filter_copy(): void
+    {
+        $employee = $this->employee();
+        $waitingLoan = $this->vehicleLoan(
+            $employee,
+            $this->vehicle(),
+            [
+                'status' => VehicleLoanStatus::UnderReview,
+                'submitted_at' => now(),
+            ],
+        );
+        $completedLoan = $this->vehicleLoan(
+            $employee,
+            $this->vehicle(),
+            [
+                'status' => VehicleLoanStatus::Completed,
+                'submitted_at' => now(),
+            ],
+        );
+
+        $this->actingAs($employee)
+            ->get(route('my.vehicle-loans.index', [
+                'status' => 'waiting',
+            ]))
+            ->assertOk()
+            ->assertSee($waitingLoan->loan_number)
+            ->assertDontSee($completedLoan->loan_number)
+            ->assertSee('Terapkan Filter')
+            ->assertSee('Buat Pengajuan Baru')
+            ->assertSee('Menunggu Persetujuan');
+    }
+
+    public function test_draft_detail_clearly_explains_that_draft_is_not_submitted(): void
+    {
+        $employee = $this->employee();
+        $vehicleLoan = $this->vehicleLoan(
+            $employee,
+            $this->vehicle(),
+        );
+
+        $this->actingAs($employee)
+            ->get(route('my.vehicle-loans.show', $vehicleLoan))
+            ->assertOk()
+            ->assertSee('Draft belum dikirim ke Administrator')
+            ->assertSee('Langkah 2 dari 2')
+            ->assertSee('id="kirim-pengajuan"', false)
+            ->assertSee('data-signature-form', false)
+            ->assertSee('Tanda Tangani & Kirim ke Administrator', false);
+    }
+
+    public function test_admin_detail_uses_admin_approval_route_and_employee_page_has_session_guard(): void
+    {
+        $admin = $this->admin();
+        $employee = $this->employee();
+        $vehicle = $this->vehicle();
+
+        $draftLoan = $this->vehicleLoan($employee, $vehicle);
+
+        $this->actingAs($employee)
+            ->get(route('my.vehicle-loans.show', $draftLoan))
+            ->assertOk()
+            ->assertSee('data-role-session-guard', false)
+            ->assertSee(
+                'action="'.route('my.vehicle-loans.submit', $draftLoan).'"',
+                false,
+            );
+
+        $reviewedLoan = $this->vehicleLoan(
+            $employee,
+            $this->vehicle(),
+            [
+                'status' => VehicleLoanStatus::UnderReview,
+                'submitted_at' => now(),
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now(),
+            ],
+        );
+
+        $this->actingAs($admin)
+            ->get(route('vehicle-loans.show', $reviewedLoan))
+            ->assertOk()
+            ->assertSee(
+                'action="'.route('vehicle-loans.approve', $reviewedLoan).'"',
+                false,
+            )
+            ->assertDontSee(
+                'action="'.route('my.vehicle-loans.submit', $reviewedLoan).'"',
+                false,
+            )
+            ->assertDontSee('Draft belum dikirim ke Administrator')
+            ->assertDontSee('Ubah Draft')
+            ->assertDontSee('data-role-session-guard', false);
+    }
+
     public function test_admin_approval_requires_signature_and_consent(): void
     {
         $admin = $this->admin();

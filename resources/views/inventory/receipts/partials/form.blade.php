@@ -7,7 +7,6 @@
             fn ($line) => [
                 'item_id' => $line->item_id,
                 'quantity' => $line->quantity,
-                'unit_cost' => $line->unit_cost,
                 'notes' => $line->notes,
             ],
         )->all();
@@ -17,7 +16,6 @@
         [
             'item_id' => '',
             'quantity' => '',
-            'unit_cost' => '',
             'notes' => '',
         ],
     ];
@@ -36,6 +34,30 @@
 @endphp
 
 <div class="grid gap-6 md:grid-cols-2">
+    <div>
+        <label for="receipt_number" class="form-label">
+            Nomor Barang Masuk
+            <span class="font-medium text-slate-500">(opsional)</span>
+        </label>
+        <input
+            id="receipt_number"
+            name="receipt_number"
+            type="text"
+            value="{{ old('receipt_number', $managedReceipt?->receipt_number) }}"
+            class="form-input @error('receipt_number') form-input-error @enderror"
+            maxlength="80"
+            placeholder="Contoh: BAST/001/2026"
+            autocomplete="off"
+        >
+        @error('receipt_number')
+            <p class="form-error">{{ $message }}</p>
+        @enderror
+        <p class="mt-2 text-xs font-medium leading-5 text-slate-500">
+            Isi jika memakai nomor dokumen eksternal/manual. Jika dikosongkan,
+            SIMANTAP membuat nomor otomatis STK-IN/YYYY/MM/NNNN.
+        </p>
+    </div>
+
     <div>
         <label for="receipt_date" class="form-label">Tanggal Penerimaan</label>
         <input
@@ -122,7 +144,7 @@
             class="secondary-button sm:w-auto"
             data-add-inventory-line
         >
-            Tambah Baris
+            Tambah Barang
         </button>
     </div>
 
@@ -184,26 +206,6 @@
                             required
                         >
                         @error("items.{$lineIndex}.quantity")
-                            <p class="form-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
-                        <label class="form-label" for="items_{{ $lineIndex }}_unit_cost">
-                            Harga Satuan
-                            <span class="font-medium text-slate-500">(opsional)</span>
-                        </label>
-                        <input
-                            id="items_{{ $lineIndex }}_unit_cost"
-                            name="items[{{ $lineIndex }}][unit_cost]"
-                            type="number"
-                            value="{{ $line['unit_cost'] ?? '' }}"
-                            class="form-input @error("items.{$lineIndex}.unit_cost") form-input-error @enderror"
-                            min="0"
-                            step="0.01"
-                            inputmode="decimal"
-                        >
-                        @error("items.{$lineIndex}.unit_cost")
                             <p class="form-error">{{ $message }}</p>
                         @enderror
                     </div>
@@ -282,21 +284,6 @@
                     >
                 </div>
                 <div>
-                    <label class="form-label" for="items___INDEX___unit_cost">
-                        Harga Satuan
-                        <span class="font-medium text-slate-500">(opsional)</span>
-                    </label>
-                    <input
-                        id="items___INDEX___unit_cost"
-                        name="items[__INDEX__][unit_cost]"
-                        type="number"
-                        class="form-input"
-                        min="0"
-                        step="0.01"
-                        inputmode="decimal"
-                    >
-                </div>
-                <div>
                     <label class="form-label" for="items___INDEX___notes">
                         Catatan
                         <span class="font-medium text-slate-500">(opsional)</span>
@@ -325,3 +312,4 @@
     Menyimpan formulir hanya membuat draft. Stok baru bertambah setelah draft
     diperiksa dan diposting oleh Administrator.
 </div>
+

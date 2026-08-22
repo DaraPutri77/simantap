@@ -51,7 +51,6 @@ class InventoryTransactionTest extends TestCase
                     [
                         'item_id' => $item->id,
                         'quantity' => '5.50',
-                        'unit_cost' => '25000',
                         'notes' => null,
                     ],
                 ],
@@ -124,6 +123,165 @@ class InventoryTransactionTest extends TestCase
         ]);
     }
 
+    public function test_receipt_form_exposes_manual_number_manual_date_and_no_price_fields(): void
+    {
+        $admin = $this->admin();
+        $this->item([
+            'item_code' => 'FORM-NOPRICE-001',
+            'name' => 'Barang Operasional',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('inventory-receipts.create'))
+            ->assertOk()
+            ->assertSee('Nomor Barang Masuk')
+            ->assertSee('BAST/001/2026')
+            ->assertSee('Tanggal Penerimaan')
+            ->assertSee('Tambah Barang')
+            ->assertDontSee('Harga Satuan')
+            ->assertDontSee('Harga Satuan Master')
+            ->assertDontSee('name="items[0][unit_cost]"', false);
+    }
+
+    public function test_receipt_supports_manual_number_and_blank_number_still_generates_automatic_number(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item();
+
+        $this->actingAs($admin)
+            ->post(route('inventory-receipts.store'), [
+                'receipt_number' => 'bast/001/2026',
+                'receipt_date' => '2026-08-21T09:30',
+                'source' => 'Penerimaan Operasional',
+                'items' => [
+                    [
+                        'item_id' => $item->id,
+                        'quantity' => '2',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $manualReceipt = InventoryReceipt::query()
+            ->where('receipt_number', 'BAST/001/2026')
+            ->firstOrFail();
+
+        $this->assertNull(
+            $manualReceipt->items()->firstOrFail()->unit_cost,
+        );
+
+        $this->actingAs($admin)
+            ->post(route('inventory-receipts.store'), [
+                'receipt_number' => '',
+                'receipt_date' => '2026-08-21T10:00',
+                'source' => 'Penerimaan Operasional',
+                'items' => [
+                    [
+                        'item_id' => $item->id,
+                        'quantity' => '1',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $automaticReceipt = InventoryReceipt::query()
+            ->where('id', '!=', $manualReceipt->id)
+            ->firstOrFail();
+
+        $this->assertStringStartsWith(
+            'STK-IN/2026/08/',
+            $automaticReceipt->receipt_number,
+        );
+        $this->assertNotSame(
+            $manualReceipt->receipt_number,
+            $automaticReceipt->receipt_number,
+        );
+    }
+
+    public function test_receipt_rejects_duplicate_manual_number_and_reserved_automatic_namespace(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item();
+        $payload = [
+            'receipt_number' => 'BAST/002/2026',
+            'receipt_date' => '2026-08-21T10:00',
+            'source' => 'Penerimaan Operasional',
+            'items' => [
+                [
+                    'item_id' => $item->id,
+                    'quantity' => '1',
+                ],
+            ],
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('inventory-receipts.store'), $payload)
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->from(route('inventory-receipts.create'))
+            ->post(route('inventory-receipts.store'), $payload)
+            ->assertRedirect(route('inventory-receipts.create'))
+            ->assertSessionHasErrors('receipt_number');
+
+        $reservedPrefixPayload = $payload;
+        $reservedPrefixPayload['receipt_number'] = 'STK-IN/2026/08/9999';
+
+        $this->actingAs($admin)
+            ->from(route('inventory-receipts.create'))
+            ->post(route('inventory-receipts.store'), $reservedPrefixPayload)
+            ->assertRedirect(route('inventory-receipts.create'))
+            ->assertSessionHasErrors('receipt_number');
+
+        $this->assertDatabaseCount('inventory_receipts', 1);
+    }
+
+    public function test_receipt_ignores_legacy_price_payload_and_posts_using_quantity_only(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item([
+            'current_stock' => 10,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('inventory-receipts.store'), [
+                'receipt_number' => 'BAST/NO-PRICE/001',
+                'receipt_date' => '2026-08-21T10:00',
+                'source' => 'Penerimaan Operasional',
+                'items' => [
+                    [
+                        'item_id' => $item->id,
+                        'quantity' => '3',
+                        'unit_cost' => '999999',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $receipt = InventoryReceipt::query()->firstOrFail();
+        $line = $receipt->items()->firstOrFail();
+
+        $this->assertNull($line->unit_cost);
+        $this->assertSame('10.00', $item->refresh()->current_stock);
+
+        $this->actingAs($admin)
+            ->post(route('inventory-receipts.post', $receipt))
+            ->assertRedirect();
+
+        $this->assertSame(
+            InventoryReceiptStatus::Posted,
+            $receipt->refresh()->status,
+        );
+        $this->assertSame('13.00', $item->refresh()->current_stock);
+        $this->assertDatabaseHas('stock_movements', [
+            'reference_type' => 'inventory_receipt',
+            'reference_id' => $receipt->id,
+            'movement_type' => StockMovementType::StockIn->value,
+            'quantity_in' => 3,
+            'quantity_out' => 0,
+        ]);
+    }
+
     public function test_receipt_draft_can_be_updated_or_cancelled_but_not_posted_after_cancel(): void
     {
         $admin = $this->admin();
@@ -140,7 +298,6 @@ class InventoryTransactionTest extends TestCase
                     [
                         'item_id' => $item->id,
                         'quantity' => '4',
-                        'unit_cost' => null,
                         'notes' => null,
                     ],
                 ],
@@ -203,6 +360,69 @@ class InventoryTransactionTest extends TestCase
 
         $this->assertDatabaseCount('inventory_receipts', 0);
         $this->assertDatabaseCount('inventory_receipt_items', 0);
+    }
+
+
+    public function test_adjustment_workspace_explains_stock_opname_and_physical_quantity(): void
+    {
+        $admin = $this->admin();
+        $this->item([
+            'item_code' => 'OPNAME-001',
+            'name' => 'Barang Stock Opname',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('stock-adjustments.index'))
+            ->assertOk()
+            ->assertSee('Kapan menu Penyesuaian digunakan?')
+            ->assertSee('Barang Masuk')
+            ->assertSee('Buat Stock Opname / Penyesuaian');
+
+        $this->actingAs($admin)
+            ->get(route('stock-adjustments.create'))
+            ->assertOk()
+            ->assertSee('Penyesuaian bukan untuk mencatat barang datang.')
+            ->assertSee('Jumlah Fisik Aktual')
+            ->assertSee('Tambah Barang');
+    }
+
+    public function test_adjustment_index_renders_page_aggregates_without_correlated_subqueries(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item([
+            'item_code' => 'OPNAME-PERF-001',
+            'name' => 'Barang Uji Agregat',
+            'current_stock' => 10,
+        ]);
+
+        for ($index = 1; $index <= 12; $index++) {
+            $this->actingAs($admin)
+                ->post(route('stock-adjustments.store'), [
+                    'adjustment_date' => '2026-07-'.str_pad(
+                        (string) min($index, 28),
+                        2,
+                        '0',
+                        STR_PAD_LEFT,
+                    ).'T12:00',
+                    'reason' => 'Uji halaman penyesuaian '.$index,
+                    'notes' => null,
+                    'items' => [
+                        [
+                            'item_id' => $item->id,
+                            'physical_quantity' => (string) (10 + $index),
+                            'notes' => null,
+                        ],
+                    ],
+                ])
+                ->assertRedirect();
+        }
+
+        $this->actingAs($admin)
+            ->get(route('stock-adjustments.index'))
+            ->assertOk()
+            ->assertSee('12 dokumen ditemukan', false)
+            ->assertSee('1 barang')
+            ->assertSee('Uji halaman penyesuaian 12');
     }
 
     public function test_adjustment_posts_inbound_and_outbound_movements_atomically(): void

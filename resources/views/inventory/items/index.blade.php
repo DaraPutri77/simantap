@@ -90,6 +90,21 @@
                 </select>
             </div>
 
+            <div>
+                <label for="unit" class="form-label">Satuan</label>
+                <select id="unit" name="unit" class="form-input">
+                    <option value="">Semua satuan</option>
+                    @foreach ($units as $unit)
+                        <option
+                            value="{{ $unit->id }}"
+                            @selected($filters['unit'] === $unit->id)
+                        >
+                            {{ $unit->name }} ({{ $unit->symbol }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
             @if ($canManage)
                 <div>
                     <label for="status" class="form-label">Status</label>

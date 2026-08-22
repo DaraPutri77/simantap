@@ -75,7 +75,6 @@
                             <tr>
                                 <th>Barang</th>
                                 <th>Jumlah</th>
-                                <th>Harga Satuan</th>
                                 <th>Catatan</th>
                             </tr>
                         </thead>
@@ -89,11 +88,6 @@
                                     <td>
                                         {{ number_format((float) $line->quantity, 2, ',', '.') }}
                                         {{ $line->unit_snapshot }}
-                                    </td>
-                                    <td>
-                                        {{ $line->unit_cost === null
-                                            ? '—'
-                                            : 'Rp'.number_format((float) $line->unit_cost, 2, ',', '.') }}
                                     </td>
                                     <td>{{ $line->notes ?: '—' }}</td>
                                 </tr>

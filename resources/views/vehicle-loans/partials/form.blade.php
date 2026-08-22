@@ -15,6 +15,14 @@
             ?->timezone($displayTimezone)
             ->format('Y-m-d\TH:i'),
     );
+    $registrationReferenceDate = now()->timezone($displayTimezone)->startOfDay();
+    $eligibleVehicleCount = $vehicles->filter(
+        static fn ($vehicle): bool => in_array(
+            $vehicle->registrationState($registrationReferenceDate),
+            ['valid', 'expiring'],
+            true,
+        ),
+    )->count();
 @endphp
 
 @if ($errors->has('phone'))
@@ -57,12 +65,23 @@
             >
                 <option value="">Pilih kendaraan</option>
                 @foreach ($vehicles as $vehicle)
+                    @php
+                        $registrationState = $vehicle->registrationState($registrationReferenceDate);
+                        $registrationBlocked = in_array($registrationState, ['missing', 'expired'], true);
+                        $registrationLabel = match ($registrationState) {
+                            'missing' => 'STNK belum diisi',
+                            'expired' => 'STNK kedaluwarsa',
+                            'expiring' => 'STNK segera berakhir',
+                            default => 'STNK berlaku',
+                        };
+                    @endphp
                     <option
                         value="{{ $vehicle->getKey() }}"
                         @selected($selectedVehicleId === (string) $vehicle->getKey())
+                        @disabled($registrationBlocked)
                     >
                         {{ $vehicle->vehicle_code }} · {{ $vehicle->license_plate }} ·
-                        {{ $vehicle->displayName() }} · {{ $vehicle->status->label() }}
+                        {{ $vehicle->displayName() }} · {{ $vehicle->status->label() }} · {{ $registrationLabel }}
                     </option>
                 @endforeach
             </select>
@@ -70,9 +89,13 @@
                 <p class="form-error">{{ $message }}</p>
             @enderror
             <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                Kendaraan berstatus Dipesan tetap dapat dipilih jika jadwalnya
-                tidak berbenturan.
+                Kendaraan berstatus Dipesan tetap dapat dipilih jika jadwalnya tidak berbenturan. Kendaraan dengan STNK belum diisi atau kedaluwarsa ditampilkan sebagai informasi tetapi tidak dapat dipilih.
             </p>
+            @if ($eligibleVehicleCount === 0)
+                <div class="alert-warning mt-3">
+                    Belum ada kendaraan yang memenuhi syarat dokumen STNK untuk diajukan. Hubungi Administrator agar data master kendaraan dilengkapi.
+                </div>
+            @endif
         </div>
 
         <div>

@@ -32,11 +32,37 @@ class VehicleLoanController extends Controller
     {
         Gate::authorize('viewAny', VehicleLoan::class);
 
+        $actor = $request->user();
+
+        abort_if($actor === null, 401);
+
+        $canViewAll = $actor->can(
+            PermissionName::VehicleLoanViewAll->value,
+        );
+
+        $statusFilterOptions = $canViewAll
+            ? VehicleLoanStatus::options()
+            : [
+                VehicleLoanStatus::Draft->value => 'Draft',
+                'waiting' => 'Menunggu Persetujuan',
+                'approved' => 'Disetujui / Siap Diambil',
+                'active' => 'Sedang Dipinjam / Pengembalian',
+                VehicleLoanStatus::Completed->value => 'Selesai',
+                'closed' => 'Ditolak / Dibatalkan',
+            ];
+
+        $allowedStatusFilters = $canViewAll
+            ? VehicleLoanStatus::values()
+            : array_values(array_unique([
+                ...array_keys($statusFilterOptions),
+                ...VehicleLoanStatus::values(),
+            ]));
+
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
             'status' => [
                 'nullable',
-                Rule::in(VehicleLoanStatus::values()),
+                Rule::in($allowedStatusFilters),
             ],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'until' => [
@@ -48,18 +74,13 @@ class VehicleLoanController extends Controller
                 ),
             ],
         ]);
-        $actor = $request->user();
 
-        abort_if($actor === null, 401);
-
-        $canViewAll = $actor->can(
-            PermissionName::VehicleLoanViewAll->value,
-        );
         $search = trim((string) ($filters['q'] ?? ''));
         $status = (string) ($filters['status'] ?? '');
         $from = (string) ($filters['from'] ?? '');
         $until = (string) ($filters['until'] ?? '');
         $bounds = DisplayDateRange::utcBounds($from, $until);
+
         $baseQuery = VehicleLoan::query()
             ->when(
                 ! $canViewAll,
@@ -68,6 +89,7 @@ class VehicleLoanController extends Controller
                     $actor->getKey(),
                 ),
             );
+
         $vehicleLoans = (clone $baseQuery)
             ->with([
                 'borrower:id,name,employee_number,work_unit',
@@ -116,10 +138,51 @@ class VehicleLoanController extends Controller
             )
             ->when(
                 $status !== '',
-                static fn (Builder $query): Builder => $query->where(
-                    'status',
+                static function (Builder $query) use (
                     $status,
-                ),
+                    $canViewAll,
+                ): void {
+                    if ($canViewAll) {
+                        $query->where('status', $status);
+
+                        return;
+                    }
+
+                    $statuses = match ($status) {
+                        VehicleLoanStatus::Draft->value => [
+                            VehicleLoanStatus::Draft->value,
+                        ],
+                        'waiting' => [
+                            VehicleLoanStatus::Submitted->value,
+                            VehicleLoanStatus::UnderReview->value,
+                        ],
+                        'approved' => [
+                            VehicleLoanStatus::Approved->value,
+                            VehicleLoanStatus::ReadyForPickup->value,
+                        ],
+                        'active' => [
+                            VehicleLoanStatus::Borrowed->value,
+                            VehicleLoanStatus::AwaitingReturnInspection->value,
+                            VehicleLoanStatus::ReturnIssue->value,
+                        ],
+                        VehicleLoanStatus::Completed->value => [
+                            VehicleLoanStatus::Completed->value,
+                        ],
+                        'closed' => [
+                            VehicleLoanStatus::Rejected->value,
+                            VehicleLoanStatus::Cancelled->value,
+                        ],
+                        default => in_array(
+                            $status,
+                            VehicleLoanStatus::values(),
+                            true,
+                        ) ? [$status] : [],
+                    };
+
+                    if ($statuses !== []) {
+                        $query->whereIn('status', $statuses);
+                    }
+                },
             )
             ->when(
                 $bounds['from'] !== null,
@@ -145,7 +208,7 @@ class VehicleLoanController extends Controller
         return view('vehicle-loans.index', [
             'vehicleLoans' => $vehicleLoans,
             'filters' => compact('search', 'status', 'from', 'until'),
-            'statusOptions' => VehicleLoanStatus::options(),
+            'statusOptions' => $statusFilterOptions,
             'summary' => [
                 'total' => (clone $baseQuery)->count(),
                 'waiting' => (clone $baseQuery)
@@ -207,7 +270,7 @@ class VehicleLoanController extends Controller
             ->route('my.vehicle-loans.show', $vehicleLoan)
             ->with(
                 'status',
-                'Draft peminjaman berhasil dibuat. Periksa jadwal lalu bubuhkan tanda tangan untuk mengajukan.',
+                'Langkah 1 selesai. Draft '.$vehicleLoan->loan_number.' sudah tersimpan. Lanjutkan tanda tangan lalu kirim ke Administrator agar pengajuan benar-benar masuk antrean.',
             );
     }
 
@@ -288,7 +351,7 @@ class VehicleLoanController extends Controller
             ->route('my.vehicle-loans.show', $vehicleLoan)
             ->with(
                 'status',
-                'Peminjaman berhasil diajukan dan menunggu pemeriksaan Administrator.',
+                'Pengajuan '.$vehicleLoan->loan_number.' berhasil dikirim dan sekarang masuk antrean Administrator.',
             );
     }
 

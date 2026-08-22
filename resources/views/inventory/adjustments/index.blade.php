@@ -17,9 +17,19 @@
             </p>
         </div>
         <a href="{{ route('stock-adjustments.create') }}" class="button-primary-inline">
-            Buat Penyesuaian
+            Buat Stock Opname / Penyesuaian
         </a>
     </section>
+
+    <div class="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-900">
+        <p class="font-black">Kapan menu Penyesuaian digunakan?</p>
+        <p class="mt-1">
+            Masukkan jumlah fisik yang benar setelah pemeriksaan. Sistem akan
+            menghitung selisih terhadap stok sistem dan baru mengubah stok saat
+            dokumen diposting. Barang yang baru datang dari pemasok tetap dicatat
+            melalui menu <span class="font-black">Barang Masuk</span>, bukan di sini.
+        </p>
+    </div>
 
     <section class="panel mt-6">
         <div class="panel-header">
@@ -69,7 +79,7 @@
             </div>
             <div class="inventory-filter-actions">
                 <a href="{{ route('stock-adjustments.index') }}" class="secondary-button">Reset</a>
-                <button type="submit" class="button-primary-inline">Terapkan</button>
+                <button type="submit" class="button-primary-inline">Terapkan Filter</button>
             </div>
         </form>
 

@@ -8,6 +8,13 @@
     @php
         $isInbound = $movement->isInbound();
         $unit = $movement->item->unit->symbol;
+        $movementTone = match ($movement->movement_type) {
+            \App\Enums\StockMovementType::InitialStock
+                => 'bg-sky-400/15 text-sky-200 ring-sky-300/20',
+            default => $isInbound
+                ? 'bg-emerald-400/15 text-emerald-200 ring-emerald-300/20'
+                : 'bg-red-400/15 text-red-200 ring-red-300/20',
+        };
         $integrityTone = $integrity['overall']
             ? 'bg-emerald-400/15 text-emerald-200 ring-emerald-300/20'
             : 'bg-amber-400/15 text-amber-200 ring-amber-300/20';
@@ -18,9 +25,12 @@
         <div class="relative flex flex-col gap-6 xl:flex-row xl:items-center">
             <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="rounded-full px-2.5 py-1 text-[10px] font-extrabold ring-1 ring-inset {{ $isInbound
-                        ? 'bg-emerald-400/15 text-emerald-200 ring-emerald-300/20'
-                        : 'bg-red-400/15 text-red-200 ring-red-300/20' }}">
+                    <span
+                        class="rounded-full px-2.5 py-1 text-[10px] font-extrabold ring-1 ring-inset {{ $movementTone }}"
+                        data-movement-tone="{{ $movement->movement_type === \App\Enums\StockMovementType::InitialStock
+                            ? 'initial'
+                            : ($movement->movement_type->isInbound() ? 'inbound' : 'outbound') }}"
+                    >
                         {{ $movement->movement_type->label() }}
                     </span>
                     <span class="rounded-full px-2.5 py-1 text-[10px] font-extrabold ring-1 ring-inset {{ $integrityTone }}">

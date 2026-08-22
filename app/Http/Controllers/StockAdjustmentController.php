@@ -51,9 +51,14 @@ class StockAdjustmentController extends Controller
         $bounds = DisplayDateRange::utcBounds($from, $until);
 
         $adjustments = StockAdjustment::query()
-            ->with('creator:id,name')
-            ->withCount('items')
-            ->withSum('items', 'difference_quantity')
+            ->with([
+                'creator:id,name',
+                'items' => static fn ($query) => $query->select([
+                    'id',
+                    'stock_adjustment_id',
+                    'difference_quantity',
+                ]),
+            ])
             ->when(
                 $search !== '',
                 static fn (Builder $query): Builder => $query
@@ -100,6 +105,31 @@ class StockAdjustmentController extends Controller
             ->latest('id')
             ->paginate(10)
             ->withQueryString();
+
+        // Hitung agregat hanya dari baris penyesuaian yang berada pada halaman
+        // saat ini. Ini menghindari dua correlated aggregate subquery
+        // (withCount + withSum) pada setiap record StockAdjustment yang dapat
+        // menjadi sangat lambat pada MySQL/MariaDB ketika data riil membesar.
+        $adjustments->getCollection()->each(
+            static function (StockAdjustment $adjustment): void {
+                $items = $adjustment->getRelation('items');
+
+                $adjustment->setAttribute(
+                    'items_count',
+                    $items->count(),
+                );
+                $adjustment->setAttribute(
+                    'items_sum_difference_quantity',
+                    $items->sum(
+                        static fn ($item): float => (float) $item->difference_quantity,
+                    ),
+                );
+
+                // View index hanya membutuhkan hasil agregat, bukan koleksi
+                // detailnya. Lepaskan relasi untuk menjaga penggunaan memori.
+                $adjustment->unsetRelation('items');
+            },
+        );
 
         return view('inventory.adjustments.index', [
             'adjustments' => $adjustments,

@@ -253,6 +253,28 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     [StockMovementController::class, 'index'],
                 )->name('stock.index');
                 Route::get(
+                    '/kartu-stok/excel',
+                    [StockMovementController::class, 'downloadExcel'],
+                )->name('stock.excel');
+                Route::get(
+                    '/kartu-stok/barang/{item}',
+                    [StockMovementController::class, 'card'],
+                )
+                    ->withTrashed()
+                    ->name('stock.card');
+                Route::get(
+                    '/kartu-stok/barang/{item}/pdf',
+                    [StockMovementController::class, 'downloadCardPdf'],
+                )
+                    ->withTrashed()
+                    ->name('stock.card.pdf');
+                Route::get(
+                    '/kartu-stok/barang/{item}/excel',
+                    [StockMovementController::class, 'downloadCardExcel'],
+                )
+                    ->withTrashed()
+                    ->name('stock.card.excel');
+                Route::get(
                     '/kartu-stok/{stock_movement}',
                     [StockMovementController::class, 'show'],
                 )->name('stock.show');

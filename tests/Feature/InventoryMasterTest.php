@@ -225,13 +225,13 @@ class InventoryMasterTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('units.store'), [
-                'name' => 'Lembar',
-                'symbol' => 'LEMBAR',
+                'name' => 'Dus',
+                'symbol' => 'DUS',
                 'is_active' => '1',
             ])
             ->assertRedirect(route('units.index'));
 
-        $unit = Unit::query()->where('symbol', 'lembar')->firstOrFail();
+        $unit = Unit::query()->where('symbol', 'dus')->firstOrFail();
 
         $this->assertFalse($category->refresh()->is_active);
         $this->assertTrue($unit->is_active);
@@ -245,6 +245,133 @@ class InventoryMasterTest extends TestCase
             'auditable_type' => 'unit',
             'auditable_id' => $unit->id,
         ]);
+    }
+
+    public function test_item_master_does_not_expose_commercial_price_fields(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item([
+            'name' => 'Barang Operasional Tanpa Harga',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('items.index'))
+            ->assertOk()
+            ->assertDontSee('Harga Master')
+            ->assertDontSee('Harga Satuan Master');
+
+        $this->actingAs($admin)
+            ->get(route('items.show', $item))
+            ->assertOk()
+            ->assertDontSee('Harga satuan master')
+            ->assertDontSee('Harga master belum diisi');
+
+        $this->actingAs($admin)
+            ->get(route('items.edit', $item))
+            ->assertOk()
+            ->assertDontSee('name="unit_price"', false)
+            ->assertDontSee('Harga Satuan Master');
+    }
+
+    public function test_item_edit_keeps_current_inactive_category_and_unit_selectable(): void
+    {
+        $admin = $this->admin();
+        $category = ItemCategory::query()->create([
+            'name' => 'Kategori Arsip Nonaktif',
+            'description' => 'Dipertahankan untuk barang lama.',
+            'is_active' => false,
+        ]);
+        $unit = Unit::query()->create([
+            'name' => 'Bundel Nonaktif',
+            'symbol' => 'BNDL',
+            'is_active' => false,
+        ]);
+        $item = $this->item([
+            'category_id' => $category->id,
+            'unit_id' => $unit->id,
+            'name' => 'Barang Dengan Master Nonaktif',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('items.edit', $item))
+            ->assertOk()
+            ->assertSee('Kategori Arsip Nonaktif')
+            ->assertSee('Bundel Nonaktif')
+            ->assertSee('BNDL')
+            ->assertSee('(nonaktif)');
+    }
+
+    public function test_item_filters_use_active_category_and_unit_master_in_alphabetical_order(): void
+    {
+        $admin = $this->admin();
+
+        $categoryAlpha = ItemCategory::query()->create([
+            'name' => 'AAA Kategori Filter',
+            'description' => 'Kategori aktif untuk pengujian filter.',
+            'is_active' => true,
+        ]);
+        $categoryZulu = ItemCategory::query()->create([
+            'name' => 'ZZZ Kategori Filter',
+            'description' => 'Kategori aktif untuk pengujian filter.',
+            'is_active' => true,
+        ]);
+        ItemCategory::query()->create([
+            'name' => 'MMM Kategori Filter Nonaktif',
+            'description' => 'Tidak boleh muncul pada dropdown filter.',
+            'is_active' => false,
+        ]);
+
+        $unitAlpha = Unit::query()->create([
+            'name' => 'AAA Satuan Filter',
+            'symbol' => 'AAF',
+            'is_active' => true,
+        ]);
+        $unitZulu = Unit::query()->create([
+            'name' => 'ZZZ Satuan Filter',
+            'symbol' => 'ZZF',
+            'is_active' => true,
+        ]);
+        Unit::query()->create([
+            'name' => 'MMM Satuan Filter Nonaktif',
+            'symbol' => 'MMF',
+            'is_active' => false,
+        ]);
+
+        $matched = $this->item([
+            'name' => 'Barang Cocok Filter',
+            'category_id' => $categoryAlpha->id,
+            'unit_id' => $unitAlpha->id,
+        ]);
+        $other = $this->item([
+            'name' => 'Barang Lain Filter',
+            'category_id' => $categoryZulu->id,
+            'unit_id' => $unitZulu->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('items.index'))
+            ->assertOk()
+            ->assertSee('Semua kategori')
+            ->assertSee('Semua satuan')
+            ->assertSeeInOrder([
+                'AAA Kategori Filter',
+                'ZZZ Kategori Filter',
+            ])
+            ->assertSeeInOrder([
+                'AAA Satuan Filter',
+                'ZZZ Satuan Filter',
+            ])
+            ->assertDontSee('MMM Kategori Filter Nonaktif')
+            ->assertDontSee('MMM Satuan Filter Nonaktif');
+
+        $this->actingAs($admin)
+            ->get(route('items.index', [
+                'category' => $categoryAlpha->id,
+                'unit' => $unitAlpha->id,
+            ]))
+            ->assertOk()
+            ->assertSee($matched->name)
+            ->assertDontSee($other->name);
     }
 
     public function test_low_stock_filter_uses_available_stock_not_physical_stock(): void

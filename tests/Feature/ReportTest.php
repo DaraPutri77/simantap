@@ -111,6 +111,48 @@ class ReportTest extends TestCase
         }
     }
 
+    public function test_administrator_can_download_every_report_type_as_real_pdf(): void
+    {
+        $admin = $this->admin();
+
+        foreach (ReportCatalog::keys() as $report) {
+            $response = $this->actingAs($admin)
+                ->get(route('reports.pdf', [
+                    'report' => $report,
+                ]));
+
+            $response
+                ->assertOk()
+                ->assertHeader(
+                    'content-type',
+                    'application/pdf',
+                );
+
+            $this->assertStringContainsString(
+                'attachment;',
+                (string) $response->headers->get(
+                    'content-disposition',
+                ),
+                "Laporan {$report} harus dikirim sebagai file unduhan.",
+            );
+
+            $this->assertStringStartsWith(
+                '%PDF',
+                (string) $response->getContent(),
+                "Laporan {$report} harus menghasilkan binary PDF yang valid.",
+            );
+        }
+
+        $this->assertSame(
+            count(ReportCatalog::keys()),
+            \App\Models\AuditLog::query()
+                ->where('actor_id', $admin->id)
+                ->where('event', 'report_downloaded')
+                ->where('module', 'report')
+                ->count(),
+        );
+    }
+
     public function test_employee_cannot_open_report_center_or_download_report(): void
     {
         $employee = $this->employee();

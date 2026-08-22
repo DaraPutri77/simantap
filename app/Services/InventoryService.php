@@ -383,10 +383,16 @@ class InventoryService
                 (string) $data['receipt_date'],
             );
 
-            $receipt = InventoryReceipt::query()->create([
-                'receipt_number' => $this
+            $receiptNumber = trim((string) ($data['receipt_number'] ?? ''));
+
+            if ($receiptNumber === '') {
+                $receiptNumber = $this
                     ->documentNumberService
-                    ->next('stock_in', $displayDate),
+                    ->next('stock_in', $displayDate);
+            }
+
+            $receipt = InventoryReceipt::query()->create([
+                'receipt_number' => $receiptNumber,
                 'receipt_date' => $storedDate,
                 'source' => $data['source'],
                 'reference_number' => $data['reference_number'] ?? null,
@@ -442,11 +448,20 @@ class InventoryService
                 $lockedReceipt->status,
                 'Barang masuk',
             );
-            [, $storedDate] = $this->transactionDates(
+            [$displayDate, $storedDate] = $this->transactionDates(
                 (string) $data['receipt_date'],
             );
+            $receiptNumber = trim((string) ($data['receipt_number'] ?? ''));
+
+            if ($receiptNumber === '') {
+                $receiptNumber = $this
+                    ->documentNumberService
+                    ->next('stock_in', $displayDate);
+            }
+
             $oldValues = [
                 ...$lockedReceipt->only([
+                    'receipt_number',
                     'receipt_date',
                     'source',
                     'reference_number',
@@ -456,6 +471,7 @@ class InventoryService
             ];
 
             $lockedReceipt->update([
+                'receipt_number' => $receiptNumber,
                 'receipt_date' => $storedDate,
                 'source' => $data['source'],
                 'reference_number' => $data['reference_number'] ?? null,
@@ -473,6 +489,7 @@ class InventoryService
                 oldValues: $oldValues,
                 newValues: [
                     ...$lockedReceipt->only([
+                        'receipt_number',
                         'receipt_date',
                         'source',
                         'reference_number',
@@ -889,10 +906,7 @@ class InventoryService
                 'item_name_snapshot' => $item->name,
                 'unit_snapshot' => $item->unit->symbol,
                 'quantity' => $this->quantity($line['quantity']),
-                'unit_cost' => isset($line['unit_cost'])
-                    && $line['unit_cost'] !== ''
-                        ? (string) $line['unit_cost']
-                        : null,
+                'unit_cost' => null,
                 'notes' => $line['notes'] ?? null,
             ]);
         }

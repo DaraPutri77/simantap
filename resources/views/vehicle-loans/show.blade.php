@@ -32,16 +32,58 @@
             >
                 Unduh PDF
             </a>
-            @can('update', $vehicleLoan)
-                <a
-                    href="{{ route('my.vehicle-loans.edit', $vehicleLoan) }}"
-                    class="button-primary-inline"
-                >
-                    Ubah Draft
-                </a>
-            @endcan
+            @if (! $canManage)
+                @can('update', $vehicleLoan)
+                    <a
+                        href="{{ route('my.vehicle-loans.edit', $vehicleLoan) }}"
+                        class="button-primary-inline"
+                    >
+                        Ubah Draft
+                    </a>
+                @endcan
+            @endif
         </div>
     </section>
+
+    @if (session('status'))
+        <div class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-950">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    @if (! $canManage)
+        @can('submit', $vehicleLoan)
+        <div class="mt-6 rounded-3xl border-2 border-amber-300 bg-amber-50 p-5 sm:p-6">
+            <p class="text-xs font-black uppercase tracking-[.14em] text-amber-800">
+                Langkah 2 dari 2 · Belum terkirim
+            </p>
+            <h2 class="mt-2 text-xl font-black text-amber-950">
+                Draft belum dikirim ke Administrator
+            </h2>
+            <p class="mt-2 max-w-3xl text-sm font-semibold leading-6 text-amber-900">
+                Menyimpan draft belum sama dengan mengajukan peminjaman.
+                Bubuhkan tanda tangan lalu klik tombol kirim agar nomor
+                {{ $vehicleLoan->loan_number }} masuk ke antrean Administrator.
+            </p>
+            <a
+                href="#kirim-pengajuan"
+                class="button-primary-inline mt-4"
+            >
+                Lanjut Tanda Tangan & Kirim
+            </a>
+        </div>
+        @endcan
+    @endif
+
+    @if (! $canManage && in_array($status, [
+        \App\Enums\VehicleLoanStatus::Submitted,
+        \App\Enums\VehicleLoanStatus::UnderReview,
+    ], true))
+        <div class="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm font-semibold leading-6 text-sky-950">
+            Pengajuan <strong>{{ $vehicleLoan->loan_number }}</strong> sudah terkirim
+            dan sedang berada dalam proses pemeriksaan Administrator.
+        </div>
+    @endif
 
     @if ($errors->any())
         <div class="alert-danger mt-6">
@@ -269,11 +311,14 @@
                 @endif
             </section>
 
-            @can('submit', $vehicleLoan)
+            @if (! $canManage)
+                @can('submit', $vehicleLoan)
                 <form
+                    id="kirim-pengajuan"
                     method="POST"
                     action="{{ route('my.vehicle-loans.submit', $vehicleLoan) }}"
-                    class="panel p-5 sm:p-6"
+                    class="panel p-5 sm:p-6 scroll-mt-28"
+                    data-signature-form
                 >
                     @csrf
                     <p class="eyebrow">Ajukan Draft</p>
@@ -295,10 +340,11 @@
                         class="primary-button mt-5"
                         data-submit-label="Mengajukan..."
                     >
-                        Ajukan Peminjaman
+                        Tanda Tangani & Kirim ke Administrator
                     </button>
                 </form>
-            @endcan
+                @endcan
+            @endif
 
             @if ($canManage && $status === \App\Enums\VehicleLoanStatus::Submitted)
                 <form
@@ -416,4 +462,49 @@
             @endif
         </aside>
     </div>
+
+    @if (! $canManage)
+        <script data-role-session-guard>
+            (() => {
+                const adminDetailUrl = @json(route('vehicle-loans.show', $vehicleLoan));
+                let roleCheckInFlight = false;
+
+                const redirectIfSessionBecameAdministrator = async () => {
+                    if (roleCheckInFlight || document.visibilityState !== 'visible') {
+                        return;
+                    }
+
+                    roleCheckInFlight = true;
+
+                    try {
+                        const response = await fetch(adminDetailUrl, {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Accept': 'text/html',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+
+                        if (response.ok) {
+                            window.location.replace(adminDetailUrl);
+                        }
+                    } catch (error) {
+                        // Network errors must never block the employee workflow.
+                    } finally {
+                        roleCheckInFlight = false;
+                    }
+                };
+
+                window.addEventListener('focus', redirectIfSessionBecameAdministrator);
+                window.addEventListener('pageshow', redirectIfSessionBecameAdministrator);
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        redirectIfSessionBecameAdministrator();
+                    }
+                });
+            })();
+        </script>
+    @endif
+
 </x-layouts.app>

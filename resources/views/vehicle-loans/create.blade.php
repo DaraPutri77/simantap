@@ -4,13 +4,14 @@
     eyebrow="Peminjaman Saya"
 >
     <section>
-        <p class="eyebrow">Formulir Baru</p>
+        <p class="eyebrow">Langkah 1 dari 2 · Formulir Baru</p>
         <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
             Ajukan Peminjaman Kendaraan
         </h1>
         <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-            Simpan sebagai draft, periksa kembali jadwal, lalu bubuhkan tanda
-            tangan untuk mengirim pengajuan kepada Administrator.
+            Isi data peminjaman terlebih dahulu. Setelah draft tersimpan, sistem
+            akan membawa Anda ke Langkah 2 untuk tanda tangan dan mengirim
+            pengajuan ke Administrator.
         </p>
     </section>
 
@@ -34,7 +35,7 @@
                 class="button-primary-inline"
                 data-submit-label="Menyimpan..."
             >
-                Simpan Draft
+                Simpan Draft & Lanjut Tanda Tangan
             </button>
         </div>
     </form>

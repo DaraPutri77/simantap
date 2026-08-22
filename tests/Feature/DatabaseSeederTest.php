@@ -88,8 +88,8 @@ class DatabaseSeederTest extends TestCase
             ]);
         }
 
-        $this->assertDatabaseCount('item_categories', 6);
-        $this->assertDatabaseCount('units', 6);
+        $this->assertDatabaseCount('item_categories', count($this->categoryNames()));
+        $this->assertDatabaseCount('units', count($this->units()));
         $this->assertDatabaseCount('settings', 5);
 
         $this->assertSame(
@@ -186,8 +186,8 @@ class DatabaseSeederTest extends TestCase
             'permissions',
             count(PermissionName::cases()),
         );
-        $this->assertDatabaseCount('item_categories', 6);
-        $this->assertDatabaseCount('units', 6);
+        $this->assertDatabaseCount('item_categories', count($this->categoryNames()));
+        $this->assertDatabaseCount('units', count($this->units()));
         $this->assertDatabaseCount('settings', 5);
     }
 
@@ -217,12 +217,19 @@ class DatabaseSeederTest extends TestCase
     private function categoryNames(): array
     {
         return [
+            'Alat Tulis',
             'Alat Tulis Kantor',
             'Kertas',
             'Tinta',
             'Perlengkapan Kebersihan',
             'Barang Cetakan',
             'Perlengkapan Komputer',
+            'Perlengkapan Arsip',
+            'Perlengkapan Cetak',
+            'Pantry / Konsumsi',
+            'Baterai & Kelistrikan',
+            'Materai & Administrasi',
+            'Lainnya',
         ];
     }
 
@@ -258,6 +265,22 @@ class DatabaseSeederTest extends TestCase
             [
                 'name' => 'Unit',
                 'symbol' => 'unit',
+            ],
+            [
+                'name' => 'PCS',
+                'symbol' => 'pcs',
+            ],
+            [
+                'name' => 'Roll',
+                'symbol' => 'roll',
+            ],
+            [
+                'name' => 'Set',
+                'symbol' => 'set',
+            ],
+            [
+                'name' => 'Lembar',
+                'symbol' => 'lembar',
             ],
         ];
     }

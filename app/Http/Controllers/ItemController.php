@@ -24,6 +24,7 @@ class ItemController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
             'category' => ['nullable', 'integer'],
+            'unit' => ['nullable', 'integer'],
             'status' => [
                 'nullable',
                 'in:active,inactive',
@@ -38,6 +39,7 @@ class ItemController extends Controller
         ) === true;
         $search = trim((string) ($filters['q'] ?? ''));
         $categoryId = (int) ($filters['category'] ?? 0);
+        $unitId = (int) ($filters['unit'] ?? 0);
         $status = (string) ($filters['status'] ?? '');
         $stock = (string) ($filters['stock'] ?? '');
         $baseQuery = Item::query();
@@ -71,6 +73,11 @@ class ItemController extends Controller
                 $categoryId > 0,
                 static fn (Builder $query): Builder => $query
                     ->where('category_id', $categoryId),
+            )
+            ->when(
+                $unitId > 0,
+                static fn (Builder $query): Builder => $query
+                    ->where('unit_id', $unitId),
             )
             ->when(
                 $canManage && $status !== '',
@@ -112,9 +119,15 @@ class ItemController extends Controller
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'units' => Unit::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->orderBy('symbol')
+                ->get(['id', 'name', 'symbol']),
             'filters' => [
                 'q' => $search,
                 'category' => $categoryId,
+                'unit' => $unitId,
                 'status' => $status,
                 'stock' => $stock,
             ],
@@ -285,7 +298,10 @@ class ItemController extends Controller
                     $query->where('is_active', true);
 
                     if ($item !== null) {
-                        $query->orWhereKey($item->category_id);
+                        $query->orWhere(
+                            $query->getModel()->getQualifiedKeyName(),
+                            $item->category_id,
+                        );
                     }
                 })
                 ->orderBy('name')
@@ -295,7 +311,10 @@ class ItemController extends Controller
                     $query->where('is_active', true);
 
                     if ($item !== null) {
-                        $query->orWhereKey($item->unit_id);
+                        $query->orWhere(
+                            $query->getModel()->getQualifiedKeyName(),
+                            $item->unit_id,
+                        );
                     }
                 })
                 ->orderBy('name')

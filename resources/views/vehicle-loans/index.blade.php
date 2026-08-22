@@ -1,3 +1,10 @@
+@php
+    $hasFilters = $filters['search'] !== ''
+        || $filters['status'] !== ''
+        || $filters['from'] !== ''
+        || $filters['until'] !== '';
+@endphp
+
 <x-layouts.app
     :title="$canViewAll ? 'Peminjaman Kendaraan' : 'Peminjaman Saya'"
     :header="$canViewAll ? 'Peminjaman Kendaraan' : 'Peminjaman Saya'"
@@ -34,7 +41,7 @@
                 href="{{ route('my.vehicle-loans.create') }}"
                 class="button-primary-inline"
             >
-                Ajukan Peminjaman
+                Buat Pengajuan Baru
             </a>
         @endif
     </section>
@@ -67,20 +74,28 @@
             </div>
         </div>
 
+        @if (! $canViewAll)
+            <div class="mx-4 mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm font-semibold leading-6 text-sky-950">
+                <strong>Bagian di bawah hanya untuk mencari dan menyaring riwayat peminjaman.</strong>
+                Untuk membuat permohonan kendaraan baru, gunakan tombol
+                <span class="font-black">Buat Pengajuan Baru</span>.
+            </div>
+        @endif
+
         <form
             method="GET"
             action="{{ route($routePrefix.'.index') }}"
             class="inventory-filter-grid"
         >
             <div>
-                <label for="q" class="form-label">Cari Peminjaman</label>
+                <label for="q" class="form-label">{{ $canViewAll ? 'Cari Peminjaman' : 'Cari Riwayat Peminjaman' }}</label>
                 <input
                     id="q"
                     name="q"
                     type="search"
                     value="{{ $filters['search'] }}"
                     class="form-input"
-                    placeholder="Nomor, pegawai, kendaraan, tujuan"
+                    placeholder="{{ $canViewAll ? 'Nomor, pegawai, kendaraan, tujuan' : 'Nomor, kendaraan, atau tujuan' }}"
                 >
             </div>
             <div>
@@ -119,17 +134,41 @@
                     Reset
                 </a>
                 <button type="submit" class="button-primary-inline">
-                    Terapkan
+                    Terapkan Filter
                 </button>
             </div>
         </form>
 
         @if ($vehicleLoans->isEmpty())
             <div class="empty-state">
-                <p class="font-extrabold text-slate-700">
-                    Belum ada peminjaman yang sesuai.
-                </p>
-                <p class="mt-1">Ubah filter atau buat pengajuan baru.</p>
+                @if ($hasFilters)
+                    <p class="font-extrabold text-slate-700">
+                        Tidak ada peminjaman yang cocok dengan filter ini.
+                    </p>
+                    <p class="mt-1">Reset filter untuk melihat seluruh riwayat.</p>
+                    <a
+                        href="{{ route($routePrefix.'.index') }}"
+                        class="secondary-button mt-4 inline-flex sm:w-auto"
+                    >
+                        Reset Filter
+                    </a>
+                @elseif ($canViewAll)
+                    <p class="font-extrabold text-slate-700">
+                        Belum ada pengajuan peminjaman kendaraan.
+                    </p>
+                    <p class="mt-1">Pengajuan pegawai yang sudah benar-benar dikirim akan muncul di sini.</p>
+                @else
+                    <p class="font-extrabold text-slate-700">
+                        Anda belum memiliki riwayat peminjaman kendaraan.
+                    </p>
+                    <p class="mt-1">Pencarian kendaraan di halaman ini tidak membuat pengajuan baru.</p>
+                    <a
+                        href="{{ route('my.vehicle-loans.create') }}"
+                        class="button-primary-inline mt-4"
+                    >
+                        Buat Pengajuan Baru
+                    </a>
+                @endif
             </div>
         @else
             <div class="grid gap-3 p-4 md:hidden">

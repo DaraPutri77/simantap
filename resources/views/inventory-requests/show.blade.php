@@ -78,6 +78,27 @@
         </div>
     @endif
 
+    @if (
+        filled($inventoryRequest->revision_note)
+        && $status !== \App\Enums\InventoryRequestStatus::RevisionRequired
+    )
+        <div class="alert-warning mt-6">
+            <div>
+                <p class="font-black">
+                    Catatan Perbaikan Terakhir
+                </p>
+
+                <p class="mt-1 whitespace-pre-line">
+                    {{ $inventoryRequest->revision_note }}
+                </p>
+
+                <p class="mt-2 text-xs font-semibold opacity-80">
+                    Jejak perubahan tetap tersimpan pada Riwayat Status.
+                </p>
+            </div>
+        </div>
+    @endif
+
     <section class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,.55fr)]">
         <article class="panel">
             <div class="panel-header">

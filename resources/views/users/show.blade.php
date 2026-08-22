@@ -68,8 +68,8 @@
                 </h1>
 
                 <p class="mt-2 text-sm font-medium text-slate-300">
-                    {{ $employee->position }}
-                    · {{ $employee->work_unit }}
+                    {{ $employee->position ?: 'Jabatan belum diisi' }}
+                    · {{ $employee->work_unit ?: 'Unit kerja belum diisi' }}
                 </p>
             </div>
 
@@ -90,6 +90,27 @@
             </div>
         </div>
     </section>
+
+    @if (blank($employee->position) || blank($employee->work_unit))
+        <div class="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 sm:flex sm:items-center sm:justify-between sm:gap-5">
+            <div>
+                <p class="font-black text-amber-950">
+                    Data kepegawaian belum lengkap
+                </p>
+                <p class="mt-1 text-sm font-semibold leading-6 text-amber-900">
+                    Lengkapi jabatan dan unit kerja agar identitas pada PDF,
+                    formulir, dan laporan SIMANTAP tidak menampilkan
+                    &ldquo;Belum diisi&rdquo;.
+                </p>
+            </div>
+            <a
+                href="{{ route('users.edit', $employee) }}"
+                class="button-primary-inline mt-4 shrink-0 sm:mt-0"
+            >
+                Lengkapi Data Kepegawaian
+            </a>
+        </div>
+    @endif
 
     <section class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div class="space-y-6">
@@ -118,8 +139,8 @@
                             'Nomor Telepon',
                             $employee->phone ?: 'Belum diisi',
                         ],
-                        ['Unit Kerja', $employee->work_unit],
-                        ['Jabatan', $employee->position],
+                        ['Unit Kerja', $employee->work_unit ?: 'Belum diisi'],
+                        ['Jabatan', $employee->position ?: 'Belum diisi'],
                     ] as [$label, $value])
                         <div>
                             <dt class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">

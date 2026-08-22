@@ -56,6 +56,20 @@
                 <h2 class="panel-title">Riwayat Pergerakan</h2>
                 <p class="panel-subtitle">{{ $movements->total() }} catatan ditemukan</p>
             </div>
+
+            <a
+                href="{{ route('stock.excel', [
+                    'q' => $filters['search'] ?: null,
+                    'item' => $filters['itemId'] ?: null,
+                    'type' => $filters['type'] ?: null,
+                    'direction' => $filters['direction'] ?: null,
+                    'from' => $filters['from'] ?: null,
+                    'until' => $filters['until'] ?: null,
+                ]) }}"
+                class="button-primary-inline"
+            >
+                Unduh Excel Sesuai Filter
+            </a>
         </div>
 
         <form
@@ -131,6 +145,70 @@
             </div>
         </form>
 
+        @if ($selectedItem)
+            <div class="mx-5 mb-5 rounded-2xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[.14em] text-sky-700">
+                            Mode Kartu Stok Per Barang
+                        </p>
+                        <h3 class="mt-2 text-lg font-black text-slate-950">
+                            {{ $selectedItem->item_code }} · {{ $selectedItem->name }}
+                        </h3>
+                        <p class="mt-1 text-xs font-medium leading-5 text-slate-600">
+                            {{ $selectedItem->category?->name ?: 'Kategori tidak tersedia' }}
+                            ·
+                            {{ $selectedItem->unit?->symbol ?: 'Satuan tidak tersedia' }}
+                            @if ($filters['from'] || $filters['until'])
+                                · periode mengikuti filter tanggal
+                            @endif
+                        </p>
+                        <p class="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
+                            Kartu formal selalu memuat seluruh pergerakan masuk dan keluar
+                            untuk barang ini pada periode yang dipilih agar kesinambungan
+                            saldo tidak terputus. Filter jenis dan arah di halaman ledger
+                            tetap digunakan untuk penelusuran transaksi.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <a
+                            href="{{ route('stock.card', [
+                                'item' => $selectedItem,
+                                'from' => $filters['from'] ?: null,
+                                'until' => $filters['until'] ?: null,
+                            ]) }}"
+                            class="secondary-button"
+                        >
+                            Buka Kartu Barang
+                        </a>
+
+                        <a
+                            href="{{ route('stock.card.pdf', [
+                                'item' => $selectedItem,
+                                'from' => $filters['from'] ?: null,
+                                'until' => $filters['until'] ?: null,
+                            ]) }}"
+                            class="secondary-button"
+                        >
+                            Unduh PDF
+                        </a>
+
+                        <a
+                            href="{{ route('stock.card.excel', [
+                                'item' => $selectedItem,
+                                'from' => $filters['from'] ?: null,
+                                'until' => $filters['until'] ?: null,
+                            ]) }}"
+                            class="button-primary-inline"
+                        >
+                            Unduh Excel Kartu
+                        </a>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if ($movements->isEmpty())
             <div class="empty-state">
                 Belum ada pergerakan stok yang sesuai dengan filter.
@@ -175,9 +253,21 @@
                                     </p>
                                 </td>
                                 <td>
-                                    <span class="rounded-full px-2.5 py-1 text-xs font-extrabold ring-1 ring-inset {{ $movement->movement_type->isInbound()
-                                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-100'
-                                        : 'bg-red-50 text-red-700 ring-red-100' }}">
+                                    @php
+                                        $movementTone = match ($movement->movement_type) {
+                                            \App\Enums\StockMovementType::InitialStock
+                                                => 'bg-sky-50 text-sky-700 ring-sky-200',
+                                            default => $movement->movement_type->isInbound()
+                                                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                                                : 'bg-red-50 text-red-700 ring-red-200',
+                                        };
+                                    @endphp
+                                    <span
+                                        class="rounded-full px-2.5 py-1 text-xs font-extrabold ring-1 ring-inset {{ $movementTone }}"
+                                        data-movement-tone="{{ $movement->movement_type === \App\Enums\StockMovementType::InitialStock
+                                            ? 'initial'
+                                            : ($movement->movement_type->isInbound() ? 'inbound' : 'outbound') }}"
+                                    >
                                         {{ $movement->movement_type->label() }}
                                     </span>
                                 </td>
@@ -246,9 +336,21 @@
                                     WIB
                                 </p>
                             </div>
-                            <span class="rounded-full px-2.5 py-1 text-[10px] font-extrabold {{ $movement->movement_type->isInbound()
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-red-50 text-red-700' }}">
+                            @php
+                                $movementTone = match ($movement->movement_type) {
+                                    \App\Enums\StockMovementType::InitialStock
+                                        => 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200',
+                                    default => $movement->movement_type->isInbound()
+                                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                                        : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200',
+                                };
+                            @endphp
+                            <span
+                                class="rounded-full px-2.5 py-1 text-[10px] font-extrabold {{ $movementTone }}"
+                                data-movement-tone="{{ $movement->movement_type === \App\Enums\StockMovementType::InitialStock
+                                    ? 'initial'
+                                    : ($movement->movement_type->isInbound() ? 'inbound' : 'outbound') }}"
+                            >
                                 {{ $movement->movement_type->label() }}
                             </span>
                         </div>

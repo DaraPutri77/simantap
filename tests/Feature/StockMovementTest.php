@@ -16,6 +16,7 @@ use Database\Seeders\ReferenceDataSeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 class StockMovementTest extends TestCase
@@ -73,6 +74,69 @@ class StockMovementTest extends TestCase
             ->assertDontSee('MOV-OUT-001')
             ->assertSee('Barang Histori Nonaktif')
             ->assertSee('Nonaktif');
+    }
+
+    public function test_stock_workspace_uses_distinct_colors_for_initial_inbound_and_outbound_badges(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item([
+            'item_code' => 'WARNA-001',
+            'name' => 'Barang Uji Warna',
+        ]);
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'WARNA-INIT',
+            type: StockMovementType::InitialStock,
+            quantityIn: 5,
+            quantityOut: 0,
+            stockBefore: 0,
+            stockAfter: 5,
+            date: Carbon::parse('2026-08-03 01:00:00', 'UTC'),
+        );
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'WARNA-IN',
+            type: StockMovementType::StockIn,
+            quantityIn: 3,
+            quantityOut: 0,
+            stockBefore: 5,
+            stockAfter: 8,
+            date: Carbon::parse('2026-08-03 02:00:00', 'UTC'),
+        );
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'WARNA-OUT',
+            type: StockMovementType::RequestOut,
+            quantityIn: 0,
+            quantityOut: 2,
+            stockBefore: 8,
+            stockAfter: 6,
+            date: Carbon::parse('2026-08-03 03:00:00', 'UTC'),
+        );
+
+        $this->actingAs($admin)
+            ->get(route('stock.index', ['item' => $item->id]))
+            ->assertOk()
+            ->assertSee('data-movement-tone="initial"', false)
+            ->assertSee('data-movement-tone="inbound"', false)
+            ->assertSee('data-movement-tone="outbound"', false)
+            ->assertSee('bg-sky-50 text-sky-700 ring-sky-200', false)
+            ->assertSee('bg-emerald-50 text-emerald-700 ring-emerald-200', false)
+            ->assertSee('bg-red-50 text-red-700 ring-red-200', false)
+            ->assertSee('Stok Awal')
+            ->assertSee('Barang Masuk')
+            ->assertSee('Barang Keluar');
+
+        $this->actingAs($admin)
+            ->get(route('stock.card', ['item' => $item]))
+            ->assertOk()
+            ->assertSee('data-movement-tone="initial"', false)
+            ->assertSee('data-movement-tone="inbound"', false)
+            ->assertSee('data-movement-tone="outbound"', false);
     }
 
     public function test_detail_traces_request_source_employee_and_processor(): void
@@ -177,6 +241,310 @@ class StockMovementTest extends TestCase
         $this->assertSame('12.00', $movement->refresh()->stock_after);
     }
 
+    public function test_admin_can_view_stock_card_for_single_item_with_period_and_balance(): void
+    {
+        $admin = $this->admin();
+
+        $item = $this->item([
+            'item_code' => 'CARD-001',
+            'name' => 'Barang Kartu Utama',
+        ]);
+
+        $otherItem = $this->item([
+            'item_code' => 'CARD-OTHER',
+            'name' => 'Barang Lain',
+        ]);
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'BEFORE-RANGE',
+            type: StockMovementType::InitialStock,
+            quantityIn: 10,
+            quantityOut: 0,
+            stockBefore: 0,
+            stockAfter: 10,
+            date: Carbon::parse('2026-08-02 02:00:00', 'UTC'),
+        );
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'IN-RANGE-IN',
+            type: StockMovementType::StockIn,
+            quantityIn: 5,
+            quantityOut: 0,
+            stockBefore: 10,
+            stockAfter: 15,
+            date: Carbon::parse('2026-08-03 02:00:00', 'UTC'),
+        );
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'IN-RANGE-OUT',
+            type: StockMovementType::AdjustmentOut,
+            quantityIn: 0,
+            quantityOut: 2,
+            stockBefore: 15,
+            stockAfter: 13,
+            date: Carbon::parse('2026-08-04 02:00:00', 'UTC'),
+        );
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'AFTER-RANGE',
+            type: StockMovementType::StockIn,
+            quantityIn: 1,
+            quantityOut: 0,
+            stockBefore: 13,
+            stockAfter: 14,
+            date: Carbon::parse('2026-08-05 02:00:00', 'UTC'),
+        );
+
+        $this->movement(
+            actor: $admin,
+            item: $otherItem,
+            number: 'OTHER-ITEM',
+            type: StockMovementType::StockIn,
+            quantityIn: 7,
+            quantityOut: 0,
+            stockBefore: 3,
+            stockAfter: 10,
+            date: Carbon::parse('2026-08-03 03:00:00', 'UTC'),
+        );
+
+        $this->actingAs($admin)
+            ->get(route('stock.card', [
+                'item' => $item,
+                'from' => '2026-08-03',
+                'until' => '2026-08-04',
+            ]))
+            ->assertOk()
+            ->assertSee('Kartu Stok Persediaan')
+            ->assertSee('CARD-001')
+            ->assertSee('Barang Kartu Utama')
+            ->assertSee('IN-RANGE-IN')
+            ->assertSee('IN-RANGE-OUT')
+            ->assertDontSee('BEFORE-RANGE')
+            ->assertDontSee('AFTER-RANGE')
+            ->assertDontSee('OTHER-ITEM')
+            ->assertSee('Saldo Awal Periode')
+            ->assertSee('10,00')
+            ->assertSee('13,00')
+            ->assertSee('Konsisten');
+    }
+
+
+    public function test_admin_can_download_filtered_stock_ledger_excel(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item([
+            'item_code' => 'XLSX-001',
+            'name' => 'Barang Excel',
+        ]);
+        $otherItem = $this->item([
+            'item_code' => 'XLSX-OTHER',
+            'name' => 'Barang Excel Lain',
+        ]);
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'XLSX-IN-001',
+            type: StockMovementType::StockIn,
+            quantityIn: 5,
+            quantityOut: 0,
+            stockBefore: 10,
+            stockAfter: 15,
+            date: Carbon::parse('2026-08-03 02:00:00', 'UTC'),
+        );
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'XLSX-OUT-001',
+            type: StockMovementType::AdjustmentOut,
+            quantityIn: 0,
+            quantityOut: 2,
+            stockBefore: 15,
+            stockAfter: 13,
+            date: Carbon::parse('2026-08-04 02:00:00', 'UTC'),
+        );
+        $this->movement(
+            actor: $admin,
+            item: $otherItem,
+            number: 'XLSX-OTHER-001',
+            type: StockMovementType::StockIn,
+            quantityIn: 3,
+            quantityOut: 0,
+            stockBefore: 0,
+            stockAfter: 3,
+            date: Carbon::parse('2026-08-03 03:00:00', 'UTC'),
+        );
+
+        $response = $this->actingAs($admin)
+            ->get(route('stock.excel', [
+                'item' => $item->id,
+                'direction' => 'inbound',
+                'from' => '2026-08-03',
+                'until' => '2026-08-04',
+            ]));
+
+        $response
+            ->assertOk()
+            ->assertDownload();
+
+        $file = $response->baseResponse->getFile();
+        $workbook = IOFactory::load($file->getPathname());
+        $data = $workbook->getSheetByName('Data');
+        $rows = $data->toArray();
+
+        $this->assertSame('Nomor Transaksi', $rows[0][1]);
+        $this->assertSame('XLSX-IN-001', $rows[1][1]);
+        $this->assertCount(2, $rows);
+
+        $serialized = json_encode($rows, JSON_THROW_ON_ERROR);
+
+        $this->assertStringNotContainsString(
+            'XLSX-OUT-001',
+            $serialized,
+        );
+        $this->assertStringNotContainsString(
+            'XLSX-OTHER-001',
+            $serialized,
+        );
+    }
+
+    public function test_stock_card_excel_does_not_mutate_ledger(): void
+    {
+        $admin = $this->admin();
+        $item = $this->item([
+            'item_code' => 'CARD-XLSX',
+            'name' => 'Barang Kartu Excel',
+        ]);
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'CARD-XLSX-001',
+            type: StockMovementType::InitialStock,
+            quantityIn: 10,
+            quantityOut: 0,
+            stockBefore: 0,
+            stockAfter: 10,
+            date: Carbon::parse('2026-08-03 02:00:00', 'UTC'),
+        );
+
+        $before = StockMovement::query()
+            ->orderBy('id')
+            ->get()
+            ->map(
+                static fn (StockMovement $movement): array => $movement
+                    ->getRawOriginal(),
+            )
+            ->all();
+
+        $response = $this->actingAs($admin)
+            ->get(route('stock.card.excel', [
+                'item' => $item,
+                'from' => '2026-08-01',
+                'until' => '2026-08-31',
+            ]));
+
+        $response
+            ->assertOk()
+            ->assertDownload('kartu-stok-CARD-XLSX.xlsx');
+
+        $file = $response->baseResponse->getFile();
+        $workbook = IOFactory::load($file->getPathname());
+
+        $this->assertSame(
+            ['Ringkasan', 'Data'],
+            $workbook->getSheetNames(),
+        );
+        $this->assertSame(
+            'CARD-XLSX-001',
+            $workbook->getSheetByName('Data')->getCell('B2')->getValue(),
+        );
+
+        $after = StockMovement::query()
+            ->orderBy('id')
+            ->get()
+            ->map(
+                static fn (StockMovement $movement): array => $movement
+                    ->getRawOriginal(),
+            )
+            ->all();
+
+        $this->assertSame($before, $after);
+    }
+
+    public function test_stock_card_pdf_does_not_mutate_ledger(): void
+    {
+        $admin = $this->admin();
+
+        $item = $this->item([
+            'item_code' => 'PDF-001',
+            'name' => 'Barang PDF',
+        ]);
+
+        $this->movement(
+            actor: $admin,
+            item: $item,
+            number: 'PDF-MOV-001',
+            type: StockMovementType::InitialStock,
+            quantityIn: 10,
+            quantityOut: 0,
+            stockBefore: 0,
+            stockAfter: 10,
+            date: Carbon::parse('2026-08-03 02:00:00', 'UTC'),
+        );
+
+        $before = StockMovement::query()
+            ->orderBy('id')
+            ->get()
+            ->map(
+                static fn (StockMovement $movement): array => $movement
+                    ->getRawOriginal(),
+            )
+            ->all();
+
+        $response = $this->actingAs($admin)
+            ->get(route('stock.card.pdf', [
+                'item' => $item,
+                'from' => '2026-08-01',
+                'until' => '2026-08-31',
+            ]));
+
+        $response->assertOk();
+
+        $this->assertStringStartsWith(
+            'application/pdf',
+            (string) $response->headers->get('Content-Type'),
+        );
+
+        $this->assertStringContainsString(
+            'attachment',
+            strtolower(
+                (string) $response->headers->get(
+                    'Content-Disposition',
+                ),
+            ),
+        );
+
+        $after = StockMovement::query()
+            ->orderBy('id')
+            ->get()
+            ->map(
+                static fn (StockMovement $movement): array => $movement
+                    ->getRawOriginal(),
+            )
+            ->all();
+
+        $this->assertSame($before, $after);
+    }
+
     public function test_employee_cannot_access_stock_movement_workspace_or_detail(): void
     {
         $admin = $this->admin();
@@ -199,6 +567,22 @@ class StockMovementTest extends TestCase
 
         $this->actingAs($employee)
             ->get(route('stock.show', $movement))
+            ->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('stock.card', $movement->item))
+            ->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('stock.card.pdf', $movement->item))
+            ->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('stock.excel'))
+            ->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('stock.card.excel', $movement->item))
             ->assertForbidden();
     }
 

@@ -18,6 +18,16 @@
         </include>
     </source>
     <php>
+        <!--
+            Full Laravel + PHPUnit regression runs share one long-lived PHP process.
+            Individual PDF endpoints remain valid under the server's 128 MB limit,
+            while the complete test runner needs additional headroom after many
+            framework, Excel, QR, and DomPDF tests execute in sequence.
+            This limit applies to PHPUnit only; it does not change php.ini or the
+            production/web-server memory limit.
+        -->
+        <ini name="memory_limit" value="256M"/>
+
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

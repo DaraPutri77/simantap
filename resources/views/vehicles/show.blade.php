@@ -134,6 +134,11 @@
                         <h2 class="panel-title">Identitas Teknis</h2>
                         <p class="panel-subtitle">Informasi registrasi kendaraan</p>
                     </div>
+                    @if ($canManage)
+                        <a href="{{ route('vehicles.edit', $vehicle) }}" class="text-xs font-black text-sky-700 hover:text-sky-900">
+                            Edit Data
+                        </a>
+                    @endif
                 </div>
                 <dl class="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
                     @foreach ([
@@ -186,17 +191,41 @@
                 </p>
                 @if ($registrationState === 'expired')
                     <div class="alert-danger mt-4">
-                        STNK telah kedaluwarsa. Kendaraan perlu ditinjau sebelum digunakan.
+                        STNK telah kedaluwarsa. Kendaraan tidak dapat diajukan sampai masa berlaku diperbarui.
                     </div>
                 @elseif ($registrationState === 'expiring')
                     <div class="alert-warning mt-4">
                         Masa berlaku STNK berakhir dalam 30 hari.
                     </div>
+                @elseif ($registrationState === 'missing')
+                    <div class="alert-warning mt-4">
+                        Masa berlaku STNK belum dicatat. Kendaraan belum dapat diajukan untuk peminjaman.
+                    </div>
+                @endif
+
+                @if ($canManage)
+                    <a
+                        href="{{ route('vehicles.edit', $vehicle) }}#registration_expiry_date"
+                        class="button-primary-inline mt-4 justify-center"
+                    >
+                        {{ $registrationState === 'missing' ? 'Lengkapi STNK' : 'Edit Data STNK' }}
+                    </a>
+                @elseif (in_array($registrationState, ['missing', 'expired'], true))
+                    <p class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs font-semibold leading-5 text-slate-600">
+                        Data master kendaraan hanya dapat diubah Administrator. Hubungi Administrator untuk melengkapi atau memperbarui STNK.
+                    </p>
                 @endif
             </article>
 
             <article class="panel p-5 sm:p-6">
-                <h2 class="panel-title">Penempatan dan Pengelola</h2>
+                <div class="flex items-start justify-between gap-3">
+                    <h2 class="panel-title">Penempatan dan Pengelola</h2>
+                    @if ($canManage)
+                        <a href="{{ route('vehicles.edit', $vehicle) }}#responsible_person" class="text-xs font-black text-sky-700 hover:text-sky-900">
+                            Edit
+                        </a>
+                    @endif
+                </div>
                 <dl class="mt-5 space-y-4 text-sm">
                     <div>
                         <dt class="text-xs font-bold text-slate-500">Lokasi penyimpanan</dt>

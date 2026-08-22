@@ -119,6 +119,7 @@
             <h2 class="panel-title">Daftar Barang</h2>
             <p class="panel-subtitle">
                 Maksimal 20 jenis barang dalam satu permintaan.
+                Barang dengan stok tersedia yang sudah mencapai batas minimum tidak dapat diminta.
             </p>
         </div>
         <button
@@ -162,10 +163,16 @@
                                 <option
                                     value="{{ $masterItem->id }}"
                                     data-stock="{{ $masterItem->available_stock }}"
+                                    data-minimum="{{ $masterItem->minimum_stock }}"
+                                    data-category="{{ $masterItem->category?->name }}"
                                     data-unit="{{ $masterItem->unit->symbol }}"
+                                    @disabled(
+                                        (float) $masterItem->available_stock <= (float) $masterItem->minimum_stock
+                                        && (string) ($line['item_id'] ?? '') !== (string) $masterItem->id
+                                    )
                                     @selected((string) ($line['item_id'] ?? '') === (string) $masterItem->id)
                                 >
-                                    {{ $masterItem->item_code }} · {{ $masterItem->name }}
+                                    {{ $masterItem->item_code }} · {{ $masterItem->name }} · {{ $masterItem->category?->name ?: 'Tanpa kategori' }}{{ (float) $masterItem->available_stock <= (float) $masterItem->minimum_stock ? ' · STOK MINIMUM' : '' }}
                                 </option>
                             @endforeach
                         </select>
@@ -252,9 +259,14 @@
                             <option
                                 value="{{ $masterItem->id }}"
                                 data-stock="{{ $masterItem->available_stock }}"
+                                data-minimum="{{ $masterItem->minimum_stock }}"
+                                data-category="{{ $masterItem->category?->name }}"
                                 data-unit="{{ $masterItem->unit->symbol }}"
+                                @disabled(
+                                    (float) $masterItem->available_stock <= (float) $masterItem->minimum_stock
+                                )
                             >
-                                {{ $masterItem->item_code }} · {{ $masterItem->name }}
+                                {{ $masterItem->item_code }} · {{ $masterItem->name }} · {{ $masterItem->category?->name ?: 'Tanpa kategori' }}{{ (float) $masterItem->available_stock <= (float) $masterItem->minimum_stock ? ' · STOK MINIMUM' : '' }}
                             </option>
                         @endforeach
                     </select>

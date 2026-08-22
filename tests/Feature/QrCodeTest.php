@@ -37,7 +37,9 @@ class QrCodeTest extends TestCase
             ->assertOk()
             ->assertSee('QR Identitas')
             ->assertSee(route('items.show', $item))
-            ->assertSee(route('qr-codes.item.svg', $item));
+            ->assertSee(route('qr-codes.item.svg', $item))
+            ->assertSee(route('qr-codes.item.label', $item))
+            ->assertSee('Cetak Label PDF');
 
         $this->actingAs($admin)
             ->get(route('vehicles.show', $vehicle))
@@ -72,16 +74,50 @@ class QrCodeTest extends TestCase
             )
             ->assertSee('<svg', false);
 
-        $this->actingAs($admin)
-            ->get(route('qr-codes.vehicle.label', $vehicle))
+        $itemLabel = $this->actingAs($admin)
+            ->get(route('qr-codes.item.label', $item));
+
+        $itemLabel
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringContainsString(
+            'attachment;',
+            (string) $itemLabel->headers->get('content-disposition'),
+        );
+        $this->assertStringStartsWith(
+            '%PDF',
+            (string) $itemLabel->getContent(),
+        );
+
+        $vehicleLabel = $this->actingAs($admin)
+            ->get(route('qr-codes.vehicle.label', $vehicle));
+
+        $vehicleLabel
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringContainsString(
+            'attachment;',
+            (string) $vehicleLabel->headers->get('content-disposition'),
+        );
+        $this->assertStringStartsWith(
+            '%PDF',
+            (string) $vehicleLabel->getContent(),
+        );
 
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,
             'auditable_type' => 'item',
             'auditable_id' => $item->id,
             'event' => 'qr_code_downloaded',
+            'module' => 'qr_code',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'auditable_type' => 'item',
+            'auditable_id' => $item->id,
+            'event' => 'qr_label_downloaded',
             'module' => 'qr_code',
         ]);
         $this->assertDatabaseHas('audit_logs', [
@@ -113,6 +149,10 @@ class QrCodeTest extends TestCase
 
         $this->actingAs($employee)
             ->get(route('qr-codes.item.svg', $item))
+            ->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('qr-codes.item.label', $item))
             ->assertForbidden();
 
         $this->actingAs($employee)

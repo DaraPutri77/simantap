@@ -4,174 +4,490 @@
     <meta charset="UTF-8">
     <title>{{ $vehicleLoan->loan_number }}</title>
     <style>
-        @page { margin: 24mm 18mm; }
-        * { box-sizing: border-box; }
-        body { font-family: DejaVu Sans, sans-serif; color: #0f172a; font-size: 10pt; }
-        h1, h2, p { margin: 0; }
-        .header { position: relative; min-height: 86px; text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; }
-        .header h1 { font-size: 15pt; margin-top: 5px; }
-        .header p { font-size: 9pt; margin-top: 3px; color: #475569; }
-        .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 7px; }
-        .meta { width: 100%; margin-top: 18px; border-collapse: collapse; }
-        .meta td { padding: 5px 0; vertical-align: top; }
-        .meta .label { width: 31%; color: #475569; font-weight: bold; }
-        .box { margin-top: 16px; border: 1px solid #94a3b8; border-radius: 6px; padding: 12px; }
-        .box h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
-        .detail { width: 100%; border-collapse: collapse; }
-        .detail th, .detail td { border: 1px solid #cbd5e1; padding: 8px; vertical-align: top; }
-        .detail th { width: 31%; text-align: left; background: #f1f5f9; }
-        .status { display: inline-block; border: 1px solid #64748b; border-radius: 10px; padding: 3px 8px; font-weight: bold; }
-        .signature-table { width: 100%; margin-top: 26px; border-collapse: collapse; page-break-inside: avoid; }
-        .signature-table td { width: 50%; text-align: center; vertical-align: top; padding: 8px 14px; }
-        .signature-space { height: 78px; padding-top: 8px; }
-        .signature-space img { max-width: 170px; max-height: 70px; }
-        .name { font-weight: bold; text-decoration: underline; }
-        .footer { position: fixed; bottom: -12mm; left: 0; right: 0; text-align: center; font-size: 8pt; color: #64748b; }
-        .document-verification {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 125px;
+        @page {
+            margin: 11mm 12mm 13mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
             margin: 0;
+            font-family: DejaVu Sans, sans-serif;
+            color: #172033;
+            font-size: 8.7pt;
+            line-height: 1.35;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        .header-table {
+            width: 100%;
+            border-bottom: 2px solid #0f2747;
+            padding-bottom: 7px;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+        }
+
+        .header-logo {
+            width: 25%;
+            text-align: left;
+        }
+
+        .header-logo img {
+            width: 150px;
+            height: auto;
+        }
+
+        .header-title {
+            width: 53%;
             text-align: center;
-            page-break-inside: avoid;
+            padding: 0 8px;
         }
-        .document-verification img {
+
+        .header-title h1 {
+            margin: 0;
+            color: #0f2747;
+            font-size: 14pt;
+            line-height: 1.15;
+            letter-spacing: .2px;
+        }
+
+        .header-title p {
+            margin: 4px 0 0;
+            color: #526078;
+            font-size: 8.3pt;
+        }
+
+        .header-verify {
+            width: 22%;
+            text-align: center;
+            color: #526078;
+            font-size: 6.4pt;
+            line-height: 1.25;
+        }
+
+        .header-verify img {
             display: block;
-            width: 58px;
-            height: 58px;
-            margin: 0 auto 3px;
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 2px;
         }
-        .document-verification-title {
+
+        .header-verify strong {
+            display: block;
+            color: #172033;
             font-size: 6.8pt;
+        }
+
+        .document-strip {
+            width: 100%;
+            margin-top: 9px;
+            table-layout: fixed;
+        }
+
+        .document-strip td {
+            border: 1px solid #d7dee9;
+            background: #f7f9fc;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+
+        .document-strip .kicker {
+            display: block;
+            margin-bottom: 2px;
+            color: #66758d;
+            font-size: 6.6pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .document-strip .value {
+            color: #172033;
+            font-size: 8.5pt;
             font-weight: bold;
         }
-        .document-verification-meta {
+
+        .status {
+            display: inline-block;
+            padding: 2px 6px;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            color: #1d4ed8;
+            background: #eff6ff;
+            font-size: 7.5pt;
+            font-weight: bold;
+        }
+
+        .section {
+            margin-top: 9px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            margin: 0;
+            padding: 5px 8px;
+            border-left: 4px solid #0b7db5;
+            background: #eef7fb;
+            color: #0f2747;
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: .55px;
+        }
+
+        .info-grid,
+        .detail-grid {
+            width: 100%;
+            table-layout: fixed;
+            border: 1px solid #d7dee9;
+            border-top: 0;
+        }
+
+        .info-grid td,
+        .detail-grid td {
+            border: 1px solid #e1e6ef;
+            padding: 5px 7px;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+
+        .field-label {
+            width: 18%;
+            background: #f7f9fc;
+            color: #526078;
+            font-size: 7.2pt;
+            font-weight: bold;
+        }
+
+        .field-value {
+            width: 32%;
+            color: #172033;
+            font-size: 8.2pt;
+        }
+
+        .full-label {
+            width: 20%;
+            background: #f7f9fc;
+            color: #526078;
+            font-size: 7.2pt;
+            font-weight: bold;
+        }
+
+        .full-value {
+            width: 80%;
+            color: #172033;
+            font-size: 8.2pt;
+        }
+
+        .process-grid {
+            width: 100%;
+            table-layout: fixed;
+            border: 1px solid #d7dee9;
+            border-top: 0;
+        }
+
+        .process-grid td {
+            width: 50%;
+            border: 1px solid #e1e6ef;
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+
+        .process-grid .label {
+            display: block;
+            margin-bottom: 2px;
+            color: #66758d;
+            font-size: 6.7pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .process-grid .person {
+            font-size: 8.1pt;
+            font-weight: bold;
+        }
+
+        .process-grid .muted {
             margin-top: 2px;
-            color: #64748b;
-            font-size: 6pt;
-            line-height: 1.25;
+            color: #66758d;
+            font-size: 6.8pt;
+        }
+
+        .note-box {
+            margin-top: 6px;
+            border: 1px solid #d7dee9;
+            padding: 6px 8px;
+            background: #fbfcfe;
+        }
+
+        .note-box strong {
+            color: #526078;
+            font-size: 7pt;
+        }
+
+        .signature-section {
+            margin-top: 10px;
+            page-break-inside: avoid;
+        }
+
+        .signature-table {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .signature-table td {
+            width: 50%;
+            vertical-align: top;
+            padding: 0 5px;
+        }
+
+        .signature-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            padding: 6px 8px 7px;
+            text-align: center;
+            min-height: 105px;
+        }
+
+        .signature-role {
+            color: #526078;
+            font-size: 7pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: .35px;
+        }
+
+        .signature-image {
+            height: 42px;
+            margin: 4px 0 2px;
+            text-align: center;
+        }
+
+        .signature-image img {
+            max-width: 135px;
+            max-height: 40px;
+        }
+
+        .signature-placeholder {
+            padding-top: 13px;
+            color: #94a3b8;
+            font-size: 7pt;
+            font-style: italic;
+        }
+
+        .signature-name {
+            color: #172033;
+            font-size: 8pt;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .signature-meta {
+            margin-top: 2px;
+            color: #66758d;
+            font-size: 6.8pt;
+        }
+
+        .verification-note {
+            margin-top: 8px;
+            padding: 5px 7px;
+            border-top: 1px solid #d7dee9;
+            color: #66758d;
+            font-size: 6.5pt;
+            line-height: 1.3;
+            text-align: center;
+        }
+
+        .footer {
+            position: fixed;
+            right: 0;
+            bottom: -8mm;
+            left: 0;
+            color: #7b879a;
+            font-size: 6.2pt;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
-        <h1>FORM PEMINJAMAN KENDARAAN DINAS</h1>
-        <p>Sistem Manajemen Aset dan Persediaan</p>
-            <div class="document-verification">
-            <img
-                src="{{ $verificationQrDataUri }}"
-                alt="QR verifikasi dokumen"
-            >
-            <div class="document-verification-title">
-                Verifikasi SIMANTAP
-            </div>
-            <div class="document-verification-meta">
-                Versi {{ $documentVerification->version }}
-                · {{ substr($documentVerification->payload_hash, 0, 12) }}
-                <br>
+    <table class="header-table">
+        <tr>
+            <td class="header-logo">
+                <img
+                    src="{{ public_path(config('simantap.institution.logo')) }}"
+                    alt="{{ $institutionName }}"
+                >
+            </td>
+            <td class="header-title">
+                <h1>FORM PEMINJAMAN KENDARAAN DINAS</h1>
+                <p>{{ $institutionName }} · SIMANTAP</p>
+            </td>
+            <td class="header-verify">
+                <img src="{{ $verificationQrDataUri }}" alt="QR verifikasi dokumen">
+                <strong>VERIFIKASI DOKUMEN</strong>
+                Versi {{ $documentVerification->version }} · {{ substr($documentVerification->payload_hash, 0, 10) }}<br>
                 QR bukan tanda tangan digital
-            </div>
-        </div>
-    </header>
-
-    <table class="meta">
-        <tr>
-            <td class="label">Nomor Peminjaman</td>
-            <td>: {{ $vehicleLoan->loan_number }}</td>
-        </tr>
-        <tr>
-            <td class="label">Status</td>
-            <td>: <span class="status">{{ $vehicleLoan->status->label() }}</span></td>
-        </tr>
-        <tr>
-            <td class="label">Tanggal Cetak</td>
-            <td>: {{ $documentVerification->issued_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
+            </td>
         </tr>
     </table>
 
-    <section class="box">
-        <h2>Identitas Peminjam</h2>
-        <table class="detail">
-            <tr><th>Nama</th><td>{{ $vehicleLoan->borrower_name_snapshot }}</td></tr>
-            <tr><th>NIP/Nomor Pegawai</th><td>{{ $vehicleLoan->employee_number_snapshot ?: '-' }}</td></tr>
-            <tr><th>Unit Kerja</th><td>{{ $vehicleLoan->work_unit_snapshot ?: '-' }}</td></tr>
-            <tr><th>Nomor Telepon</th><td>{{ $vehicleLoan->phone_snapshot }}</td></tr>
+    <table class="document-strip">
+        <tr>
+            <td style="width: 38%;">
+                <span class="kicker">Nomor Peminjaman</span>
+                <span class="value">{{ $vehicleLoan->loan_number }}</span>
+            </td>
+            <td style="width: 24%;">
+                <span class="kicker">Status</span>
+                <span class="status">{{ $vehicleLoan->status->label() }}</span>
+            </td>
+            <td style="width: 38%;">
+                <span class="kicker">Tanggal Cetak</span>
+                <span class="value">{{ $documentVerification->issued_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</span>
+            </td>
+        </tr>
+    </table>
+
+    <section class="section">
+        <div class="section-title">Identitas Peminjam</div>
+        <table class="info-grid">
+            <tr>
+                <td class="field-label">Nama</td>
+                <td class="field-value">{{ $vehicleLoan->borrower_name_snapshot }}</td>
+                <td class="field-label">NIP / Nomor Pegawai</td>
+                <td class="field-value">{{ $vehicleLoan->employee_number_snapshot ?: '-' }}</td>
+            </tr>
+            <tr>
+                <td class="field-label">Unit Kerja</td>
+                <td class="field-value">{{ $vehicleLoan->work_unit_snapshot ?: '-' }}</td>
+                <td class="field-label">Nomor Telepon</td>
+                <td class="field-value">{{ $vehicleLoan->phone_snapshot ?: '-' }}</td>
+            </tr>
         </table>
     </section>
 
-    <section class="box">
-        <h2>Rincian Peminjaman</h2>
-        <table class="detail">
+    <section class="section">
+        <div class="section-title">Rincian Peminjaman</div>
+        <table class="detail-grid">
             <tr>
-                <th>Kendaraan Dinas</th>
-                <td>
-                    {{ $vehicleLoan->vehicle_code_snapshot }} ·
-                    {{ $vehicleLoan->license_plate_snapshot }} ·
-                    {{ $vehicleLoan->vehicle_name_snapshot }}
+                <td class="full-label">Kendaraan Dinas</td>
+                <td class="full-value" colspan="3">
+                    <strong>{{ $vehicleLoan->vehicle_code_snapshot }}</strong>
+                    · {{ $vehicleLoan->license_plate_snapshot }}
+                    · {{ $vehicleLoan->vehicle_name_snapshot }}
                 </td>
             </tr>
             <tr>
-                <th>Mulai</th>
-                <td>{{ $vehicleLoan->planned_start_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
+                <td class="field-label">Mulai</td>
+                <td class="field-value">{{ $vehicleLoan->planned_start_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
+                <td class="field-label">Selesai</td>
+                <td class="field-value">{{ $vehicleLoan->planned_end_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
             </tr>
             <tr>
-                <th>Selesai</th>
-                <td>{{ $vehicleLoan->planned_end_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</td>
+                <td class="full-label">Tujuan</td>
+                <td class="full-value" colspan="3">{{ $vehicleLoan->destination }}</td>
             </tr>
-            <tr><th>Tujuan</th><td>{{ $vehicleLoan->destination }}</td></tr>
-            <tr><th>Keperluan</th><td>{!! nl2br(e($vehicleLoan->purpose)) !!}</td></tr>
-            <tr><th>Keterangan</th><td>{{ $vehicleLoan->reason ?: '-' }}</td></tr>
+            <tr>
+                <td class="full-label">Keperluan</td>
+                <td class="full-value" colspan="3">{!! nl2br(e($vehicleLoan->purpose)) !!}</td>
+            </tr>
+            <tr>
+                <td class="full-label">Keterangan</td>
+                <td class="full-value" colspan="3">{{ $vehicleLoan->reason ?: '-' }}</td>
+            </tr>
         </table>
     </section>
 
-    @if ($vehicleLoan->rejection_reason || $vehicleLoan->cancellation_reason || $vehicleLoan->admin_notes)
-        <section class="box">
-            <h2>Catatan Proses</h2>
-            <table class="detail">
+    <section class="section">
+        <div class="section-title">Verifikasi dan Persetujuan</div>
+        <table class="process-grid">
+            <tr>
+                <td>
+                    <span class="label">Diperiksa oleh</span>
+                    <span class="person">{{ $vehicleLoan->reviewer?->name ?: 'Belum diperiksa' }}</span>
+                    @if ($vehicleLoan->reviewed_at)
+                        <div class="muted">{{ $vehicleLoan->reviewed_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</div>
+                    @endif
+                </td>
+                <td>
+                    <span class="label">Disetujui oleh</span>
+                    <span class="person">{{ $approvalSignerName ?: ($vehicleLoan->approver?->name ?: 'Menunggu persetujuan') }}</span>
+                    @if ($vehicleLoan->approved_at)
+                        <div class="muted">{{ $vehicleLoan->approved_at->timezone($displayTimezone)->translatedFormat('d F Y, H:i') }} WIB</div>
+                    @endif
+                </td>
+            </tr>
+        </table>
+
+        @if ($vehicleLoan->admin_notes || $vehicleLoan->rejection_reason || $vehicleLoan->cancellation_reason)
+            <div class="note-box">
                 @if ($vehicleLoan->admin_notes)
-                    <tr><th>Administrator</th><td>{!! nl2br(e($vehicleLoan->admin_notes)) !!}</td></tr>
+                    <strong>Catatan Administrator:</strong>
+                    {!! nl2br(e($vehicleLoan->admin_notes)) !!}
                 @endif
                 @if ($vehicleLoan->rejection_reason)
-                    <tr><th>Alasan Penolakan</th><td>{!! nl2br(e($vehicleLoan->rejection_reason)) !!}</td></tr>
+                    @if ($vehicleLoan->admin_notes)<br>@endif
+                    <strong>Alasan Penolakan:</strong>
+                    {!! nl2br(e($vehicleLoan->rejection_reason)) !!}
                 @endif
                 @if ($vehicleLoan->cancellation_reason)
-                    <tr><th>Alasan Pembatalan</th><td>{!! nl2br(e($vehicleLoan->cancellation_reason)) !!}</td></tr>
+                    @if ($vehicleLoan->admin_notes || $vehicleLoan->rejection_reason)<br>@endif
+                    <strong>Alasan Pembatalan:</strong>
+                    {!! nl2br(e($vehicleLoan->cancellation_reason)) !!}
                 @endif
-            </table>
-        </section>
-    @endif
+            </div>
+        @endif
+    </section>
 
-    <table class="signature-table">
-        <tr>
-            <td>Peminjam,</td>
-            <td>Penyetuju/Pengelola,</td>
-        </tr>
-        <tr>
-            <td class="signature-space">
-                @if ($submissionSignature)
-                    <img src="{{ $submissionSignature }}" alt="Tanda tangan peminjam">
-                @endif
-            </td>
-            <td class="signature-space">
-                @if ($approvalSignature)
-                    <img src="{{ $approvalSignature }}" alt="Tanda tangan Penyetuju/Pengelola">
-                @endif
-            </td>
-        </tr>
-        <tr>
-            <td><span class="name">{{ $vehicleLoan->borrower_name_snapshot }}</span></td>
-            <td><span class="name">{{ $approvalSignerName ?: '................................' }}</span></td>
-        </tr>
-        <tr>
-            <td>{{ $vehicleLoan->employee_number_snapshot ?: '-' }}</td>
-            <td>{{ $approvalSignerEmployeeNumber ?: '' }}</td>
-        </tr>
-    </table>
+    <section class="signature-section">
+        <table class="signature-table">
+            <tr>
+                <td>
+                    <div class="signature-card">
+                        <div class="signature-role">Peminjam</div>
+                        <div class="signature-image">
+                            @if ($submissionSignature)
+                                <img src="{{ $submissionSignature }}" alt="Tanda tangan peminjam">
+                            @else
+                                <div class="signature-placeholder">Belum ditandatangani</div>
+                            @endif
+                        </div>
+                        <div class="signature-name">{{ $vehicleLoan->borrower_name_snapshot }}</div>
+                        <div class="signature-meta">{{ $vehicleLoan->employee_number_snapshot ?: '-' }}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="signature-card">
+                        <div class="signature-role">Penyetuju / Pengelola</div>
+                        <div class="signature-image">
+                            @if ($approvalSignature)
+                                <img src="{{ $approvalSignature }}" alt="Tanda tangan Penyetuju/Pengelola">
+                            @else
+                                <div class="signature-placeholder">Menunggu persetujuan Administrator</div>
+                            @endif
+                        </div>
+                        <div class="signature-name">{{ $approvalSignerName ?: '................................' }}</div>
+                        <div class="signature-meta">{{ $approvalSignerEmployeeNumber ?: '' }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </section>
+
+    <div class="verification-note">
+        Dokumen elektronik SIMANTAP. Keaslian dokumen dapat diperiksa melalui QR verifikasi di bagian atas.
+        Nomor referensi: {{ $vehicleLoan->loan_number }} · ID dokumen: {{ $vehicleLoan->public_id }}.
+    </div>
 
     <div class="footer">
-        Dokumen dibuat oleh SIMANTAP · {{ $vehicleLoan->public_id }}
+        {{ $institutionShortName }} · SIMANTAP · {{ $vehicleLoan->loan_number }}
     </div>
 </body>
 </html>
