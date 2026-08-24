@@ -16,6 +16,7 @@ use App\Models\VehicleConditionCheck;
 use App\Models\VehicleLoan;
 use App\Models\VehicleLoanStatusHistory;
 use App\Support\SignaturePayload;
+use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +36,7 @@ class VehicleLoanLifecycleService
         'photo_back' => AttachmentCategory::VehicleBack,
         'photo_left' => AttachmentCategory::VehicleLeft,
         'photo_right' => AttachmentCategory::VehicleRight,
+        'photo_borrower_with_key' => AttachmentCategory::BorrowerWithKey,
         'photo_odometer' => AttachmentCategory::Odometer,
         'photo_fuel' => AttachmentCategory::Fuel,
         'photo_damage' => AttachmentCategory::Damage,
@@ -59,14 +61,22 @@ class VehicleLoanLifecycleService
             $data,
             $actor,
         );
+        $signatureFile = null;
 
         try {
+            $signatureFile = $this->storeSignatureFile(
+                $vehicleLoan,
+                (string) $data['signature_data'],
+                DigitalSignaturePurpose::VehicleCheckoutConfirmation,
+            );
+
             $result = DB::transaction(function () use (
                 $vehicleLoan,
                 $data,
                 $actor,
                 $httpRequest,
                 $storedEvidence,
+                $signatureFile,
             ): VehicleLoan {
                 $locked = $this->lockLoan($vehicleLoan);
                 $this->requireStatus(
@@ -92,11 +102,19 @@ class VehicleLoanLifecycleService
                     'Odometer awal tidak boleh lebih kecil daripada odometer master kendaraan.',
                 );
 
+                $signature = $this->createSignatureRecord(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::VehicleCheckoutConfirmation,
+                    $signatureFile,
+                    $httpRequest,
+                );
                 $conditionCheck = $this->createConditionCheck(
                     $locked,
                     ConditionCheckType::Checkout,
                     $data,
                     $actor,
+                    $signature->signed_at,
                 );
                 $this->createAttachmentRecords(
                     $conditionCheck,
@@ -128,6 +146,8 @@ class VehicleLoanLifecycleService
                         'fuel_level' => $conditionCheck->fuel_level,
                         'overall_condition' => $conditionCheck->overall_condition->value,
                         'evidence_count' => count($storedEvidence),
+                        'signature_id' => $signature->getKey(),
+                        'signature_purpose' => $signature->purpose->value,
                     ],
                 );
 
@@ -135,6 +155,7 @@ class VehicleLoanLifecycleService
             }, 3);
         } catch (Throwable $exception) {
             $this->deleteStoredFiles($storedEvidence);
+            $this->deleteStoredSignature($signatureFile);
 
             throw $exception;
         }
@@ -151,17 +172,33 @@ class VehicleLoanLifecycleService
         User $actor,
         ?Request $httpRequest = null,
     ): VehicleLoan {
-        $signatureFile = $this->storeSignatureFile(
+        $storedEvidence = $this->storeEvidenceFiles(
             $vehicleLoan,
-            (string) $data['signature_data'],
+            ConditionCheckType::Checkout,
+            $data,
+            $actor,
         );
+        $signatureFile = null;
 
         try {
+            if (count($storedEvidence) !== 1) {
+                throw ValidationException::withMessages([
+                    'photo_borrower_with_key' => 'Foto peminjam memegang kunci kendaraan wajib diunggah.',
+                ]);
+            }
+
+            $signatureFile = $this->storeSignatureFile(
+                $vehicleLoan,
+                (string) $data['signature_data'],
+                DigitalSignaturePurpose::VehicleLoanPickup,
+            );
+
             $result = DB::transaction(function () use (
                 $vehicleLoan,
                 $actor,
                 $httpRequest,
                 $signatureFile,
+                $storedEvidence,
             ): VehicleLoan {
                 $locked = $this->lockLoan($vehicleLoan);
                 $this->assertBorrower($locked, $actor);
@@ -170,6 +207,20 @@ class VehicleLoanLifecycleService
                     [VehicleLoanStatus::ReadyForPickup],
                     'Kendaraan belum berada pada tahap siap diambil.',
                 );
+
+                if (
+                    $locked->planned_start_at !== null
+                    && now()->lt($locked->planned_start_at)
+                ) {
+                    throw ValidationException::withMessages([
+                        'pickup_time' => sprintf(
+                            'Kendaraan baru dapat diambil mulai %s WIB sesuai jadwal peminjaman.',
+                            $locked->planned_start_at
+                                ->timezone($this->displayTimezone())
+                                ->translatedFormat('d M Y, H:i'),
+                        ),
+                    ]);
+                }
 
                 $vehicle = $this->lockVehicle($locked->vehicle_id);
                 $this->requireVehicleStatus(
@@ -196,53 +247,23 @@ class VehicleLoanLifecycleService
                     ]);
                 }
 
-                $existingSignature = DigitalSignature::query()
-                    ->where('signable_type', $locked->getMorphClass())
-                    ->where('signable_id', $locked->getKey())
-                    ->where('purpose', DigitalSignaturePurpose::VehicleLoanPickup->value)
-                    ->lockForUpdate()
-                    ->first();
+                $this->assertEvidenceNotPreviouslyUsed(
+                    $checkout,
+                    $storedEvidence,
+                );
 
-                if ($existingSignature !== null) {
-                    throw ValidationException::withMessages([
-                        'loan' => 'Tanda tangan serah terima sudah tersimpan.',
-                    ]);
-                }
-
-                $version = 1 + (int) $locked->signatures()
-                    ->where(
-                        'purpose',
-                        DigitalSignaturePurpose::VehicleLoanPickup->value,
-                    )
-                    ->max('version');
-                $signedAt = now();
-                $locked->signatures()->create([
-                    'signer_id' => $actor->getKey(),
-                    'signer_name_snapshot' => $actor->name,
-                    'employee_number_snapshot' => $actor->employee_number,
-                    'purpose' => DigitalSignaturePurpose::VehicleLoanPickup,
-                    'version' => $version,
-                    'image_path' => $signatureFile['path'],
-                    'transaction_hash' => hash(
-                        'sha256',
-                        implode('|', [
-                            $locked->loan_number,
-                            DigitalSignaturePurpose::VehicleLoanPickup->value,
-                            $version,
-                            $actor->getKey(),
-                            $signatureFile['checksum'],
-                            $signedAt->toIso8601String(),
-                        ]),
-                    ),
-                    'image_checksum' => $signatureFile['checksum'],
-                    'ip_address' => $httpRequest?->ip(),
-                    'user_agent' => Str::limit(
-                        (string) $httpRequest?->userAgent(),
-                        2000,
-                        '',
-                    ),
-                    'signed_at' => $signedAt,
-                ]);
+                $this->createAttachmentRecords(
+                    $checkout,
+                    $storedEvidence,
+                );
+                $signature = $this->createSignatureRecord(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::VehicleLoanPickup,
+                    $signatureFile,
+                    $httpRequest,
+                );
+                $signedAt = $signature->signed_at;
 
                 $checkout->forceFill([
                     'borrower_confirmed_at' => $signedAt,
@@ -275,14 +296,18 @@ class VehicleLoanLifecycleService
                     [
                         'actual_start_at' => $signedAt->toIso8601String(),
                         'vehicle_status' => VehicleStatus::Borrowed->value,
+                        'pickup_evidence_count' => count($storedEvidence),
+                        'signature_id' => $signature->getKey(),
+                        'signature_purpose' => $signature->purpose->value,
                     ],
                 );
 
                 return $locked;
             }, 3);
         } catch (Throwable $exception) {
-            Storage::disk($this->evidenceDisk())
-                ->delete($signatureFile['path']);
+            $this->deleteStoredFiles($storedEvidence);
+
+            $this->deleteStoredSignature($signatureFile);
 
             throw $exception;
         }
@@ -299,75 +324,99 @@ class VehicleLoanLifecycleService
         User $actor,
         ?Request $httpRequest = null,
     ): VehicleLoan {
-        $result = DB::transaction(function () use (
-            $vehicleLoan,
-            $data,
-            $actor,
-            $httpRequest,
-        ): VehicleLoan {
-            $locked = $this->lockLoan($vehicleLoan);
-            $this->assertBorrower($locked, $actor);
-            $this->requireStatus(
-                $locked,
-                [VehicleLoanStatus::Borrowed],
-                'Hanya kendaraan yang sedang dipinjam yang dapat diajukan untuk pengembalian.',
+        $signatureFile = null;
+
+        try {
+            $signatureFile = $this->storeSignatureFile(
+                $vehicleLoan,
+                (string) $data['signature_data'],
+                DigitalSignaturePurpose::VehicleLoanReturnRequest,
             );
 
-            $vehicle = $this->lockVehicle($locked->vehicle_id);
-            $this->requireVehicleStatus(
-                $vehicle,
-                VehicleStatus::Borrowed,
-                'Status kendaraan tidak sesuai dengan peminjaman aktif.',
-            );
-
-            $returnedAt = now();
-            $isLate = $locked->planned_end_at !== null
-                && $returnedAt->gt($locked->planned_end_at);
-            $overdueAt = $locked->overdue_at;
-
-            if ($isLate && $overdueAt === null) {
-                $overdueAt = $locked->planned_end_at;
-            }
-
-            $previousStatus = $locked->status;
-            $locked->forceFill([
-                'status' => VehicleLoanStatus::AwaitingReturnInspection,
-                'actual_end_at' => $returnedAt,
-                'overdue_at' => $overdueAt,
-            ])->save();
-
-            $notes = trim((string) ($data['return_notes'] ?? ''));
-            $historyNote = $isLate
-                ? 'Pengembalian diajukan setelah batas waktu dan menunggu pemeriksaan Administrator.'
-                : 'Pengembalian diajukan dan menunggu pemeriksaan Administrator.';
-
-            if ($notes !== '') {
-                $historyNote .= "\nCatatan peminjam: {$notes}";
-            }
-
-            $this->recordStatus(
-                $locked,
-                $previousStatus,
-                VehicleLoanStatus::AwaitingReturnInspection,
-                $historyNote,
-                $actor,
-            );
-            $this->auditTransition(
-                $locked,
-                $previousStatus,
-                VehicleLoanStatus::AwaitingReturnInspection,
-                'vehicle_loan_return_requested',
+            $result = DB::transaction(function () use (
+                $vehicleLoan,
+                $data,
                 $actor,
                 $httpRequest,
-                [
-                    'actual_end_at' => $returnedAt->toIso8601String(),
-                    'overdue_at' => $overdueAt?->toIso8601String(),
-                    'is_late' => $isLate,
-                ],
-            );
+                $signatureFile,
+            ): VehicleLoan {
+                $locked = $this->lockLoan($vehicleLoan);
+                $this->assertBorrower($locked, $actor);
+                $this->requireStatus(
+                    $locked,
+                    [VehicleLoanStatus::Borrowed],
+                    'Hanya kendaraan yang sedang dipinjam yang dapat diajukan untuk pengembalian.',
+                );
 
-            return $locked;
-        }, 3);
+                $vehicle = $this->lockVehicle($locked->vehicle_id);
+                $this->requireVehicleStatus(
+                    $vehicle,
+                    VehicleStatus::Borrowed,
+                    'Status kendaraan tidak sesuai dengan peminjaman aktif.',
+                );
+
+                $signature = $this->createSignatureRecord(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::VehicleLoanReturnRequest,
+                    $signatureFile,
+                    $httpRequest,
+                );
+                $returnedAt = $signature->signed_at;
+                $isLate = $locked->planned_end_at !== null
+                    && $returnedAt->gt($locked->planned_end_at);
+                $overdueAt = $locked->overdue_at;
+
+                if ($isLate && $overdueAt === null) {
+                    $overdueAt = $locked->planned_end_at;
+                }
+
+                $previousStatus = $locked->status;
+                $locked->forceFill([
+                    'status' => VehicleLoanStatus::AwaitingReturnInspection,
+                    'actual_end_at' => $returnedAt,
+                    'overdue_at' => $overdueAt,
+                ])->save();
+
+                $notes = trim((string) ($data['return_notes'] ?? ''));
+                $historyNote = $isLate
+                    ? 'Pengembalian ditandatangani setelah batas waktu dan menunggu pemeriksaan Administrator.'
+                    : 'Pengembalian ditandatangani dan menunggu pemeriksaan Administrator.';
+
+                if ($notes !== '') {
+                    $historyNote .= "\nCatatan peminjam: {$notes}";
+                }
+
+                $this->recordStatus(
+                    $locked,
+                    $previousStatus,
+                    VehicleLoanStatus::AwaitingReturnInspection,
+                    $historyNote,
+                    $actor,
+                );
+                $this->auditTransition(
+                    $locked,
+                    $previousStatus,
+                    VehicleLoanStatus::AwaitingReturnInspection,
+                    'vehicle_loan_return_requested',
+                    $actor,
+                    $httpRequest,
+                    [
+                        'actual_end_at' => $returnedAt->toIso8601String(),
+                        'overdue_at' => $overdueAt?->toIso8601String(),
+                        'is_late' => $isLate,
+                        'signature_id' => $signature->getKey(),
+                        'signature_purpose' => $signature->purpose->value,
+                    ],
+                );
+
+                return $locked;
+            }, 3);
+        } catch (Throwable $exception) {
+            $this->deleteStoredSignature($signatureFile);
+
+            throw $exception;
+        }
 
         return $this->loadLoan($result);
     }
@@ -387,14 +436,22 @@ class VehicleLoanLifecycleService
             $data,
             $actor,
         );
+        $signatureFile = null;
 
         try {
+            $signatureFile = $this->storeSignatureFile(
+                $vehicleLoan,
+                (string) $data['signature_data'],
+                DigitalSignaturePurpose::VehicleReturnConfirmation,
+            );
+
             $result = DB::transaction(function () use (
                 $vehicleLoan,
                 $data,
                 $actor,
                 $httpRequest,
                 $storedEvidence,
+                $signatureFile,
             ): VehicleLoan {
                 $locked = $this->lockLoan($vehicleLoan);
                 $this->requireStatus(
@@ -422,6 +479,11 @@ class VehicleLoanLifecycleService
                     ]);
                 }
 
+                $this->assertEvidenceNotPreviouslyUsed(
+                    $checkout,
+                    $storedEvidence,
+                );
+
                 $this->assertNoConditionCheck(
                     $locked,
                     ConditionCheckType::Return,
@@ -438,11 +500,19 @@ class VehicleLoanLifecycleService
                     'Odometer akhir tidak boleh lebih kecil daripada odometer awal atau odometer master kendaraan.',
                 );
 
+                $signature = $this->createSignatureRecord(
+                    $locked,
+                    $actor,
+                    DigitalSignaturePurpose::VehicleReturnConfirmation,
+                    $signatureFile,
+                    $httpRequest,
+                );
                 $returnCheck = $this->createConditionCheck(
                     $locked,
                     ConditionCheckType::Return,
                     $data,
                     $actor,
+                    $signature->signed_at,
                 );
                 $this->createAttachmentRecords(
                     $returnCheck,
@@ -511,6 +581,8 @@ class VehicleLoanLifecycleService
                         'overall_condition' => $returnCheck->overall_condition->value,
                         'vehicle_status' => $vehicleStatus->value,
                         'evidence_count' => count($storedEvidence),
+                        'signature_id' => $signature->getKey(),
+                        'signature_purpose' => $signature->purpose->value,
                     ],
                 );
 
@@ -518,6 +590,7 @@ class VehicleLoanLifecycleService
             }, 3);
         } catch (Throwable $exception) {
             $this->deleteStoredFiles($storedEvidence);
+            $this->deleteStoredSignature($signatureFile);
 
             throw $exception;
         }
@@ -590,6 +663,7 @@ class VehicleLoanLifecycleService
         ConditionCheckType $type,
         array $data,
         User $actor,
+        DateTimeInterface $checkedAt,
     ): VehicleConditionCheck {
         return $vehicleLoan->conditionChecks()->create([
             'check_type' => $type,
@@ -604,8 +678,16 @@ class VehicleLoanLifecycleService
             'checked_by' => $actor->getKey(),
             'checker_name_snapshot' => $actor->name,
             'checker_employee_number_snapshot' => $actor->employee_number,
-            'checked_at' => now(),
+            'checked_at' => $checkedAt,
         ]);
+    }
+
+    private function displayTimezone(): string
+    {
+        return (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
     }
 
     private function assertNoConditionCheck(
@@ -839,6 +921,66 @@ class VehicleLoanLifecycleService
     }
 
     /**
+     * @param  list<array{
+     *     category: AttachmentCategory,
+     *     disk: string,
+     *     original_name: string,
+     *     stored_name: string,
+     *     path: string,
+     *     mime_type: string,
+     *     file_size: int,
+     *     checksum: string,
+     *     uploaded_by: int,
+     *     metadata: array<string, mixed>
+     * }>  $storedEvidence
+     */
+    private function assertEvidenceNotPreviouslyUsed(
+        VehicleConditionCheck $baseline,
+        array $storedEvidence,
+    ): void {
+        $existingChecksums = $baseline->attachments()
+            ->whereIn(
+                'checksum',
+                array_column($storedEvidence, 'checksum'),
+            )
+            ->pluck('checksum')
+            ->filter(
+                static fn (mixed $checksum): bool => is_string($checksum)
+                    && $checksum !== '',
+            )
+            ->all();
+
+        if ($existingChecksums === []) {
+            return;
+        }
+
+        foreach ($storedEvidence as $evidence) {
+            if (
+                ! in_array(
+                    $evidence['checksum'],
+                    $existingChecksums,
+                    true,
+                )
+            ) {
+                continue;
+            }
+
+            $field = array_search(
+                $evidence['category'],
+                self::EVIDENCE_FIELDS,
+                true,
+            );
+
+            throw ValidationException::withMessages([
+                is_string($field) ? $field : 'evidence' => sprintf(
+                    '%s memakai ulang foto dari tahap sebelumnya. Ambil dan unggah foto baru yang sesuai kondisi saat ini.',
+                    $evidence['category']->label(),
+                ),
+            ]);
+        }
+    }
+
+    /**
      * @param  list<array{disk: string, path: string}>  $storedFiles
      */
     private function deleteStoredFiles(array $storedFiles): void
@@ -855,6 +997,7 @@ class VehicleLoanLifecycleService
     private function storeSignatureFile(
         VehicleLoan $vehicleLoan,
         string $dataUrl,
+        DigitalSignaturePurpose $purpose,
     ): array {
         $binary = $this->signatureBinary($dataUrl);
         $checksum = hash(
@@ -865,14 +1008,15 @@ class VehicleLoanLifecycleService
             $binary,
         );
         $path = sprintf(
-            'signatures/vehicle-loans/%s/pickup/%s.png',
+            'signatures/vehicle-loans/%s/%s/%s.png',
             $vehicleLoan->public_id,
+            $purpose->value,
             Str::uuid(),
         );
 
         if (! Storage::disk($this->evidenceDisk())->put($path, $binary)) {
             throw new RuntimeException(
-                'Tanda tangan serah terima tidak dapat disimpan.',
+                'Tanda tangan digital tidak dapat disimpan.',
             );
         }
 
@@ -880,6 +1024,76 @@ class VehicleLoanLifecycleService
             'path' => $path,
             'checksum' => $checksum,
         ];
+    }
+
+    /**
+     * @param  array{path: string, checksum: string}  $signatureFile
+     */
+    private function createSignatureRecord(
+        VehicleLoan $vehicleLoan,
+        User $actor,
+        DigitalSignaturePurpose $purpose,
+        array $signatureFile,
+        ?Request $httpRequest,
+    ): DigitalSignature {
+        $existingSignature = DigitalSignature::query()
+            ->where('signable_type', $vehicleLoan->getMorphClass())
+            ->where('signable_id', $vehicleLoan->getKey())
+            ->where('purpose', $purpose->value)
+            ->lockForUpdate()
+            ->first();
+
+        if ($existingSignature !== null) {
+            throw ValidationException::withMessages([
+                'loan' => $purpose->label().' sudah pernah ditandatangani.',
+            ]);
+        }
+
+        $version = 1 + (int) $vehicleLoan->signatures()
+            ->where('purpose', $purpose->value)
+            ->max('version');
+        $signedAt = now();
+
+        return $vehicleLoan->signatures()->create([
+            'signer_id' => $actor->getKey(),
+            'signer_name_snapshot' => $actor->name,
+            'employee_number_snapshot' => $actor->employee_number,
+            'purpose' => $purpose,
+            'version' => $version,
+            'image_path' => $signatureFile['path'],
+            'transaction_hash' => hash(
+                'sha256',
+                implode('|', [
+                    $vehicleLoan->loan_number,
+                    $purpose->value,
+                    $version,
+                    $actor->getKey(),
+                    $signatureFile['checksum'],
+                    $signedAt->toIso8601String(),
+                ]),
+            ),
+            'image_checksum' => $signatureFile['checksum'],
+            'ip_address' => $httpRequest?->ip(),
+            'user_agent' => Str::limit(
+                (string) $httpRequest?->userAgent(),
+                2000,
+                '',
+            ),
+            'signed_at' => $signedAt,
+        ]);
+    }
+
+    /**
+     * @param  array{path: string, checksum: string}|null  $signatureFile
+     */
+    private function deleteStoredSignature(?array $signatureFile): void
+    {
+        if ($signatureFile === null) {
+            return;
+        }
+
+        Storage::disk($this->evidenceDisk())
+            ->delete($signatureFile['path']);
     }
 
     private function signatureBinary(string $dataUrl): string

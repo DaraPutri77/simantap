@@ -6,17 +6,21 @@
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #0f172a; }
         h1, h2, h3, p { margin: 0; }
-        .header { position: relative; min-height: 84px; text-align: center; margin-bottom: 18px; }
-        .header h1 { font-size: 15px; margin-top: 5px; }
+        .header { margin-bottom: 18px; }
+        .header-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .header-table td { border: 0; padding: 0; }
+        .header-main { width: 82%; text-align: center; vertical-align: middle; }
+        .header h1 { font-size: 14px; line-height: 1.25; margin-top: 5px; }
         .header p { margin-top: 4px; color: #475569; }
-        .institution-logo { display: block; width: 230px; height: auto; margin: 0 0 7px; }
+        .institution-logo { display: block; width: 220px; height: auto; margin: 0 auto 7px; }
         .section { margin-top: 14px; }
-        .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; padding: 6px 8px; background: #e2e8f0; border: 1px solid #cbd5e1; }
+        .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; padding: 6px 8px; background: #e2e8f0; border: 1px solid #cbd5e1; page-break-after: avoid; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: top; }
         th { width: 28%; background: #f8fafc; text-align: left; }
         .status { font-weight: bold; }
         .evidence-grid { width: 100%; border-collapse: separate; border-spacing: 5px; }
+        .evidence-grid tr { page-break-inside: avoid; }
         .evidence-cell { width: 50%; border: 1px solid #cbd5e1; padding: 5px; text-align: center; }
         .evidence-cell img { max-width: 100%; max-height: 135px; }
         .evidence-label { margin-top: 4px; font-size: 8px; color: #475569; }
@@ -26,6 +30,7 @@
             border-collapse: collapse;
             page-break-inside: avoid;
         }
+        .signature-section { page-break-inside: avoid; }
         .signature-table td {
             width: 50%;
             text-align: center;
@@ -39,15 +44,12 @@
             max-height: 65px;
             max-width: 180px;
         }
+        .signature-meta { font-size: 8px; color: #64748b; }
         .muted { color: #64748b; }
-        .page-break { page-break-before: always; }
         .document-verification {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 125px;
-            margin: 0;
+            width: 18%;
             text-align: center;
+            vertical-align: top !important;
             page-break-inside: avoid;
         }
         .document-verification img {
@@ -72,27 +74,40 @@
     @php
         $checkout = $vehicleLoan->checkoutCheck();
         $return = $vehicleLoan->returnCheck();
+        $checkoutOfficerSignatureRecord =
+            $vehicleLoan->checkoutConfirmationSignature();
+        $pickupSignatureRecord = $vehicleLoan->pickupSignature();
+        $returnBorrowerSignatureRecord =
+            $vehicleLoan->returnRequestSignature();
+        $returnOfficerSignatureRecord =
+            $vehicleLoan->returnConfirmationSignature();
     @endphp
 
     <div class="header">
-        <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
-        <h1>FORM SERAH TERIMA DAN PENGEMBALIAN KENDARAAN DINAS</h1>
-        <p>{{ $vehicleLoan->loan_number }}</p>
-            <div class="document-verification">
-            <img
-                src="{{ $verificationQrDataUri }}"
-                alt="QR verifikasi dokumen"
-            >
-            <div class="document-verification-title">
-                Verifikasi SIMANTAP
-            </div>
-            <div class="document-verification-meta">
-                Versi {{ $documentVerification->version }}
-                · {{ substr($documentVerification->payload_hash, 0, 12) }}
-                <br>
-                QR bukan tanda tangan digital
-            </div>
-        </div>
+        <table class="header-table">
+            <tr>
+                <td class="header-main">
+                    <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
+                    <h1>FORM SERAH TERIMA DAN PENGEMBALIAN KENDARAAN DINAS</h1>
+                    <p>{{ $vehicleLoan->loan_number }}</p>
+                </td>
+                <td class="document-verification">
+                    <img
+                        src="{{ $verificationQrDataUri }}"
+                        alt="QR verifikasi dokumen"
+                    >
+                    <div class="document-verification-title">
+                        Verifikasi SIMANTAP
+                    </div>
+                    <div class="document-verification-meta">
+                        Versi {{ $documentVerification->version }}
+                        · {{ substr($documentVerification->payload_hash, 0, 12) }}
+                        <br>
+                        QR bukan tanda tangan digital
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <div class="section">
@@ -142,7 +157,14 @@
         <div class="section">
             <div class="section-title">{{ $block['title'] }}</div>
             @if ($block['check'])
-                @php $check = $block['check']; @endphp
+                @php
+                    $check = $block['check'];
+                    $conditionSignatureRecord = $check->isCheckout()
+                        ? $checkoutOfficerSignatureRecord
+                        : $returnOfficerSignatureRecord;
+                    $conditionRecordedAt = $conditionSignatureRecord?->signed_at
+                        ?? $check->checked_at;
+                @endphp
                 <table>
                     <tr>
                         <th>Diperiksa Oleh</th>
@@ -156,7 +178,7 @@
                             {{ $check->checker_employee_number_snapshot ?: ($check->checker?->employee_number ?: '-') }}
                         </td>
                     </tr>
-                    <tr><th>Waktu Pemeriksaan</th><td>{{ $check->checked_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB</td></tr>
+                    <tr><th>Waktu Pemeriksaan</th><td>{{ $conditionRecordedAt->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB</td></tr>
                     <tr><th>Odometer</th><td>{{ number_format((float) $check->odometer, 1, ',', '.') }} km</td></tr>
                     <tr><th>Bahan Bakar</th><td>{{ $check->fuel_level }}%</td></tr>
                     <tr><th>Kondisi Keseluruhan</th><td>{{ $check->overall_condition->label() }}</td></tr>
@@ -220,7 +242,7 @@
             ?: $return?->checker?->employee_number;
     @endphp
 
-    <div class="section">
+    <div class="section signature-section">
         <div class="section-title">Pertanggungjawaban Serah Terima</div>
 
         <table class="signature-table">
@@ -235,13 +257,19 @@
                         <img
                             class="signature"
                             src="{{ $pickupSignature }}"
-                            alt="Tanda tangan peminjam"
+                            alt="Tanda tangan peminjam saat pengambilan"
                         >
                     @endif
                 </td>
 
                 <td class="signature-space">
-                    {{-- Ruang tanda tangan basah Petugas/Pengelola --}}
+                    @if ($checkoutOfficerSignature)
+                        <img
+                            class="signature"
+                            src="{{ $checkoutOfficerSignature }}"
+                            alt="Tanda tangan petugas pemeriksaan kondisi awal"
+                        >
+                    @endif
                 </td>
             </tr>
 
@@ -266,11 +294,29 @@
                     {{ $checkoutCheckerEmployeeNumber ?: '................................' }}
                 </td>
             </tr>
+            <tr>
+                <td class="signature-meta">
+                    @if ($pickupSignatureRecord)
+                        Ditandatangani melalui sistem:
+                        {{ $pickupSignatureRecord->signed_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
+                    @else
+                        Belum ditandatangani melalui sistem.
+                    @endif
+                </td>
+                <td class="signature-meta">
+                    @if ($checkoutOfficerSignatureRecord)
+                        Ditandatangani melalui sistem:
+                        {{ $checkoutOfficerSignatureRecord->signed_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
+                    @else
+                        Belum ditandatangani melalui sistem.
+                    @endif
+                </td>
+            </tr>
         </table>
     </div>
 
-    @if ($return)
-        <div class="section">
+    @if ($return || $returnBorrowerSignature)
+        <div class="section signature-section">
             <div class="section-title">Pertanggungjawaban Pengembalian</div>
 
             <table class="signature-table">
@@ -281,10 +327,22 @@
 
                 <tr>
                     <td class="signature-space">
-                        {{-- Ruang tanda tangan basah peminjam --}}
+                        @if ($returnBorrowerSignature)
+                            <img
+                                class="signature"
+                                src="{{ $returnBorrowerSignature }}"
+                                alt="Tanda tangan peminjam saat pengembalian"
+                            >
+                        @endif
                     </td>
                     <td class="signature-space">
-                        {{-- Ruang tanda tangan basah Pemeriksa/Pengelola --}}
+                        @if ($returnOfficerSignature)
+                            <img
+                                class="signature"
+                                src="{{ $returnOfficerSignature }}"
+                                alt="Tanda tangan petugas pemeriksaan kondisi akhir"
+                            >
+                        @endif
                     </td>
                 </tr>
 
@@ -309,10 +367,28 @@
                         {{ $returnCheckerEmployeeNumber ?: '................................' }}
                     </td>
                 </tr>
+                <tr>
+                    <td class="signature-meta">
+                        @if ($returnBorrowerSignatureRecord)
+                            Ditandatangani melalui sistem:
+                            {{ $returnBorrowerSignatureRecord->signed_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
+                        @else
+                            Belum ditandatangani melalui sistem.
+                        @endif
+                    </td>
+                    <td class="signature-meta">
+                        @if ($returnOfficerSignatureRecord)
+                            Ditandatangani melalui sistem:
+                            {{ $returnOfficerSignatureRecord->signed_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
+                        @else
+                            Belum ditandatangani melalui sistem.
+                        @endif
+                    </td>
+                </tr>
             </table>
         </div>
     @endif
-    <div class="section page-break">
+    <div class="section">
         <div class="section-title">Riwayat Status</div>
         <table>
             <thead>

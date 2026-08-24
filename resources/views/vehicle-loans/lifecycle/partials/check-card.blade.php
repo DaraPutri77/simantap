@@ -2,6 +2,11 @@
     $check = $check ?? null;
     $title = $title ?? 'Pemeriksaan Kondisi';
     $displayTimezone = $displayTimezone ?? config('simantap.display_timezone', 'Asia/Jakarta');
+    $conditionSignature = $check?->isCheckout()
+        ? $vehicleLoan->checkoutConfirmationSignature()
+        : $vehicleLoan->returnConfirmationSignature();
+    $conditionRecordedAt = $conditionSignature?->signed_at
+        ?? $check?->checked_at;
 @endphp
 
 @if ($check)
@@ -18,7 +23,7 @@
             <div class="text-xs font-semibold text-slate-500 sm:text-right">
                 <p>{{ $check->checker?->name ?: 'Petugas' }}</p>
                 <p class="mt-1">
-                    {{ $check->checked_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
+                    {{ $conditionRecordedAt->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
                 </p>
             </div>
         </div>

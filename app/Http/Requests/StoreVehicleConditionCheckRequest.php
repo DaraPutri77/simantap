@@ -3,8 +3,11 @@
 namespace App\Http\Requests;
 
 use App\Enums\VehicleOverallCondition;
+use App\Rules\SignatureDataUrl;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreVehicleConditionCheckRequest extends FormRequest
 {
@@ -71,7 +74,62 @@ class StoreVehicleConditionCheckRequest extends FormRequest
                     5120,
                 ),
             ],
+            'signature_data' => ['required', new SignatureDataUrl],
+            'condition_consent' => ['accepted'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $labels = [
+                'photo_front' => 'tampak depan',
+                'photo_back' => 'tampak belakang',
+                'photo_left' => 'sisi kiri',
+                'photo_right' => 'sisi kanan',
+                'photo_odometer' => 'odometer',
+                'photo_fuel' => 'indikator bahan bakar',
+                'photo_damage' => 'kerusakan atau temuan',
+            ];
+            $checksumOwners = [];
+
+            foreach ($labels as $field => $label) {
+                $file = $this->file($field);
+
+                if (! $file instanceof UploadedFile) {
+                    continue;
+                }
+
+                $realPath = $file->getRealPath();
+
+                if (! is_string($realPath) || $realPath === '') {
+                    continue;
+                }
+
+                $checksum = hash_file('sha256', $realPath);
+
+                if (! is_string($checksum)) {
+                    continue;
+                }
+
+                $firstField = $checksumOwners[$checksum] ?? null;
+
+                if (is_string($firstField)) {
+                    $validator->errors()->add(
+                        $field,
+                        sprintf(
+                            'Foto %s sama dengan foto %s. Setiap jenis bukti wajib menggunakan foto yang berbeda.',
+                            $label,
+                            $labels[$firstField],
+                        ),
+                    );
+
+                    continue;
+                }
+
+                $checksumOwners[$checksum] = $field;
+            }
+        });
     }
 
     /**
@@ -89,6 +147,8 @@ class StoreVehicleConditionCheckRequest extends FormRequest
             'photo_fuel.required' => 'Foto indikator bahan bakar wajib diunggah.',
             'photo_damage.required' => 'Foto kerusakan wajib diunggah ketika kondisi tidak baik.',
             'damage_notes.required' => 'Catatan kerusakan wajib diisi ketika kondisi tidak baik.',
+            'signature_data.required' => 'Tanda tangan petugas wajib dibubuhkan.',
+            'condition_consent.accepted' => 'Pernyataan pertanggungjawaban pemeriksaan wajib disetujui.',
         ];
     }
 }

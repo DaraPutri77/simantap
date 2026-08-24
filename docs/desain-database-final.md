@@ -367,14 +367,17 @@ Kolom:
 `id`; `signable_type varchar(255)`; `signable_id bigint unsigned`;
 `signer_id foreignId restrictOnDelete`; `signer_name_snapshot varchar(255)`;
 `employee_number_snapshot varchar(50) nullable`; `purpose varchar(100)`;
-`image_path varchar(255)`; `transaction_hash char(64) index`;
+`version unsignedInteger default 1`; `image_path varchar(255)`;
+`transaction_hash char(64) index`;
 `image_checksum char(64)`; `ip_address varchar(45) nullable`;
 `user_agent text nullable`; `signed_at timestamp`; `created_at`; `updated_at`.
 
-Unique: `signable_type + signable_id + signer_id + purpose`.
+Unique: `signable_type + signable_id + purpose + version`.
 
-Tujuan: `inventory_request_submission`, `inventory_receipt_confirmation`,
-`vehicle_loan_submission`, `vehicle_checkout_confirmation`,
+Tujuan: `inventory_request_submission`, `inventory_request_approval`,
+`inventory_receipt_confirmation`, `vehicle_loan_submission`,
+`vehicle_loan_approval`, `vehicle_checkout_confirmation`,
+`vehicle_loan_pickup`, `vehicle_loan_return_request`,
 `vehicle_return_confirmation`.
 
 ## 14. Pendukung Sistem
@@ -458,6 +461,11 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 21. Lampiran hanya tersedia melalui route yang memiliki otorisasi.
 22. Pegawai hanya dapat melihat transaksi miliknya sendiri.
 23. Nomor dokumen dibuat atomik menggunakan `document_sequences`.
+24. Pengambilan kendaraan tidak dapat dikonfirmasi sebelum
+    `planned_start_at`.
+25. Setiap kategori bukti kondisi kendaraan menggunakan foto berbeda dan
+    checksum foto tidak boleh dipakai ulang pada tahap checkout, pengambilan,
+    atau pengembalian untuk peminjaman yang sama.
 
 ## 17. Index Utama
 

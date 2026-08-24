@@ -66,6 +66,14 @@
                 $checkoutCheck = $vehicleLoan->checkoutCheck();
                 $returnCheck = $vehicleLoan->returnCheck();
                 $status = $vehicleLoan->status;
+                $pickupOpensAt = $vehicleLoan->planned_start_at;
+                $pickupIsOpen = $pickupOpensAt === null
+                    || now()->gte($pickupOpensAt);
+                $pickedUpBeforeSchedule = $vehicleLoan->actual_start_at !== null
+                    && $vehicleLoan->planned_start_at !== null
+                    && $vehicleLoan->actual_start_at->lt(
+                        $vehicleLoan->planned_start_at,
+                    );
             @endphp
 
             <article class="panel overflow-hidden">
@@ -102,12 +110,22 @@
                             >
                                 Detail Peminjaman
                             </a>
-                            <a
-                                href="{{ route('vehicle-loan-lifecycle.pdf', $vehicleLoan) }}"
-                                class="secondary-button sm:w-auto"
-                            >
-                                PDF Serah Terima
-                            </a>
+                            @if ($checkoutCheck)
+                                <a
+                                    href="{{ route('vehicle-loan-lifecycle.pdf', $vehicleLoan) }}"
+                                    class="secondary-button sm:w-auto"
+                                >
+                                    PDF Serah Terima
+                                </a>
+                            @else
+                                <span
+                                    class="secondary-button cursor-not-allowed opacity-60 sm:w-auto"
+                                    aria-disabled="true"
+                                    title="PDF tersedia setelah pemeriksaan kondisi awal disimpan"
+                                >
+                                    PDF setelah Checkout
+                                </span>
+                            @endif
                         </div>
                     </div>
 
@@ -137,6 +155,12 @@
                             </dd>
                         </div>
                     </dl>
+
+                    @if ($pickedUpBeforeSchedule)
+                        <div class="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950">
+                            Catatan data historis: pengambilan tercatat sebelum jadwal mulai. Riwayat tidak diubah; alur baru telah mencegah pengambilan sebelum waktu yang direncanakan.
+                        </div>
+                    @endif
                 </div>
 
                 <div class="grid gap-5 p-5 sm:p-6 xl:grid-cols-2">
@@ -162,12 +186,14 @@
                                 'action' => route('vehicle-loan-lifecycle.admin.checkout', $vehicleLoan),
                                 'formKey' => 'checkout_'.$vehicleLoan->id,
                                 'heading' => 'Pemeriksaan Kondisi Awal',
-                                'description' => 'Pemeriksaan ini menjadi baseline immutable sebelum kendaraan dapat dikonfirmasi dan dipinjam.',
-                                'buttonLabel' => 'Simpan Checkout dan Siapkan Kendaraan',
+                                'description' => 'Pemeriksaan dan tanda tangan ini menjadi baseline immutable sebelum kendaraan dapat dikonfirmasi dan dipinjam.',
+                                'buttonLabel' => 'Tanda Tangani Checkout dan Siapkan Kendaraan',
+                                'signaturePadId' => 'vehicle_checkout_officer_'.$vehicleLoan->id,
+                                'signatureConsentText' => 'Saya telah melakukan pemeriksaan kondisi awal. Setiap foto sesuai label, merupakan foto baru pada pemeriksaan ini, dan seluruh data dapat dipertanggungjawabkan.',
                             ])
                         @elseif ($status === \App\Enums\VehicleLoanStatus::ReadyForPickup)
                             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-950">
-                                Pemeriksaan awal sudah selesai. Menunggu peminjam membubuhkan tanda tangan serah terima sebelum kendaraan berubah menjadi Dipinjam.
+                                Pemeriksaan awal sudah selesai. Menunggu peminjam mengunggah foto memegang kunci dan membubuhkan tanda tangan serah terima sebelum kendaraan berubah menjadi Dipinjam.
                             </div>
                         @elseif ($status === \App\Enums\VehicleLoanStatus::Borrowed)
                             <div class="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-sm font-semibold leading-6 text-cyan-950">
@@ -178,8 +204,10 @@
                                 'action' => route('vehicle-loan-lifecycle.admin.return-inspection', $vehicleLoan),
                                 'formKey' => 'return_'.$vehicleLoan->id,
                                 'heading' => 'Pemeriksaan Kondisi Akhir',
-                                'description' => 'Sistem akan membandingkan odometer terhadap checkout dan master kendaraan. Kondisi selain Baik akan menghasilkan return_issue dan kendaraan Perlu Pemeriksaan.',
-                                'buttonLabel' => 'Selesaikan Pemeriksaan Pengembalian',
+                                'description' => 'Sistem akan membandingkan odometer terhadap checkout dan master kendaraan. Tanda tangan pemeriksa mengesahkan hasil pemeriksaan akhir.',
+                                'buttonLabel' => 'Tanda Tangani dan Selesaikan Pemeriksaan',
+                                'signaturePadId' => 'vehicle_return_officer_'.$vehicleLoan->id,
+                                'signatureConsentText' => 'Saya telah melakukan pemeriksaan kondisi akhir. Setiap foto sesuai label, merupakan foto baru pada pemeriksaan ini, dan seluruh data dapat dipertanggungjawabkan.',
                             ])
                         @elseif ($status === \App\Enums\VehicleLoanStatus::Completed)
                             <div class="rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm font-semibold leading-6 text-teal-950">
@@ -196,32 +224,73 @@
                                 Peminjaman sudah disetujui. Administrator belum menyelesaikan pemeriksaan kondisi awal.
                             </div>
                         @elseif ($status === \App\Enums\VehicleLoanStatus::ReadyForPickup)
-                            <form
-                                method="POST"
-                                action="{{ route('vehicle-loan-lifecycle.employee.confirm-pickup', $vehicleLoan) }}"
-                                class="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5"
-                            >
-                                @csrf
-                                <p class="text-sm font-black text-slate-950">Konfirmasi Serah Terima</p>
-                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-600">
-                                    Periksa data kondisi awal di atas. Setelah ditandatangani, actual_start_at tercatat dan kendaraan berubah menjadi Dipinjam.
-                                </p>
-                                <div class="mt-5">
-                                    @include('inventory-requests.partials.signature-pad', [
-                                        'padId' => 'vehicle_pickup_'.$vehicleLoan->id,
-                                        'consentName' => 'pickup_consent',
-                                        'consentText' => 'Saya telah memeriksa kondisi awal kendaraan dan menerima kendaraan sesuai data serah terima di atas.',
-                                    ])
+                            @if (! $pickupIsOpen)
+                                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
+                                    Pemeriksaan awal sudah selesai. Kendaraan baru dapat diambil mulai
+                                    <strong>{{ $pickupOpensAt->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB</strong>
+                                    sesuai jadwal peminjaman.
                                 </div>
-                                <button type="submit" class="primary-button mt-5">
-                                    Tanda Tangani dan Ambil Kendaraan
-                                </button>
-                            </form>
+                            @else
+                                <form
+                                    method="POST"
+                                    action="{{ route('vehicle-loan-lifecycle.employee.confirm-pickup', $vehicleLoan) }}"
+                                    enctype="multipart/form-data"
+                                    class="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-5"
+                                    data-signature-form
+                                >
+                                    @csrf
+                                    <p class="text-sm font-black text-slate-950">Konfirmasi Serah Terima</p>
+                                    <p class="mt-1 text-xs font-semibold leading-5 text-slate-600">
+                                        Periksa data kondisi awal di atas. Foto peminjam memegang kunci dan tanda tangan wajib dilengkapi sebelum kendaraan berubah menjadi Dipinjam.
+                                    </p>
+                                    <div class="mt-5">
+                                        <label for="photo_borrower_with_key_{{ $vehicleLoan->id }}" class="form-label">
+                                            Foto Peminjam Memegang Kunci Kendaraan
+                                        </label>
+                                        <input
+                                            id="photo_borrower_with_key_{{ $vehicleLoan->id }}"
+                                            name="photo_borrower_with_key"
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            capture="environment"
+                                            class="form-input py-2"
+                                            data-evidence-preview-input
+                                            required
+                                        >
+                                        <div class="mt-2 hidden rounded-xl border border-slate-200 bg-slate-50 p-2" data-evidence-preview>
+                                            <img
+                                                src=""
+                                                alt="Pratinjau Foto Peminjam Memegang Kunci Kendaraan"
+                                                class="h-48 w-full rounded-lg object-contain"
+                                                data-evidence-preview-image
+                                            >
+                                            <p class="mt-2 truncate text-[10px] font-bold text-slate-600" data-evidence-preview-name></p>
+                                        </div>
+                                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                            Unggah foto peminjam saat memegang kunci kendaraan yang diterima.
+                                        </p>
+                                        @error('photo_borrower_with_key')
+                                            <p class="form-error">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="mt-5">
+                                        @include('inventory-requests.partials.signature-pad', [
+                                            'padId' => 'vehicle_pickup_'.$vehicleLoan->id,
+                                            'consentName' => 'pickup_consent',
+                                            'consentText' => 'Saya telah memeriksa kondisi awal, menerima kendaraan, dan memastikan foto benar menunjukkan saya memegang kunci kendaraan yang diterima.',
+                                        ])
+                                    </div>
+                                    <button type="submit" class="primary-button mt-5">
+                                        Tanda Tangani dan Ambil Kendaraan
+                                    </button>
+                                </form>
+                            @endif
                         @elseif ($status === \App\Enums\VehicleLoanStatus::Borrowed)
                             <form
                                 method="POST"
                                 action="{{ route('vehicle-loan-lifecycle.employee.request-return', $vehicleLoan) }}"
                                 class="rounded-2xl border border-cyan-200 bg-white p-4 sm:p-5"
+                                data-signature-form
                             >
                                 @csrf
                                 <p class="text-sm font-black text-slate-950">Ajukan Pengembalian</p>
@@ -242,24 +311,16 @@
                                     <p class="form-error">{{ $message }}</p>
                                 @enderror
 
-                                <label class="mt-4 flex items-start gap-3 rounded-xl border border-slate-300 bg-slate-50 p-4">
-                                    <input
-                                        name="return_confirmation"
-                                        type="checkbox"
-                                        value="1"
-                                        class="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-400 text-sky-700 focus:ring-sky-300"
-                                        required
-                                    >
-                                    <span class="text-xs font-semibold leading-5 text-slate-700">
-                                        Saya menyatakan kendaraan telah saya kembalikan dan siap diperiksa Administrator.
-                                    </span>
-                                </label>
-                                @error('return_confirmation')
-                                    <p class="form-error">{{ $message }}</p>
-                                @enderror
+                                <div class="mt-5">
+                                    @include('inventory-requests.partials.signature-pad', [
+                                        'padId' => 'vehicle_return_borrower_'.$vehicleLoan->id,
+                                        'consentName' => 'return_confirmation',
+                                        'consentText' => 'Saya menyatakan kendaraan telah saya kembalikan, data pengembalian ini benar, dan kendaraan siap diperiksa Administrator.',
+                                    ])
+                                </div>
 
                                 <button type="submit" class="primary-button mt-5">
-                                    Ajukan Pengembalian
+                                    Tanda Tangani dan Ajukan Pengembalian
                                 </button>
                             </form>
                         @elseif ($status === \App\Enums\VehicleLoanStatus::AwaitingReturnInspection)
@@ -292,4 +353,39 @@
             {{ $vehicleLoans->links() }}
         </div>
     @endif
+
+    <script>
+        document.querySelectorAll('[data-evidence-preview-input]').forEach((input) => {
+            const wrapper = input.parentElement?.querySelector('[data-evidence-preview]');
+            const image = wrapper?.querySelector('[data-evidence-preview-image]');
+            const name = wrapper?.querySelector('[data-evidence-preview-name]');
+            let previewUrl = null;
+
+            if (!wrapper || !image || !name) {
+                return;
+            }
+
+            input.addEventListener('change', () => {
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    previewUrl = null;
+                }
+
+                const file = input.files?.[0];
+
+                if (!file) {
+                    image.removeAttribute('src');
+                    name.textContent = '';
+                    wrapper.classList.add('hidden');
+
+                    return;
+                }
+
+                previewUrl = URL.createObjectURL(file);
+                image.src = previewUrl;
+                name.textContent = file.name;
+                wrapper.classList.remove('hidden');
+            });
+        });
+    </script>
 </x-layouts.app>

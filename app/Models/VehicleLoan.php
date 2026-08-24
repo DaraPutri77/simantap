@@ -158,9 +158,31 @@ class VehicleLoan extends Model
         );
     }
 
+    public function checkoutConfirmationSignature(): ?DigitalSignature
+    {
+        return $this->latestSignature(
+            DigitalSignaturePurpose::VehicleCheckoutConfirmation,
+        );
+    }
+
+    public function returnRequestSignature(): ?DigitalSignature
+    {
+        return $this->latestSignature(
+            DigitalSignaturePurpose::VehicleLoanReturnRequest,
+        );
+    }
+
+    public function returnConfirmationSignature(): ?DigitalSignature
+    {
+        return $this->latestSignature(
+            DigitalSignaturePurpose::VehicleReturnConfirmation,
+        );
+    }
+
     private function latestSignature(
         DigitalSignaturePurpose $purpose,
-    ): ?DigitalSignature {
+    ): ?DigitalSignature
+    {
         if ($this->relationLoaded('signatures')) {
             return $this->signatures
                 ->filter(

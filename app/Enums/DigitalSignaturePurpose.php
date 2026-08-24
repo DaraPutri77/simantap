@@ -14,6 +14,7 @@ enum DigitalSignaturePurpose: string
     case VehicleLoanSubmission = 'vehicle_loan_submission';
     case VehicleLoanApproval = 'vehicle_loan_approval';
     case VehicleLoanPickup = 'vehicle_loan_pickup';
+    case VehicleLoanReturnRequest = 'vehicle_loan_return_request';
     case VehicleCheckoutConfirmation = 'vehicle_checkout_confirmation';
     case VehicleReturnConfirmation = 'vehicle_return_confirmation';
 
@@ -26,8 +27,9 @@ enum DigitalSignaturePurpose: string
             self::VehicleLoanSubmission => 'Pengajuan Peminjaman Kendaraan',
             self::VehicleLoanApproval => 'Persetujuan Peminjaman Kendaraan',
             self::VehicleLoanPickup => 'Konfirmasi Pengambilan Kendaraan',
-            self::VehicleCheckoutConfirmation => 'Konfirmasi Pengambilan Kendaraan',
-            self::VehicleReturnConfirmation => 'Konfirmasi Pengembalian Kendaraan',
+            self::VehicleLoanReturnRequest => 'Pengajuan Pengembalian oleh Peminjam',
+            self::VehicleCheckoutConfirmation => 'Pemeriksaan Kondisi Awal oleh Petugas',
+            self::VehicleReturnConfirmation => 'Pemeriksaan Kondisi Akhir oleh Petugas',
         };
     }
 }

@@ -125,7 +125,7 @@ class VehicleLoanLifecycleController extends Controller
             ->route('vehicle-loan-lifecycle.admin.index')
             ->with(
                 'status',
-                'Pemeriksaan kondisi awal tersimpan. Kendaraan sekarang siap dikonfirmasi oleh peminjam.',
+                'Pemeriksaan kondisi awal dan tanda tangan petugas tersimpan. Kendaraan sekarang siap dikonfirmasi oleh peminjam.',
             );
     }
 
@@ -162,6 +162,23 @@ class VehicleLoanLifecycleController extends Controller
         $actor = $request->user();
         abort_if($actor === null, 401);
         abort_unless($vehicleLoan->isOwnedBy($actor), 403);
+
+        if (
+            in_array($vehicleLoan->status, [
+                VehicleLoanStatus::AwaitingReturnInspection,
+                VehicleLoanStatus::Completed,
+                VehicleLoanStatus::ReturnIssue,
+            ], true)
+            && $vehicleLoan->returnRequestSignature() !== null
+        ) {
+            return redirect()
+                ->route('vehicle-loan-lifecycle.employee.index')
+                ->with(
+                    'status',
+                    'Pengembalian sudah tercatat dan tidak dikirim ulang. Kendaraan menunggu atau telah menyelesaikan pemeriksaan akhir Administrator.',
+                );
+        }
+
         Gate::authorize('requestReturn', $vehicleLoan);
 
         $service->requestReturn(
@@ -175,7 +192,7 @@ class VehicleLoanLifecycleController extends Controller
             ->route('vehicle-loan-lifecycle.employee.index')
             ->with(
                 'status',
-                'Pengembalian dicatat. Kendaraan menunggu pemeriksaan akhir Administrator.',
+                'Pengembalian dan tanda tangan peminjam tercatat. Kendaraan menunggu pemeriksaan akhir Administrator.',
             );
     }
 
@@ -196,8 +213,8 @@ class VehicleLoanLifecycleController extends Controller
         );
 
         $message = $result->status === VehicleLoanStatus::Completed
-            ? 'Pemeriksaan pengembalian selesai. Peminjaman dinyatakan selesai.'
-            : 'Pemeriksaan menemukan masalah. Kendaraan masuk status Perlu Pemeriksaan.';
+            ? 'Pemeriksaan pengembalian dan tanda tangan pemeriksa tersimpan. Peminjaman dinyatakan selesai.'
+            : 'Pemeriksaan dan tanda tangan pemeriksa tersimpan. Kendaraan masuk status Perlu Pemeriksaan.';
 
         return redirect()
             ->route('vehicle-loan-lifecycle.admin.index')
@@ -293,19 +310,38 @@ class VehicleLoanLifecycleController extends Controller
             }
         }
 
-        $pickupSignatureRecord =
-            $vehicleLoan->pickupSignature();
+        $signatureDefinitions = [
+            'checkoutOfficerSignature' => [
+                'record' => $vehicleLoan->checkoutConfirmationSignature(),
+                'label' => 'petugas pemeriksaan kondisi awal',
+            ],
+            'pickupSignature' => [
+                'record' => $vehicleLoan->pickupSignature(),
+                'label' => 'peminjam saat pengambilan',
+            ],
+            'returnBorrowerSignature' => [
+                'record' => $vehicleLoan->returnRequestSignature(),
+                'label' => 'peminjam saat pengembalian',
+            ],
+            'returnOfficerSignature' => [
+                'record' => $vehicleLoan->returnConfirmationSignature(),
+                'label' => 'petugas pemeriksaan kondisi akhir',
+            ],
+        ];
+        $signatureData = [];
 
-        $pickupSignature = $service->signatureDataUri(
-            $pickupSignatureRecord,
-        );
+        foreach ($signatureDefinitions as $key => $definition) {
+            $signatureData[$key] = $service->signatureDataUri(
+                $definition['record'],
+            );
 
-        abort_if(
-            $pickupSignatureRecord !== null
-                && $pickupSignature === null,
-            409,
-            'Integritas tanda tangan serah terima gagal diverifikasi.',
-        );
+            abort_if(
+                $definition['record'] !== null
+                    && $signatureData[$key] === null,
+                409,
+                'Integritas tanda tangan '.$definition['label'].' gagal diverifikasi.',
+            );
+        }
 
         $documentVerification = $verificationService->issue(
             verifiable: $vehicleLoan,
@@ -327,7 +363,10 @@ class VehicleLoanLifecycleController extends Controller
             'vehicleLoan' => $vehicleLoan,
             'documentVerification' => $documentVerification,
             'verificationQrDataUri' => $verificationQrDataUri,
-            'pickupSignature' => $pickupSignature,
+            'checkoutOfficerSignature' => $signatureData['checkoutOfficerSignature'],
+            'pickupSignature' => $signatureData['pickupSignature'],
+            'returnBorrowerSignature' => $signatureData['returnBorrowerSignature'],
+            'returnOfficerSignature' => $signatureData['returnOfficerSignature'],
             'evidenceData' => $evidenceData,
             'institutionName' => (string) config(
                 'simantap.institution.name',

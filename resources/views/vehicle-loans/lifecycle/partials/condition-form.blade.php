@@ -3,6 +3,9 @@
     $buttonLabel = $buttonLabel ?? 'Simpan Pemeriksaan';
     $heading = $heading ?? 'Pemeriksaan Kondisi Kendaraan';
     $description = $description ?? 'Lengkapi kondisi kendaraan dan seluruh foto wajib.';
+    $signaturePadId = $signaturePadId ?? $formKey.'_officer';
+    $signatureConsentText = $signatureConsentText
+        ?? 'Saya menyatakan pemeriksaan ini telah saya lakukan dan seluruh data yang dicatat dapat dipertanggungjawabkan.';
 @endphp
 
 <form
@@ -10,6 +13,7 @@
     action="{{ $action }}"
     enctype="multipart/form-data"
     class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
+    data-signature-form
 >
     @csrf
 
@@ -125,7 +129,7 @@
             Foto Wajib
         </p>
         <p class="mt-1 text-xs font-semibold leading-5 text-slate-600">
-            Format JPG, JPEG, PNG, atau WEBP. Ukuran mengikuti batas evidence pada konfigurasi SIMANTAP.
+            Gunakan foto baru yang sesuai dengan setiap label. Foto yang sama tidak dapat dipakai untuk lebih dari satu bukti atau dipakai ulang dari tahap sebelumnya.
         </p>
 
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
@@ -146,9 +150,20 @@
                         name="{{ $field }}"
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
+                        capture="environment"
                         class="form-input py-2"
+                        data-evidence-preview-input
                         required
                     >
+                    <div class="mt-2 hidden rounded-xl border border-slate-200 bg-slate-50 p-2" data-evidence-preview>
+                        <img
+                            src=""
+                            alt="Pratinjau {{ $label }}"
+                            class="h-40 w-full rounded-lg object-contain"
+                            data-evidence-preview-image
+                        >
+                        <p class="mt-2 truncate text-[10px] font-bold text-slate-600" data-evidence-preview-name></p>
+                    </div>
                     @error($field)
                         <p class="form-error">{{ $message }}</p>
                     @enderror
@@ -164,8 +179,19 @@
                     name="photo_damage"
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
                     class="form-input py-2"
+                    data-evidence-preview-input
                 >
+                <div class="mt-2 hidden rounded-xl border border-slate-200 bg-slate-50 p-2" data-evidence-preview>
+                    <img
+                        src=""
+                        alt="Pratinjau Foto Kerusakan atau Temuan"
+                        class="h-40 w-full rounded-lg object-contain"
+                        data-evidence-preview-image
+                    >
+                    <p class="mt-2 truncate text-[10px] font-bold text-slate-600" data-evidence-preview-name></p>
+                </div>
                 <p class="mt-1 text-xs font-semibold text-slate-500">
                     Wajib bila kondisi keseluruhan bukan Baik.
                 </p>
@@ -174,6 +200,14 @@
                 @enderror
             </div>
         </div>
+    </div>
+
+    <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        @include('inventory-requests.partials.signature-pad', [
+            'padId' => $signaturePadId,
+            'consentName' => 'condition_consent',
+            'consentText' => $signatureConsentText,
+        ])
     </div>
 
     <button type="submit" class="primary-button mt-5">

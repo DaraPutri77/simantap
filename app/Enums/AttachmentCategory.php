@@ -14,6 +14,7 @@ enum AttachmentCategory: string
     case VehicleBack = 'vehicle_back';
     case VehicleLeft = 'vehicle_left';
     case VehicleRight = 'vehicle_right';
+    case BorrowerWithKey = 'borrower_with_key';
     case Odometer = 'odometer';
     case Fuel = 'fuel';
     case Damage = 'damage';
@@ -31,6 +32,7 @@ enum AttachmentCategory: string
             self::VehicleBack => 'Kendaraan Tampak Belakang',
             self::VehicleLeft => 'Kendaraan Tampak Kiri',
             self::VehicleRight => 'Kendaraan Tampak Kanan',
+            self::BorrowerWithKey => 'Foto Peminjam Memegang Kunci',
             self::Odometer => 'Foto Odometer',
             self::Fuel => 'Foto Indikator Bahan Bakar',
             self::Damage => 'Foto Kerusakan',

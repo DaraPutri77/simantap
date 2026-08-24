@@ -301,6 +301,15 @@ class DocumentVerificationService
             'pickup_signature' => $this->signatureFingerprint(
                 $vehicleLoan->pickupSignature(),
             ),
+            'checkout_confirmation_signature' => $this->signatureFingerprint(
+                $vehicleLoan->checkoutConfirmationSignature(),
+            ),
+            'return_request_signature' => $this->signatureFingerprint(
+                $vehicleLoan->returnRequestSignature(),
+            ),
+            'return_confirmation_signature' => $this->signatureFingerprint(
+                $vehicleLoan->returnConfirmationSignature(),
+            ),
             'status_histories' => $vehicleLoan->statusHistories
                 ->map(
                     static fn ($history): array => [
