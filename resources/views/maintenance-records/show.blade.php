@@ -1,10 +1,22 @@
 <x-layouts.app
     :title="$maintenanceRecord->maintenance_number"
     header="Detail Pemeliharaan"
-    eyebrow="Kendaraan"
+    eyebrow="Aset dan Kendaraan"
 >
     @php
         $status = $maintenanceRecord->status;
+        $showApproveForm = $status === \App\Enums\MaintenanceStatus::Reported;
+        $showStartForm = in_array($status, [
+            \App\Enums\MaintenanceStatus::Approved,
+            \App\Enums\MaintenanceStatus::FurtherActionRequired,
+        ], true);
+        $showCompletionForm = $status === \App\Enums\MaintenanceStatus::InProgress;
+        $showCancellationForm = in_array($status, [
+            \App\Enums\MaintenanceStatus::Reported,
+            \App\Enums\MaintenanceStatus::Approved,
+            \App\Enums\MaintenanceStatus::InProgress,
+            \App\Enums\MaintenanceStatus::FurtherActionRequired,
+        ], true);
         $beforeAttachments = $maintenanceRecord->attachments->where('file_category', \App\Enums\AttachmentCategory::MaintenanceBefore);
         $afterAttachments = $maintenanceRecord->attachments->where('file_category', \App\Enums\AttachmentCategory::MaintenanceAfter);
         $otherAttachments = $maintenanceRecord->attachments->reject(fn ($attachment) => in_array($attachment->file_category, [
@@ -24,7 +36,7 @@
                     {{ $status->label() }}
                 </span>
             </div>
-            <p class="mt-2 text-sm font-bold text-slate-700">{{ $maintenanceRecord->vehicle_snapshot }}</p>
+            <p class="mt-2 text-sm font-bold text-slate-700">{{ $maintenanceRecord->subjectSnapshot() }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('maintenance-records.index') }}" class="secondary-button sm:w-auto">Daftar Pemeliharaan</a>
@@ -88,20 +100,34 @@
         </article>
 
         <article class="panel p-5 sm:p-6">
-            <h2 class="text-lg font-black text-slate-950">Kendaraan</h2>
-            <p class="mt-3 text-sm font-black text-slate-900">{{ $maintenanceRecord->vehicle?->license_plate }}</p>
-            <p class="mt-1 text-sm font-semibold text-slate-700">{{ $maintenanceRecord->vehicle?->displayName() }}</p>
-            <dl class="mt-5 space-y-3">
-                <div><dt class="text-xs font-black text-slate-500">Status Sebelum</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->vehicle_status_before?->label() ?: '-' }}</dd></div>
-                <div><dt class="text-xs font-black text-slate-500">Status Sekarang</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->vehicle?->status?->label() ?: '-' }}</dd></div>
-                <div><dt class="text-xs font-black text-slate-500">Odometer</dt><dd class="mt-1 text-sm font-semibold">{{ number_format((float) ($maintenanceRecord->vehicle?->current_odometer ?? 0), 1, ',', '.') }} km</dd></div>
-            </dl>
-            @if ($maintenanceRecord->sourceVehicleLoan)
-                <div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
-                    <p class="text-xs font-black text-red-800">Masalah Pengembalian</p>
-                    <p class="mt-1 text-sm font-black text-red-950">{{ $maintenanceRecord->sourceVehicleLoan->loan_number }}</p>
-                    <p class="mt-1 text-xs font-semibold text-red-800">{{ $maintenanceRecord->sourceVehicleLoan->borrower?->name ?: '-' }}</p>
-                </div>
+            <h2 class="text-lg font-black text-slate-950">{{ $maintenanceRecord->subjectType()->label() }}</h2>
+            @if ($maintenanceRecord->vehicle)
+                <p class="mt-3 text-sm font-black text-slate-900">{{ $maintenanceRecord->vehicle->license_plate }}</p>
+                <p class="mt-1 text-sm font-semibold text-slate-700">{{ $maintenanceRecord->vehicle->displayName() }}</p>
+                <dl class="mt-5 space-y-3">
+                    <div><dt class="text-xs font-black text-slate-500">Status Sebelum</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->vehicle_status_before?->label() ?: '-' }}</dd></div>
+                    <div><dt class="text-xs font-black text-slate-500">Status Sekarang</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->vehicle->status->label() }}</dd></div>
+                    <div><dt class="text-xs font-black text-slate-500">Odometer</dt><dd class="mt-1 text-sm font-semibold">{{ number_format((float) $maintenanceRecord->vehicle->current_odometer, 1, ',', '.') }} km</dd></div>
+                </dl>
+                @if ($maintenanceRecord->sourceVehicleLoan)
+                    <div class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
+                        <p class="text-xs font-black text-red-800">Masalah Pengembalian</p>
+                        <p class="mt-1 text-sm font-black text-red-950">{{ $maintenanceRecord->sourceVehicleLoan->loan_number }}</p>
+                        <p class="mt-1 text-xs font-semibold text-red-800">{{ $maintenanceRecord->sourceVehicleLoan->borrower?->name ?: '-' }}</p>
+                    </div>
+                @endif
+            @elseif ($maintenanceRecord->operationalAsset)
+                <p class="mt-3 text-sm font-black text-slate-900">{{ $maintenanceRecord->operationalAsset->asset_code }}</p>
+                <p class="mt-1 text-sm font-semibold text-slate-700">{{ $maintenanceRecord->operationalAsset->displayName() }}</p>
+                <dl class="mt-5 space-y-3">
+                    <div><dt class="text-xs font-black text-slate-500">Referensi BMN</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->operationalAsset->administrativeCode() }}</dd></div>
+                    <div><dt class="text-xs font-black text-slate-500">Status Sebelum</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->operational_asset_status_before?->label() ?: '-' }}</dd></div>
+                    <div><dt class="text-xs font-black text-slate-500">Status Sekarang</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->operationalAsset->status->label() }}</dd></div>
+                    <div><dt class="text-xs font-black text-slate-500">Lokasi</dt><dd class="mt-1 text-sm font-semibold">{{ $maintenanceRecord->operationalAsset->location ?: '-' }}</dd></div>
+                </dl>
+                <a href="{{ route('operational-assets.show', $maintenanceRecord->operationalAsset) }}" class="secondary-button mt-5">Detail Aset</a>
+            @else
+                <p class="mt-3 text-sm font-semibold text-slate-600">{{ $maintenanceRecord->subjectSnapshot() }}</p>
             @endif
         </article>
     </section>
@@ -143,40 +169,45 @@
         </div>
     </section>
 
-    @can('approve', $maintenanceRecord)
-        <section class="panel mt-6 p-5 sm:p-6">
-            <h2 class="text-lg font-black text-slate-950">Setujui Pemeliharaan</h2>
-            <form method="POST" action="{{ route('maintenance-records.approve', $maintenanceRecord) }}" class="mt-4">
-                @csrf
-                <label for="approval_notes" class="form-label">Catatan Persetujuan</label>
-                <textarea id="approval_notes" name="approval_notes" rows="3" class="form-input min-h-24 py-3">{{ old('approval_notes') }}</textarea>
-                <button type="submit" class="primary-button mt-4 sm:w-auto">Setujui</button>
-            </form>
-        </section>
-    @endcan
+    @if ($showApproveForm)
+        @can('approve', $maintenanceRecord)
+            <section class="panel mt-6 p-5 sm:p-6">
+                <h2 class="text-lg font-black text-slate-950">Setujui Pemeliharaan</h2>
+                <form method="POST" action="{{ route('maintenance-records.approve', $maintenanceRecord) }}" class="mt-4">
+                    @csrf
+                    <label for="approval_notes" class="form-label">Catatan Persetujuan</label>
+                    <textarea id="approval_notes" name="approval_notes" rows="3" class="form-input min-h-24 py-3">{{ old('approval_notes') }}</textarea>
+                    <button type="submit" class="primary-button mt-4 sm:w-auto">Setujui</button>
+                </form>
+            </section>
+        @endcan
+    @endif
 
-    @can('start', $maintenanceRecord)
-        <section class="panel mt-6 p-5 sm:p-6">
-            <h2 class="text-lg font-black text-slate-950">Mulai Pengerjaan</h2>
-            <form method="POST" action="{{ route('maintenance-records.start', $maintenanceRecord) }}" class="mt-4 grid gap-4 sm:grid-cols-2">
-                @csrf
-                <div>
-                    <label for="start_date" class="form-label">Tanggal Mulai</label>
-                    <input id="start_date" name="start_date" type="date" value="{{ old('start_date', now($displayTimezone)->toDateString()) }}" class="form-input" required>
-                </div>
-                <div>
-                    <label for="service_provider" class="form-label">Penyedia Jasa</label>
-                    <input id="service_provider" name="service_provider" type="text" value="{{ old('service_provider', $maintenanceRecord->service_provider) }}" class="form-input" maxlength="255">
-                </div>
-                <div class="sm:col-span-2">
-                    <button type="submit" class="primary-button sm:w-auto">Mulai Pemeliharaan</button>
-                </div>
-            </form>
-        </section>
-    @endcan
+    @if ($showStartForm)
+        @can('start', $maintenanceRecord)
+            <section class="panel mt-6 p-5 sm:p-6">
+                <h2 class="text-lg font-black text-slate-950">Mulai Pengerjaan</h2>
+                <form method="POST" action="{{ route('maintenance-records.start', $maintenanceRecord) }}" class="mt-4 grid gap-4 sm:grid-cols-2">
+                    @csrf
+                    <div>
+                        <label for="start_date" class="form-label">Tanggal Mulai</label>
+                        <input id="start_date" name="start_date" type="date" value="{{ old('start_date', now($displayTimezone)->toDateString()) }}" class="form-input" required>
+                    </div>
+                    <div>
+                        <label for="service_provider" class="form-label">Penyedia Jasa</label>
+                        <input id="service_provider" name="service_provider" type="text" value="{{ old('service_provider', $maintenanceRecord->service_provider) }}" class="form-input" maxlength="255">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button type="submit" class="primary-button sm:w-auto">Mulai Pemeliharaan</button>
+                    </div>
+                </form>
+            </section>
+        @endcan
+    @endif
 
-    @can('complete', $maintenanceRecord)
-        <section class="panel mt-6 p-5 sm:p-6">
+    @if ($showCompletionForm)
+        @can('complete', $maintenanceRecord)
+            <section class="panel mt-6 p-5 sm:p-6">
             <h2 class="text-lg font-black text-slate-950">Catat Hasil Pemeliharaan</h2>
             <form method="POST" action="{{ route('maintenance-records.complete', $maintenanceRecord) }}" enctype="multipart/form-data" class="mt-4 grid gap-4 lg:grid-cols-2">
                 @csrf
@@ -219,20 +250,23 @@
                     <button type="submit" class="primary-button sm:w-auto">Simpan Hasil</button>
                 </div>
             </form>
-        </section>
-    @endcan
+            </section>
+        @endcan
+    @endif
 
-    @can('cancel', $maintenanceRecord)
-        <section class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6">
-            <h2 class="text-lg font-black text-red-950">Batalkan Pemeliharaan</h2>
-            <form method="POST" action="{{ route('maintenance-records.cancel', $maintenanceRecord) }}" class="mt-4">
-                @csrf
-                <label for="cancellation_reason" class="form-label text-red-900">Alasan Pembatalan</label>
-                <textarea id="cancellation_reason" name="cancellation_reason" rows="3" class="form-input min-h-24 py-3" required>{{ old('cancellation_reason') }}</textarea>
-                <button type="submit" class="mt-4 inline-flex items-center justify-center rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white hover:bg-red-800">
-                    Batalkan Pemeliharaan
-                </button>
-            </form>
-        </section>
-    @endcan
+    @if ($showCancellationForm)
+        @can('cancel', $maintenanceRecord)
+            <section class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6">
+                <h2 class="text-lg font-black text-red-950">Batalkan Pemeliharaan</h2>
+                <form method="POST" action="{{ route('maintenance-records.cancel', $maintenanceRecord) }}" class="mt-4">
+                    @csrf
+                    <label for="cancellation_reason" class="form-label text-red-900">Alasan Pembatalan</label>
+                    <textarea id="cancellation_reason" name="cancellation_reason" rows="3" class="form-input min-h-24 py-3" required>{{ old('cancellation_reason') }}</textarea>
+                    <button type="submit" class="mt-4 inline-flex items-center justify-center rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white hover:bg-red-800">
+                        Batalkan Pemeliharaan
+                    </button>
+                </form>
+            </section>
+        @endcan
+    @endif
 </x-layouts.app>

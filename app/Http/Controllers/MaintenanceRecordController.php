@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MaintenanceStatus;
+use App\Enums\MaintenanceSubjectType;
+use App\Enums\OperationalAssetStatus;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleStatus;
 use App\Http\Requests\ApproveMaintenanceRecordRequest;
@@ -12,6 +14,7 @@ use App\Http\Requests\StartMaintenanceRecordRequest;
 use App\Http\Requests\StoreMaintenanceRecordRequest;
 use App\Models\Attachment;
 use App\Models\MaintenanceRecord;
+use App\Models\OperationalAsset;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
 use App\Services\MaintenanceService;
@@ -34,6 +37,7 @@ class MaintenanceRecordController extends Controller
         $query = MaintenanceRecord::query()
             ->with([
                 'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,is_active',
+                'operationalAsset:id,public_id,asset_code,type,brand,model,status,is_active',
                 'reporter:id,name',
                 'handler:id,name',
                 'sourceVehicleLoan:id,public_id,loan_number,status',
@@ -50,6 +54,15 @@ class MaintenanceRecordController extends Controller
                         $vehicleQuery
                             ->where('vehicle_code', 'like', "%{$search}%")
                             ->orWhere('license_plate', 'like', "%{$search}%")
+                            ->orWhere('brand', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('operationalAsset', static function (Builder $assetQuery) use ($search): void {
+                        $assetQuery
+                            ->where('asset_code', 'like', "%{$search}%")
+                            ->orWhere('bmn_code', 'like', "%{$search}%")
+                            ->orWhere('nup', 'like', "%{$search}%")
+                            ->orWhere('register_code', 'like', "%{$search}%")
                             ->orWhere('brand', 'like', "%{$search}%")
                             ->orWhere('model', 'like', "%{$search}%");
                     });
@@ -83,10 +96,21 @@ class MaintenanceRecordController extends Controller
     {
         Gate::authorize('create', MaintenanceRecord::class);
 
+        $operationalAssets = $this->availableOperationalAssets();
+        $selectedAsset = $operationalAssets->firstWhere(
+            'public_id',
+            (string) $request->query('operational_asset', ''),
+        );
+
         return view('maintenance-records.create', [
             'vehicles' => $this->availableVehicles(),
+            'operationalAssets' => $operationalAssets,
             'returnIssues' => $this->eligibleReturnIssues(),
             'selectedLoan' => null,
+            'selectedAsset' => $selectedAsset,
+            'selectedSubjectType' => $selectedAsset === null
+                ? MaintenanceSubjectType::Vehicle
+                : MaintenanceSubjectType::OperationalAsset,
             'displayTimezone' => $this->displayTimezone(),
         ]);
     }
@@ -113,8 +137,11 @@ class MaintenanceRecordController extends Controller
 
         return view('maintenance-records.create', [
             'vehicles' => collect([$vehicleLoan->vehicle]),
+            'operationalAssets' => collect(),
             'returnIssues' => collect([$vehicleLoan]),
             'selectedLoan' => $vehicleLoan,
+            'selectedAsset' => null,
+            'selectedSubjectType' => MaintenanceSubjectType::Vehicle,
             'displayTimezone' => $this->displayTimezone(),
         ]);
     }
@@ -127,24 +154,41 @@ class MaintenanceRecordController extends Controller
         abort_if($actor === null, 401);
 
         $data = $request->validated();
-        $vehicle = Vehicle::query()
-            ->where('public_id', $data['vehicle_public_id'])
-            ->firstOrFail();
-
-        $sourceLoan = null;
-        if (! empty($data['source_vehicle_loan_public_id'])) {
-            $sourceLoan = VehicleLoan::query()
-                ->where('public_id', $data['source_vehicle_loan_public_id'])
-                ->firstOrFail();
-        }
-
-        $record = $service->report(
-            $vehicle,
-            $sourceLoan,
-            $data,
-            $actor,
-            $request,
+        $subjectType = MaintenanceSubjectType::from(
+            (string) $data['subject_type'],
         );
+
+        if ($subjectType === MaintenanceSubjectType::OperationalAsset) {
+            $asset = OperationalAsset::query()
+                ->where('public_id', $data['operational_asset_public_id'])
+                ->firstOrFail();
+
+            $record = $service->reportOperationalAsset(
+                $asset,
+                $data,
+                $actor,
+                $request,
+            );
+        } else {
+            $vehicle = Vehicle::query()
+                ->where('public_id', $data['vehicle_public_id'])
+                ->firstOrFail();
+
+            $sourceLoan = null;
+            if (! empty($data['source_vehicle_loan_public_id'])) {
+                $sourceLoan = VehicleLoan::query()
+                    ->where('public_id', $data['source_vehicle_loan_public_id'])
+                    ->firstOrFail();
+            }
+
+            $record = $service->report(
+                $vehicle,
+                $sourceLoan,
+                $data,
+                $actor,
+                $request,
+            );
+        }
 
         return redirect()
             ->route('maintenance-records.show', $record)
@@ -157,6 +201,7 @@ class MaintenanceRecordController extends Controller
 
         $maintenanceRecord->load([
             'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,is_active',
+            'operationalAsset:id,public_id,asset_code,bmn_code,nup,register_code,type,brand,model,serial_number,acquisition_year,location,responsible_person,status,is_active',
             'sourceVehicleLoan.borrower:id,name,employee_number',
             'reporter:id,name,employee_number',
             'handler:id,name,employee_number',
@@ -241,7 +286,7 @@ class MaintenanceRecordController extends Controller
 
         return $this->redirectToShow(
             $result,
-            'Hasil pemeliharaan berhasil disimpan dan status kendaraan telah diselaraskan.',
+            'Hasil pemeliharaan berhasil disimpan dan status subjek telah diselaraskan.',
         );
     }
 
@@ -263,7 +308,7 @@ class MaintenanceRecordController extends Controller
 
         return $this->redirectToShow(
             $maintenanceRecord,
-            'Pemeliharaan dibatalkan dan status kendaraan telah diselaraskan.',
+            'Pemeliharaan dibatalkan dan status subjek telah diselaraskan.',
         );
     }
 
@@ -322,6 +367,32 @@ class MaintenanceRecordController extends Controller
                 ]);
             })
             ->orderBy('vehicle_code')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, OperationalAsset>
+     */
+    private function availableOperationalAssets()
+    {
+        return OperationalAsset::query()
+            ->where('is_active', true)
+            ->whereIn('status', [
+                OperationalAssetStatus::Available->value,
+                OperationalAssetStatus::Inspection->value,
+                OperationalAssetStatus::Maintenance->value,
+                OperationalAssetStatus::Damaged->value,
+            ])
+            ->whereDoesntHave('maintenanceRecords', static function (Builder $query): void {
+                $query->whereIn('status', [
+                    MaintenanceStatus::Reported->value,
+                    MaintenanceStatus::Approved->value,
+                    MaintenanceStatus::InProgress->value,
+                    MaintenanceStatus::FurtherActionRequired->value,
+                ]);
+            })
+            ->orderBy('type')
+            ->orderBy('asset_code')
             ->get();
     }
 

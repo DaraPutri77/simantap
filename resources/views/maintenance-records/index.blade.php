@@ -1,22 +1,23 @@
 <x-layouts.app
-    title="Pemeliharaan Kendaraan"
-    header="Pemeliharaan Kendaraan"
-    eyebrow="Kendaraan"
+    title="Pemeliharaan Aset"
+    header="Pemeliharaan Aset"
+    eyebrow="Aset dan Kendaraan"
 >
     <section class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <p class="eyebrow">Kendali Pemeliharaan</p>
             <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Pemeliharaan Kendaraan
+                Pemeliharaan Aset dan Kendaraan
             </h1>
             <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-                Kelola laporan kerusakan, tindak lanjut masalah pengembalian, pengerjaan, bukti digital, biaya, dan hasil akhir kendaraan secara tertelusur.
+                Kelola laporan kerusakan PC, laptop, printer, dan kendaraan beserta pengerjaan, bukti digital, biaya, serta hasil akhir secara tertelusur.
             </p>
         </div>
         @can('create', \App\Models\MaintenanceRecord::class)
-            <a href="{{ route('maintenance-records.create') }}" class="primary-button sm:w-auto">
-                Tambah Pemeliharaan
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('operational-assets.index') }}" class="secondary-button sm:w-auto">Master Aset Perangkat</a>
+                <a href="{{ route('maintenance-records.create') }}" class="primary-button sm:w-auto">Tambah Pemeliharaan</a>
+            </div>
         @endcan
     </section>
 
@@ -55,7 +56,7 @@
                     type="search"
                     value="{{ request('q') }}"
                     class="form-input"
-                    placeholder="Nomor pemeliharaan, kendaraan, jenis, atau keluhan"
+                    placeholder="Nomor, kode aset/kendaraan, jenis, atau keluhan"
                 >
             </div>
             <div>
@@ -103,7 +104,7 @@
                             </span>
                         </div>
                         <p class="mt-2 text-sm font-bold text-slate-800">
-                            {{ $record->vehicle_snapshot }}
+                            {{ $record->subjectSnapshot() }}
                         </p>
                         <p class="mt-1 text-xs font-semibold text-slate-600">
                             {{ $record->maintenance_type }} · Dilaporkan {{ $record->reported_date->translatedFormat('d M Y') }}
@@ -129,8 +130,10 @@
                         <p class="mt-1 text-xs font-bold text-slate-900">{{ $record->handler?->name ?: '-' }}</p>
                     </div>
                     <div class="rounded-xl bg-slate-50 p-3">
-                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-500">Status Kendaraan</p>
-                        <p class="mt-1 text-xs font-bold text-slate-900">{{ $record->vehicle?->status?->label() ?: '-' }}</p>
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-500">Subjek / Status</p>
+                        <p class="mt-1 text-xs font-bold text-slate-900">
+                            {{ $record->subjectType()->label() }} · {{ $record->vehicle?->status?->label() ?? $record->operationalAsset?->status?->label() ?? '-' }}
+                        </p>
                     </div>
                     <div class="rounded-xl bg-slate-50 p-3">
                         <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-500">Biaya</p>

@@ -122,6 +122,13 @@ final class Navigation
                 'permission' => PermissionName::VehicleLoanCheck,
             ],
             [
+                'label' => 'Aset Perangkat',
+                'route' => 'operational-assets.index',
+                'icon' => 'maintenance',
+                'active_patterns' => ['operational-assets.*'],
+                'permission' => PermissionName::MaintenanceView,
+            ],
+            [
                 'label' => 'Pemeliharaan',
                 'route' => 'maintenance-records.index',
                 'icon' => 'maintenance',

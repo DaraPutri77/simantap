@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\AccountStatus;
 use App\Enums\InventoryRequestStatus;
 use App\Enums\MaintenanceStatus;
+use App\Enums\OperationalAssetStatus;
 use App\Enums\RoleName;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleStatus;
@@ -12,6 +13,7 @@ use App\Models\InventoryRequest;
 use App\Models\InventoryRequestItem;
 use App\Models\Item;
 use App\Models\MaintenanceRecord;
+use App\Models\OperationalAsset;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -76,6 +78,10 @@ final class DashboardDataService
                     ->where('status', VehicleStatus::Maintenance->value)
                     ->where('is_active', true)
                     ->count(),
+                'maintenance_assets' => OperationalAsset::query()
+                    ->where('status', OperationalAssetStatus::Maintenance->value)
+                    ->where('is_active', true)
+                    ->count(),
                 'active_employees' => User::query()
                     ->role(RoleName::Employee->value)
                     ->where('status', AccountStatus::Active->value)
@@ -122,7 +128,10 @@ final class DashboardDataService
                 ->limit(5)
                 ->get(),
             'openMaintenance' => MaintenanceRecord::query()
-                ->with('vehicle:id,brand,model,license_plate')
+                ->with([
+                    'vehicle:id,brand,model,license_plate',
+                    'operationalAsset:id,asset_code,type,brand,model',
+                ])
                 ->whereIn('status', $this->openMaintenanceStatuses())
                 ->oldest('reported_date')
                 ->limit(5)

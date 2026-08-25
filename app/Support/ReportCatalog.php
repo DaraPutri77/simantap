@@ -43,8 +43,8 @@ final class ReportCatalog
                 'description' => 'Daftar peminjaman yang tercatat melewati waktu pengembalian.',
             ],
             'maintenance' => [
-                'label' => 'Pemeliharaan Kendaraan',
-                'description' => 'Rekap laporan pemeliharaan, kendaraan, biaya, hasil, dan status.',
+                'label' => 'Pemeliharaan Aset dan Kendaraan',
+                'description' => 'Rekap laporan pemeliharaan perangkat atau kendaraan, biaya, hasil, dan status.',
             ],
         ];
     }

@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Enums\AttachmentCategory;
 use App\Enums\DocumentType;
 use App\Enums\MaintenanceStatus;
+use App\Enums\MaintenanceSubjectType;
+use App\Enums\OperationalAssetStatus;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleStatus;
 use App\Models\MaintenanceRecord;
 use App\Models\MaintenanceStatusHistory;
+use App\Models\OperationalAsset;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
@@ -152,6 +155,103 @@ class MaintenanceService
     /**
      * @param  array<string, mixed>  $data
      */
+    public function reportOperationalAsset(
+        OperationalAsset $operationalAsset,
+        array $data,
+        User $actor,
+        ?Request $httpRequest = null,
+    ): MaintenanceRecord {
+        $publicId = (string) Str::uuid();
+        $storedFiles = $this->storeReportFiles(
+            $publicId,
+            $data,
+            $actor,
+        );
+
+        try {
+            $record = DB::transaction(function () use (
+                $operationalAsset,
+                $data,
+                $actor,
+                $httpRequest,
+                $publicId,
+                $storedFiles,
+            ): MaintenanceRecord {
+                $lockedAsset = $this->lockOperationalAsset(
+                    $operationalAsset->getKey(),
+                );
+                $this->assertOperationalAssetMayEnterMaintenance($lockedAsset);
+                $this->assertNoActiveOperationalAssetMaintenance($lockedAsset);
+
+                $statusBefore = $lockedAsset->status;
+                $record = MaintenanceRecord::query()->create([
+                    'public_id' => $publicId,
+                    'maintenance_number' => $this->documentNumberService
+                        ->next(DocumentType::Maintenance),
+                    'vehicle_id' => null,
+                    'operational_asset_id' => $lockedAsset->getKey(),
+                    'source_vehicle_loan_id' => null,
+                    'vehicle_snapshot' => null,
+                    'operational_asset_snapshot' => $this->operationalAssetSnapshot(
+                        $lockedAsset,
+                    ),
+                    'vehicle_status_before' => null,
+                    'operational_asset_status_before' => $statusBefore,
+                    'reported_by' => $actor->getKey(),
+                    'maintenance_type' => $data['maintenance_type'],
+                    'complaint' => $data['complaint'],
+                    'initial_condition' => $data['initial_condition'],
+                    'reported_date' => $data['reported_date'],
+                    'status' => MaintenanceStatus::Reported,
+                ]);
+
+                $this->createAttachmentRecords($record, $storedFiles);
+
+                if ($lockedAsset->status === OperationalAssetStatus::Available) {
+                    $lockedAsset->forceFill([
+                        'status' => OperationalAssetStatus::Inspection,
+                    ])->save();
+                }
+
+                $this->recordStatus(
+                    $record,
+                    null,
+                    MaintenanceStatus::Reported,
+                    'Laporan pemeliharaan aset perangkat dibuat secara manual.',
+                    $actor,
+                );
+
+                $this->auditLogger->log(
+                    'maintenance_reported',
+                    'maintenance',
+                    $record,
+                    null,
+                    [
+                        'maintenance_number' => $record->maintenance_number,
+                        'subject_type' => MaintenanceSubjectType::OperationalAsset->value,
+                        'operational_asset_id' => $record->operational_asset_id,
+                        'status' => MaintenanceStatus::Reported->value,
+                        'operational_asset_status' => $lockedAsset->status->value,
+                        'evidence_count' => count($storedFiles),
+                    ],
+                    $httpRequest,
+                    (int) $actor->getKey(),
+                );
+
+                return $record;
+            }, 3);
+        } catch (Throwable $exception) {
+            $this->deleteStoredFiles($storedFiles);
+
+            throw $exception;
+        }
+
+        return $this->loadRecord($record);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function approve(
         MaintenanceRecord $maintenanceRecord,
         array $data,
@@ -170,7 +270,7 @@ class MaintenanceService
                 [MaintenanceStatus::Reported],
                 'Hanya laporan pemeliharaan berstatus Dilaporkan yang dapat disetujui.',
             );
-            $this->lockVehicle($locked->vehicle_id);
+            $this->lockSubject($locked);
 
             $previousStatus = $locked->status;
             $locked->forceFill([
@@ -230,20 +330,26 @@ class MaintenanceService
                 ],
                 'Pemeliharaan belum dapat dimulai pada status saat ini.',
             );
-            $vehicle = $this->lockVehicle($locked->vehicle_id);
+            $subject = $this->lockSubject($locked);
 
-            if (! $vehicle->is_active) {
-                throw ValidationException::withMessages([
-                    'vehicle' => 'Kendaraan nonaktif tidak dapat dimasukkan ke proses pemeliharaan operasional.',
-                ]);
-            }
+            if ($subject instanceof Vehicle) {
+                if (! $subject->is_active) {
+                    throw ValidationException::withMessages([
+                        'vehicle' => 'Kendaraan nonaktif tidak dapat dimasukkan ke proses pemeliharaan operasional.',
+                    ]);
+                }
 
-            if (in_array($vehicle->status, [
-                VehicleStatus::Reserved,
-                VehicleStatus::Borrowed,
-            ], true)) {
+                if (in_array($subject->status, [
+                    VehicleStatus::Reserved,
+                    VehicleStatus::Borrowed,
+                ], true)) {
+                    throw ValidationException::withMessages([
+                        'vehicle' => 'Kendaraan sedang terikat transaksi peminjaman dan tidak dapat mulai dipelihara.',
+                    ]);
+                }
+            } elseif (! $subject->is_active) {
                 throw ValidationException::withMessages([
-                    'vehicle' => 'Kendaraan sedang terikat transaksi peminjaman dan tidak dapat mulai dipelihara.',
+                    'operational_asset' => 'Aset perangkat nonaktif tidak dapat mulai dipelihara.',
                 ]);
             }
 
@@ -258,8 +364,10 @@ class MaintenanceService
                 'completed_at' => null,
             ])->save();
 
-            $vehicle->forceFill([
-                'status' => VehicleStatus::Maintenance,
+            $subject->forceFill([
+                'status' => $subject instanceof Vehicle
+                    ? VehicleStatus::Maintenance
+                    : OperationalAssetStatus::Maintenance,
             ])->save();
 
             $this->recordStatus(
@@ -278,7 +386,7 @@ class MaintenanceService
                 $actor,
                 $httpRequest,
                 [
-                    'vehicle_status' => VehicleStatus::Maintenance->value,
+                    ...$this->subjectAuditValues($locked, $subject),
                     'start_date' => (string) $locked->start_date?->toDateString(),
                     'service_provider' => $locked->service_provider,
                 ],
@@ -320,7 +428,7 @@ class MaintenanceService
                     'Hanya pemeliharaan yang sedang dikerjakan yang dapat diselesaikan.',
                 );
 
-                $vehicle = $this->lockVehicle($locked->vehicle_id);
+                $subject = $this->lockSubject($locked);
                 $outcome = MaintenanceStatus::from(
                     (string) $data['outcome_status'],
                 );
@@ -340,22 +448,25 @@ class MaintenanceService
 
                 $this->createAttachmentRecords($locked, $storedFiles);
 
-                $vehicleStatus = $this->vehicleStatusForOutcome(
-                    $outcome,
-                    $vehicle,
-                    $locked,
-                );
-                $vehicleChanges = [
-                    'status' => $vehicleStatus,
-                ];
+                $subjectStatus = $subject instanceof Vehicle
+                    ? $this->vehicleStatusForOutcome(
+                        $outcome,
+                        $subject,
+                        $locked,
+                    )
+                    : $this->operationalAssetStatusForOutcome(
+                        $outcome,
+                        $subject,
+                    );
+                $subjectChanges = ['status' => $subjectStatus];
 
                 if ($outcome === MaintenanceStatus::Unserviceable) {
-                    $vehicleChanges['is_active'] = false;
+                    $subjectChanges['is_active'] = false;
                 }
 
-                $vehicle->forceFill($vehicleChanges)->save();
+                $subject->forceFill($subjectChanges)->save();
 
-                if (in_array($outcome, [
+                if ($subject instanceof Vehicle && in_array($outcome, [
                     MaintenanceStatus::Completed,
                     MaintenanceStatus::CompletedWithNotes,
                 ], true)) {
@@ -370,7 +481,10 @@ class MaintenanceService
                     $locked,
                     $previousStatus,
                     $outcome,
-                    $this->outcomeHistoryNote($outcome),
+                    $this->outcomeHistoryNote(
+                        $outcome,
+                        $locked->subjectType(),
+                    ),
                     $actor,
                 );
 
@@ -382,7 +496,7 @@ class MaintenanceService
                     $actor,
                     $httpRequest,
                     [
-                        'vehicle_status' => $vehicleStatus->value,
+                        ...$this->subjectAuditValues($locked, $subject),
                         'cost' => $locked->cost,
                         'completion_date' => (string) $locked->completion_date?->toDateString(),
                         'evidence_count' => count($storedFiles),
@@ -421,7 +535,7 @@ class MaintenanceService
                 self::ACTIVE_STATUSES,
                 'Pemeliharaan pada status ini tidak dapat dibatalkan.',
             );
-            $vehicle = $this->lockVehicle($locked->vehicle_id);
+            $subject = $this->lockSubject($locked);
 
             $previousStatus = $locked->status;
             $locked->forceFill([
@@ -431,12 +545,14 @@ class MaintenanceService
                 'cancellation_reason' => $data['cancellation_reason'],
             ])->save();
 
-            $vehicleStatus = $this->statusAfterCancellation(
-                $vehicle,
-                $locked,
-            );
-            $vehicle->forceFill([
-                'status' => $vehicleStatus,
+            $subjectStatus = $subject instanceof Vehicle
+                ? $this->statusAfterCancellation($subject, $locked)
+                : $this->operationalAssetStatusAfterCancellation(
+                    $subject,
+                    $locked,
+                );
+            $subject->forceFill([
+                'status' => $subjectStatus,
             ])->save();
 
             $this->recordStatus(
@@ -455,7 +571,7 @@ class MaintenanceService
                 $actor,
                 $httpRequest,
                 [
-                    'vehicle_status' => $vehicleStatus->value,
+                    ...$this->subjectAuditValues($locked, $subject),
                     'cancellation_reason' => $data['cancellation_reason'],
                 ],
             );
@@ -480,6 +596,38 @@ class MaintenanceService
             ->whereKey($id)
             ->lockForUpdate()
             ->firstOrFail();
+    }
+
+    private function lockOperationalAsset(int $id): OperationalAsset
+    {
+        return OperationalAsset::query()
+            ->whereKey($id)
+            ->lockForUpdate()
+            ->firstOrFail();
+    }
+
+    private function lockSubject(
+        MaintenanceRecord $record,
+    ): Vehicle|OperationalAsset {
+        if (
+            $record->vehicle_id !== null
+            && $record->operational_asset_id === null
+        ) {
+            return $this->lockVehicle($record->vehicle_id);
+        }
+
+        if (
+            $record->vehicle_id === null
+            && $record->operational_asset_id !== null
+        ) {
+            return $this->lockOperationalAsset(
+                $record->operational_asset_id,
+            );
+        }
+
+        throw new RuntimeException(
+            'Subjek pemeliharaan tidak valid. Tepat satu subjek wajib tersedia.',
+        );
     }
 
     private function lockLoan(int $id): VehicleLoan
@@ -508,6 +656,16 @@ class MaintenanceService
         }
     }
 
+    private function assertOperationalAssetMayEnterMaintenance(
+        OperationalAsset $asset,
+    ): void {
+        if (! $asset->canEnterMaintenance()) {
+            throw ValidationException::withMessages([
+                'operational_asset_public_id' => 'Aset perangkat nonaktif tidak dapat dibuatkan pemeliharaan operasional.',
+            ]);
+        }
+    }
+
     private function assertNoActiveMaintenance(Vehicle $vehicle): void
     {
         $existing = MaintenanceRecord::query()
@@ -528,6 +686,30 @@ class MaintenanceService
 
         throw ValidationException::withMessages([
             'vehicle_public_id' => "Kendaraan sudah memiliki pemeliharaan aktif {$existing->maintenance_number}.",
+        ]);
+    }
+
+    private function assertNoActiveOperationalAssetMaintenance(
+        OperationalAsset $asset,
+    ): void {
+        $existing = MaintenanceRecord::query()
+            ->where('operational_asset_id', $asset->getKey())
+            ->whereIn(
+                'status',
+                array_map(
+                    static fn (MaintenanceStatus $status): string => $status->value,
+                    self::ACTIVE_STATUSES,
+                ),
+            )
+            ->lockForUpdate()
+            ->first();
+
+        if ($existing === null) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'operational_asset_public_id' => "Aset perangkat sudah memiliki pemeliharaan aktif {$existing->maintenance_number}.",
         ]);
     }
 
@@ -639,6 +821,22 @@ class MaintenanceService
         };
     }
 
+    private function operationalAssetStatusForOutcome(
+        MaintenanceStatus $outcome,
+        OperationalAsset $asset,
+    ): OperationalAssetStatus {
+        return match ($outcome) {
+            MaintenanceStatus::Completed,
+            MaintenanceStatus::CompletedWithNotes => $asset->is_active
+                ? OperationalAssetStatus::Available
+                : OperationalAssetStatus::Inactive,
+            MaintenanceStatus::FurtherActionRequired => OperationalAssetStatus::Maintenance,
+            MaintenanceStatus::SeverelyDamaged => OperationalAssetStatus::Damaged,
+            MaintenanceStatus::Unserviceable => OperationalAssetStatus::Inactive,
+            default => throw new RuntimeException('Status hasil pemeliharaan aset tidak didukung.'),
+        };
+    }
+
     private function statusAfterSuccessfulMaintenance(
         Vehicle $vehicle,
         MaintenanceRecord $record,
@@ -695,6 +893,23 @@ class MaintenanceService
             VehicleStatus::Maintenance => VehicleStatus::Inspection,
             VehicleStatus::Inactive => VehicleStatus::Inactive,
             default => VehicleStatus::Inspection,
+        };
+    }
+
+    private function operationalAssetStatusAfterCancellation(
+        OperationalAsset $asset,
+        MaintenanceRecord $record,
+    ): OperationalAssetStatus {
+        if (! $asset->is_active) {
+            return OperationalAssetStatus::Inactive;
+        }
+
+        return match ($record->operational_asset_status_before) {
+            OperationalAssetStatus::Available => OperationalAssetStatus::Available,
+            OperationalAssetStatus::Damaged => OperationalAssetStatus::Damaged,
+            OperationalAssetStatus::Maintenance => OperationalAssetStatus::Inspection,
+            OperationalAssetStatus::Inactive => OperationalAssetStatus::Inactive,
+            default => OperationalAssetStatus::Inspection,
         };
     }
 
@@ -793,16 +1008,57 @@ class MaintenanceService
         ]));
     }
 
-    private function outcomeHistoryNote(MaintenanceStatus $outcome): string
-    {
+    private function operationalAssetSnapshot(
+        OperationalAsset $asset,
+    ): string {
+        return implode(' | ', array_filter([
+            $asset->asset_code,
+            $asset->administrativeCode() !== $asset->asset_code
+                ? $asset->administrativeCode()
+                : null,
+            $asset->displayName(),
+            $asset->location,
+        ]));
+    }
+
+    private function outcomeHistoryNote(
+        MaintenanceStatus $outcome,
+        MaintenanceSubjectType $subjectType,
+    ): string {
+        $subject = $subjectType === MaintenanceSubjectType::Vehicle
+            ? 'kendaraan'
+            : 'aset perangkat';
+
         return match ($outcome) {
-            MaintenanceStatus::Completed => 'Pemeliharaan selesai dan kendaraan dapat kembali digunakan.',
-            MaintenanceStatus::CompletedWithNotes => 'Pemeliharaan selesai dengan catatan dan kendaraan dapat kembali digunakan.',
-            MaintenanceStatus::FurtherActionRequired => 'Pemeliharaan memerlukan tindakan lanjutan dan kendaraan tetap dalam pemeliharaan.',
-            MaintenanceStatus::SeverelyDamaged => 'Hasil pemeliharaan menyatakan kendaraan rusak berat.',
-            MaintenanceStatus::Unserviceable => 'Hasil pemeliharaan menyatakan kendaraan tidak layak digunakan dan dinonaktifkan.',
+            MaintenanceStatus::Completed => "Pemeliharaan selesai dan {$subject} dapat kembali digunakan.",
+            MaintenanceStatus::CompletedWithNotes => "Pemeliharaan selesai dengan catatan dan {$subject} dapat kembali digunakan.",
+            MaintenanceStatus::FurtherActionRequired => "Pemeliharaan memerlukan tindakan lanjutan dan {$subject} tetap dalam pemeliharaan.",
+            MaintenanceStatus::SeverelyDamaged => "Hasil pemeliharaan menyatakan {$subject} rusak berat.",
+            MaintenanceStatus::Unserviceable => "Hasil pemeliharaan menyatakan {$subject} tidak layak digunakan dan dinonaktifkan.",
             default => 'Status pemeliharaan diperbarui.',
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function subjectAuditValues(
+        MaintenanceRecord $record,
+        Vehicle|OperationalAsset $subject,
+    ): array {
+        if ($subject instanceof Vehicle) {
+            return [
+                'subject_type' => MaintenanceSubjectType::Vehicle->value,
+                'vehicle_id' => $record->vehicle_id,
+                'vehicle_status' => $subject->status->value,
+            ];
+        }
+
+        return [
+            'subject_type' => MaintenanceSubjectType::OperationalAsset->value,
+            'operational_asset_id' => $record->operational_asset_id,
+            'operational_asset_status' => $subject->status->value,
+        ];
     }
 
     /**
@@ -977,6 +1233,7 @@ class MaintenanceService
     {
         return $record->fresh([
             'vehicle',
+            'operationalAsset',
             'sourceVehicleLoan.borrower',
             'reporter',
             'handler',

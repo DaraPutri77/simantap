@@ -453,15 +453,21 @@ class ReportService
     private function maintenance(array $filters): array
     {
         $query = MaintenanceRecord::query()
-            ->with(['vehicle:id,public_id,vehicle_code,license_plate,brand,model', 'reporter:id,name,employee_number'])
+            ->with([
+                'vehicle:id,public_id,vehicle_code,license_plate,brand,model',
+                'operationalAsset:id,public_id,asset_code,bmn_code,nup,type,brand,model',
+                'reporter:id,name,employee_number',
+            ])
             ->when($filters['status'] !== '', static fn (Builder $maintenanceQuery): Builder => $maintenanceQuery->where('status', $filters['status']))
             ->when($filters['search'] !== '', static fn (Builder $maintenanceQuery): Builder => $maintenanceQuery->where(function (Builder $nested) use ($filters): void {
                 $nested
                     ->where('maintenance_number', 'like', '%'.$filters['search'].'%')
                     ->orWhere('vehicle_snapshot', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('operational_asset_snapshot', 'like', '%'.$filters['search'].'%')
                     ->orWhere('maintenance_type', 'like', '%'.$filters['search'].'%')
                     ->orWhere('complaint', 'like', '%'.$filters['search'].'%')
-                    ->orWhereHas('vehicle', static fn (Builder $vehicleQuery): Builder => $vehicleQuery->where('vehicle_code', 'like', '%'.$filters['search'].'%')->orWhere('license_plate', 'like', '%'.$filters['search'].'%'));
+                    ->orWhereHas('vehicle', static fn (Builder $vehicleQuery): Builder => $vehicleQuery->where('vehicle_code', 'like', '%'.$filters['search'].'%')->orWhere('license_plate', 'like', '%'.$filters['search'].'%'))
+                    ->orWhereHas('operationalAsset', static fn (Builder $assetQuery): Builder => $assetQuery->where('asset_code', 'like', '%'.$filters['search'].'%')->orWhere('bmn_code', 'like', '%'.$filters['search'].'%')->orWhere('nup', 'like', '%'.$filters['search'].'%'));
             }))
             ->when($filters['from'] !== '', static fn (Builder $maintenanceQuery): Builder => $maintenanceQuery->whereDate('reported_date', '>=', $filters['from']))
             ->when($filters['until'] !== '', static fn (Builder $maintenanceQuery): Builder => $maintenanceQuery->whereDate('reported_date', '<=', $filters['until']))
@@ -471,7 +477,8 @@ class ReportService
         $rows = $records->map(fn (MaintenanceRecord $record): array => [
             'tanggal' => $record->reported_date?->format('d/m/Y') ?: '-',
             'nomor' => $record->maintenance_number,
-            'kendaraan' => $record->vehicle_snapshot,
+            'subjek' => $record->subjectType()->label(),
+            'aset_kendaraan' => $record->subjectSnapshot(),
             'jenis' => $record->maintenance_type,
             'pelapor' => $record->reporter?->name ?: '-',
             'penyedia' => $record->service_provider ?: '-',
@@ -483,7 +490,8 @@ class ReportService
             'columns' => $this->columns([
                 'tanggal' => 'Tanggal Laporan',
                 'nomor' => 'Nomor Pemeliharaan',
-                'kendaraan' => 'Kendaraan',
+                'subjek' => 'Jenis Subjek',
+                'aset_kendaraan' => 'Aset / Kendaraan',
                 'jenis' => 'Jenis',
                 'pelapor' => 'Pelapor',
                 'penyedia' => 'Penyedia Jasa',

@@ -73,12 +73,13 @@
             [
                 'label' => 'Dalam Pemeliharaan',
                 'value' => number_format(
-                    $statistics['maintenance_vehicles'],
+                    $statistics['maintenance_vehicles']
+                        + $statistics['maintenance_assets'],
                     0,
                     ',',
                     '.',
                 ),
-                'note' => 'Kendaraan',
+                'note' => 'Kendaraan & perangkat',
                 'accent' => 'from-rose-400 to-red-500',
             ],
             [
@@ -663,8 +664,11 @@
                                         @if ($record->vehicle !== null)
                                             {{ $record->vehicle->license_plate }}
                                             · {{ $record->vehicle->brand }}
+                                        @elseif ($record->operationalAsset !== null)
+                                            {{ $record->operationalAsset->asset_code }}
+                                            · {{ $record->operationalAsset->brand }}
                                         @else
-                                            {{ $record->vehicle_snapshot ?: 'Kendaraan' }}
+                                            {{ $record->subjectSnapshot() ?: 'Subjek pemeliharaan' }}
                                         @endif
                                     </p>
 
