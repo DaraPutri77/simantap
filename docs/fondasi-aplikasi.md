@@ -14,7 +14,8 @@ Sistem menyatukan pengelolaan:
 - permintaan dan penyerahan barang;
 - kendaraan dinas;
 - peminjaman dan pengembalian motor dinas;
-- pemeliharaan kendaraan;
+- master aset perangkat PC, laptop, dan printer;
+- pemeliharaan aset perangkat dan kendaraan;
 - laporan dan kartu kendali;
 - bukti foto dan tanda tangan;
 - audit aktivitas.
@@ -51,9 +52,10 @@ Akun dan transaksi tidak dihapus permanen apabila masih diperlukan untuk audit.
 6. Permintaan dan Penyerahan Barang
 7. Master Kendaraan
 8. Peminjaman dan Pengembalian Motor Dinas
-9. Pemeliharaan Kendaraan
-10. Laporan dan Kartu Kendali
-11. Audit Aktivitas
+9. Master Aset Perangkat
+10. Pemeliharaan Aset dan Kendaraan
+11. Laporan dan Kartu Kendali
+12. Audit Aktivitas
 
 ## 5. Autentikasi
 
@@ -110,7 +112,8 @@ Ketentuan kata sandi:
 | Menyetujui atau menolak peminjaman | Ya | Tidak |
 | Mengunggah bukti dan tanda tangan | Dapat memantau/mengelola | Untuk transaksi sendiri |
 | Mengonfirmasi pengembalian | Dapat memproses | Untuk peminjaman sendiri |
-| Mengelola pemeliharaan kendaraan | Ya | Tidak |
+| Mengelola master PC/laptop/printer | Ya | Tidak |
+| Mengelola pemeliharaan aset dan kendaraan | Ya | Tidak |
 | Melihat laporan lengkap dan ekspor | Ya | Tidak |
 | Melihat riwayat pribadi | Ya | Ya |
 | Melihat audit aktivitas | Ya | Tidak |

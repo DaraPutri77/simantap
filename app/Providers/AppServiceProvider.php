@@ -8,6 +8,7 @@ use App\Models\InventoryRequest;
 use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\MaintenanceRecord;
+use App\Models\OperationalAsset;
 use App\Models\StockAdjustment;
 use App\Models\Unit;
 use App\Models\User;
@@ -65,6 +66,7 @@ class AppServiceProvider extends ServiceProvider
             'vehicle_loan' => VehicleLoan::class,
             'vehicle_condition_check' => VehicleConditionCheck::class,
             'maintenance_record' => MaintenanceRecord::class,
+            'operational_asset' => OperationalAsset::class,
         ]);
     }
 }

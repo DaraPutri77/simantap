@@ -4,7 +4,8 @@
 
 Dokumen ini menjadi sumber migration SIMANTAP untuk akun internal, role dan
 permission, persediaan, permintaan dan approval barang, kendaraan dinas,
-peminjaman dan pengembalian, pemeliharaan, bukti digital, notifikasi, nomor
+peminjaman dan pengembalian, aset perangkat PC/laptop/printer, pemeliharaan,
+bukti digital, notifikasi, nomor
 dokumen, pengaturan, dan audit log.
 
 Sistem melayani 39 pengguna internal: 1 admin dan 38 pegawai. Registrasi publik
@@ -317,16 +318,49 @@ Unique: `vehicle_loan_id + check_type`.
 
 `overall_condition`: `good`, `needs_attention`, `damaged`.
 
-## 12. Pemeliharaan
+## 12. Aset Perangkat Operasional
+
+### `operational_assets`
+
+Register individual ini khusus PC, laptop, dan printer. Tabel `items` tetap
+menjadi master stok agregat persediaan dan tidak dipakai sebagai register aset
+tetap.
+
+Kolom:
+
+`id`; `public_id uuid unique`; `asset_code varchar(80) unique`;
+`bmn_code varchar(50) nullable`; `nup varchar(30) nullable`;
+`register_code varchar(100) nullable unique`; `type varchar(30) index`;
+`brand varchar(255)`; `model varchar(255) nullable`;
+`serial_number varchar(120) nullable unique`;
+`acquisition_year unsignedSmallInteger nullable`; `location varchar(255) nullable`;
+`responsible_person varchar(255) nullable`; `status varchar(40) index`;
+`notes text nullable`; `is_active boolean default true index`; `created_at`;
+`updated_at`; `deleted_at`.
+
+Tipe: `pc`, `laptop`, `printer`.
+
+Status: `available`, `inspection`, `maintenance`, `damaged`, `inactive`.
+
+Kolom `bmn_code`, `nup`, dan `register_code` menjaga keterlacakan terhadap
+daftar aset BMN tanpa menyalin nilai perolehan atau data keuangan ke workflow
+pemeliharaan.
+
+## 13. Pemeliharaan
 
 ### `maintenance_records`
 
 Kolom:
 
 `id`; `maintenance_number varchar(80) unique`;
-`vehicle_id foreignId restrictOnDelete`;
+`vehicle_id foreignId nullable restrictOnDelete`;
+`operational_asset_id foreignId nullable restrictOnDelete`;
 `source_vehicle_loan_id foreignId nullable nullOnDelete`;
-`vehicle_snapshot varchar(255)`; `reported_by foreignId restrictOnDelete`;
+`vehicle_snapshot varchar(255) nullable`;
+`operational_asset_snapshot varchar(255) nullable`;
+`vehicle_status_before varchar(40) nullable`;
+`operational_asset_status_before varchar(40) nullable`;
+`reported_by foreignId restrictOnDelete`;
 `handled_by foreignId nullable nullOnDelete`;
 `maintenance_type varchar(100)`; `complaint text`; `initial_condition text`;
 `service_provider varchar(255) nullable`; `reported_date date index`;
@@ -339,10 +373,12 @@ Status: `reported`, `approved`, `in_progress`, `completed`,
 `completed_with_notes`, `further_action_required`, `severely_damaged`,
 `unserviceable`, `cancelled`.
 
-Versi pertama hanya memelihara kendaraan. Barang persediaan tidak
-diperlakukan sebagai aset tetap.
+Satu record wajib memiliki tepat satu subjek logis: `vehicle_id` atau
+`operational_asset_id`. Sumber peminjaman kendaraan hanya sah untuk subjek
+kendaraan. Invariant ini ditegakkan oleh request, service, dan model. Barang
+persediaan tidak diperlakukan sebagai aset tetap.
 
-## 13. Bukti Digital
+## 14. Bukti Digital
 
 ### `attachments`
 
@@ -380,7 +416,7 @@ Tujuan: `inventory_request_submission`, `inventory_request_approval`,
 `vehicle_loan_pickup`, `vehicle_loan_return_request`,
 `vehicle_return_confirmation`.
 
-## 14. Pendukung Sistem
+## 15. Pendukung Sistem
 
 ### `audit_logs`
 
@@ -421,7 +457,7 @@ Kolom:
 Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 `notifiable_id`, `data`, `read_at`, `created_at`, `updated_at`.
 
-## 15. Relasi Utama
+## 16. Relasi Utama
 
 - `users` memiliki banyak permintaan, peminjaman, tanda tangan, dan audit.
 - `users` memiliki role melalui `model_has_roles`.
@@ -429,11 +465,13 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 - Setiap header barang masuk/penyesuaian/permintaan memiliki banyak detail.
 - `items` memiliki banyak detail transaksi dan `stock_movements`.
 - `vehicles` memiliki banyak `vehicle_loans` dan `maintenance_records`.
+- `operational_assets` memiliki banyak `maintenance_records`.
+- Setiap `maintenance_record` memiliki tepat satu kendaraan atau aset perangkat.
 - `vehicle_loans` memiliki status history dan dua condition check.
 - `attachments` dan `digital_signatures` berelasi polymorphic.
 - `stock_movements` berelasi polymorphic ke detail transaksi sumber.
 
-## 16. Aturan Integritas
+## 17. Aturan Integritas
 
 1. `current_stock >= 0`, `reserved_stock >= 0`, dan
    `reserved_stock <= current_stock`.
@@ -466,8 +504,13 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 25. Setiap kategori bukti kondisi kendaraan menggunakan foto berbeda dan
     checksum foto tidak boleh dipakai ulang pada tahap checkout, pengambilan,
     atau pengembalian untuk peminjaman yang sama.
+26. Satu tiket pemeliharaan hanya boleh memiliki satu subjek: kendaraan atau
+    aset perangkat.
+27. PC, laptop, dan printer tidak boleh dimasukkan ke tabel stok `items` atau
+    tabel `vehicles`.
+28. Aset perangkat dengan tiket pemeliharaan aktif tidak dapat dinonaktifkan.
 
-## 17. Index Utama
+## 18. Index Utama
 
 - `items(category_id, is_active)`
 - `inventory_requests(status, request_date)`
@@ -477,12 +520,13 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 - `vehicle_loans(status, planned_start_at, planned_end_at)`
 - `vehicle_loans(borrower_id, status)`
 - `vehicle_loan_status_histories(vehicle_loan_id, changed_at)`
+- `operational_assets(type, status, is_active)`
 - `maintenance_records(status, reported_date)`
 - `audit_logs(module, created_at)`
 - `audit_logs(actor_id, created_at)`
 - Morph index pada semua relasi polymorphic
 
-## 18. Urutan Migration
+## 19. Urutan Migration
 
 1. Tabel bawaan Laravel.
 2. Tabel Spatie Permission.
@@ -491,5 +535,6 @@ Mengikuti database notification Laravel: `id`, `type`, `notifiable_type`,
 5. Barang masuk dan penyesuaian stok.
 6. Permintaan barang dan ledger stok.
 7. Kendaraan dan peminjaman.
-8. Pemeliharaan.
-9. Lampiran, tanda tangan, audit, nomor dokumen, pengaturan, dan notifikasi.
+8. Pemeliharaan kendaraan.
+9. Aset perangkat dan perluasan subjek pemeliharaan.
+10. Lampiran, tanda tangan, audit, nomor dokumen, pengaturan, dan notifikasi.

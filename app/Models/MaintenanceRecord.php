@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\MaintenanceStatus;
+use App\Enums\MaintenanceSubjectType;
+use App\Enums\OperationalAssetStatus;
 use App\Enums\VehicleStatus;
 use App\Models\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use LogicException;
 
 class MaintenanceRecord extends Model
 {
@@ -22,9 +25,12 @@ class MaintenanceRecord extends Model
         'public_id',
         'maintenance_number',
         'vehicle_id',
+        'operational_asset_id',
         'source_vehicle_loan_id',
         'vehicle_snapshot',
+        'operational_asset_snapshot',
         'vehicle_status_before',
+        'operational_asset_status_before',
         'reported_by',
         'handled_by',
         'approved_by',
@@ -61,12 +67,38 @@ class MaintenanceRecord extends Model
             'cost' => 'decimal:2',
             'status' => MaintenanceStatus::class,
             'vehicle_status_before' => VehicleStatus::class,
+            'operational_asset_status_before' => OperationalAssetStatus::class,
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $record): void {
+            $hasVehicle = $record->vehicle_id !== null;
+            $hasOperationalAsset = $record->operational_asset_id !== null;
+
+            if ($hasVehicle === $hasOperationalAsset) {
+                throw new LogicException(
+                    'Satu pemeliharaan wajib memiliki tepat satu subjek: kendaraan atau aset perangkat.',
+                );
+            }
+
+            if ($hasOperationalAsset && $record->source_vehicle_loan_id !== null) {
+                throw new LogicException(
+                    'Aset perangkat tidak boleh ditautkan ke transaksi peminjaman kendaraan.',
+                );
+            }
+        });
     }
 
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    public function operationalAsset(): BelongsTo
+    {
+        return $this->belongsTo(OperationalAsset::class);
     }
 
     public function sourceVehicleLoan(): BelongsTo
@@ -150,5 +182,19 @@ class MaintenanceRecord extends Model
             MaintenanceStatus::Unserviceable,
             MaintenanceStatus::Cancelled,
         ], true);
+    }
+
+    public function subjectType(): MaintenanceSubjectType
+    {
+        return $this->operational_asset_id === null
+            ? MaintenanceSubjectType::Vehicle
+            : MaintenanceSubjectType::OperationalAsset;
+    }
+
+    public function subjectSnapshot(): string
+    {
+        return $this->subjectType() === MaintenanceSubjectType::Vehicle
+            ? (string) $this->vehicle_snapshot
+            : (string) $this->operational_asset_snapshot;
     }
 }

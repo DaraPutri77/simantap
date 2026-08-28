@@ -1,7 +1,7 @@
 <x-layouts.app
     title="Tambah Pemeliharaan"
     header="Tambah Pemeliharaan"
-    eyebrow="Kendaraan"
+    eyebrow="Aset dan Kendaraan"
 >
     @php
         $selectedVehiclePublicId = old(
@@ -11,6 +11,14 @@
         $selectedLoanPublicId = old(
             'source_vehicle_loan_public_id',
             $selectedLoan?->public_id,
+        );
+        $selectedAssetPublicId = old(
+            'operational_asset_public_id',
+            $selectedAsset?->public_id,
+        );
+        $selectedSubjectTypeValue = old(
+            'subject_type',
+            $selectedSubjectType->value,
         );
         $selectedReturnCheck = $selectedLoan?->returnCheck();
     @endphp
@@ -22,7 +30,7 @@
                 Buat Tiket Pemeliharaan
             </h1>
             <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-                Gunakan sumber masalah pengembalian bila tersedia agar histori peminjaman dan pemeliharaan tetap terhubung.
+                Pilih satu subjek pemeliharaan: kendaraan atau aset perangkat PC, laptop, dan printer. Gunakan sumber masalah pengembalian bila tersedia agar histori kendaraan tetap terhubung.
             </p>
         </div>
         <a href="{{ route('maintenance-records.index') }}" class="secondary-button sm:w-auto">
@@ -89,7 +97,22 @@
         >
 
         <div class="grid gap-5 lg:grid-cols-2">
-            <div>
+            <div class="lg:col-span-2">
+                <label for="subject_type" class="form-label">Subjek Pemeliharaan</label>
+                @if ($selectedLoan)
+                    <input type="hidden" name="subject_type" value="{{ \App\Enums\MaintenanceSubjectType::Vehicle->value }}">
+                    <div class="flex min-h-13 items-center rounded-2xl border border-slate-200 bg-slate-100 px-4 text-sm font-black text-slate-700">Kendaraan dari masalah pengembalian</div>
+                @else
+                    <select id="subject_type" name="subject_type" class="form-input" required>
+                        @foreach (\App\Enums\MaintenanceSubjectType::cases() as $subjectTypeOption)
+                            <option value="{{ $subjectTypeOption->value }}" @selected($selectedSubjectTypeValue === $subjectTypeOption->value)>{{ $subjectTypeOption->label() }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                @error('subject_type')<p class="form-error">{{ $message }}</p>@enderror
+            </div>
+
+            <div id="vehicle-subject-field" data-subject-field="vehicle">
                 <label for="vehicle_public_id" class="form-label">Kendaraan</label>
                 <select
                     id="vehicle_public_id"
@@ -113,6 +136,21 @@
                 @endif
                 @error('vehicle_public_id')<p class="form-error">{{ $message }}</p>@enderror
             </div>
+
+            @unless ($selectedLoan)
+                <div id="operational-asset-subject-field" data-subject-field="operational_asset">
+                    <label for="operational_asset_public_id" class="form-label">Aset Perangkat</label>
+                    <select id="operational_asset_public_id" name="operational_asset_public_id" class="form-input">
+                        <option value="">Pilih PC, laptop, atau printer</option>
+                        @foreach ($operationalAssets as $operationalAsset)
+                            <option value="{{ $operationalAsset->public_id }}" @selected($selectedAssetPublicId === $operationalAsset->public_id)>
+                                {{ $operationalAsset->asset_code }} · {{ $operationalAsset->displayName() }} · {{ $operationalAsset->location ?: 'Lokasi belum diisi' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('operational_asset_public_id')<p class="form-error">{{ $message }}</p>@enderror
+                </div>
+            @endunless
 
             <div>
                 <label for="reported_date" class="form-label">Tanggal Laporan</label>
@@ -198,4 +236,29 @@
             <button type="submit" class="primary-button sm:w-auto">Simpan Laporan</button>
         </div>
     </form>
+
+    @unless ($selectedLoan)
+        <script>
+            (() => {
+                const type = document.getElementById('subject_type');
+                const fields = document.querySelectorAll('[data-subject-field]');
+
+                const synchronize = () => {
+                    fields.forEach((field) => {
+                        const active = field.dataset.subjectField === type.value;
+                        field.hidden = !active;
+                        field.querySelectorAll('select, input').forEach((control) => {
+                            control.disabled = !active;
+                            if (control.tagName === 'SELECT') {
+                                control.required = active;
+                            }
+                        });
+                    });
+                };
+
+                type.addEventListener('change', synchronize);
+                synchronize();
+            })();
+        </script>
+    @endunless
 </x-layouts.app>
