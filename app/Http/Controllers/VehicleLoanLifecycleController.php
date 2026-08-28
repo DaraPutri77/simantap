@@ -9,6 +9,7 @@ use App\Http\Requests\RequestVehicleReturnRequest;
 use App\Http\Requests\StoreVehicleConditionCheckRequest;
 use App\Models\Attachment;
 use App\Models\VehicleLoan;
+use App\Services\DocumentSignatoryService;
 use App\Services\DocumentVerificationService;
 use App\Services\QrCodeService;
 use App\Services\VehicleLoanLifecycleService;
@@ -278,6 +279,7 @@ class VehicleLoanLifecycleController extends Controller
         VehicleLoanLifecycleService $service,
         DocumentVerificationService $verificationService,
         QrCodeService $qrCodes,
+        DocumentSignatoryService $signatories,
     ): Response {
         Gate::authorize('view', $vehicleLoan);
         $vehicleLoan->load($this->lifecycleRelations());
@@ -343,13 +345,20 @@ class VehicleLoanLifecycleController extends Controller
             );
         }
 
+        $documentSignatories = $signatories->for(
+            'vehicle_loan_lifecycle',
+        );
+
         $documentVerification = $verificationService->issue(
             verifiable: $vehicleLoan,
             documentType: 'vehicle_loan_lifecycle',
             documentLabel: 'Form Serah Terima dan Pengembalian Kendaraan Dinas',
             documentReference: $vehicleLoan->loan_number,
-            payload: $verificationService
-                ->vehicleLoanLifecyclePayload($vehicleLoan),
+            payload: [
+                ...$verificationService
+                    ->vehicleLoanLifecyclePayload($vehicleLoan),
+                'official_signatories' => $documentSignatories,
+            ],
             actor: $actor,
             httpRequest: $request,
         );
@@ -368,6 +377,7 @@ class VehicleLoanLifecycleController extends Controller
             'returnBorrowerSignature' => $signatureData['returnBorrowerSignature'],
             'returnOfficerSignature' => $signatureData['returnOfficerSignature'],
             'evidenceData' => $evidenceData,
+            'documentSignatories' => $documentSignatories,
             'institutionName' => (string) config(
                 'simantap.institution.name',
                 'Badan Pusat Statistik',

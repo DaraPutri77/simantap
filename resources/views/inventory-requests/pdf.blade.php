@@ -170,7 +170,7 @@
         }
 
         .signatures td {
-            width: 33.333%;
+            width: 25%;
             padding: 0 7px;
             text-align: center;
             vertical-align: top;
@@ -412,6 +412,22 @@
                     {{ $inventoryRequest->received_at
                         ? $inventoryRequest->received_at->copy()->timezone($displayTimezone)->translatedFormat('d F Y, H:i').' WIB'
                         : '' }}
+                </div>
+            </td>
+            <td>
+                @php
+                    $kasubbag = ($documentSignatories ?? [])['kasubbag']
+                        ?? null;
+                @endphp
+                <div class="signature-label">
+                    Mengetahui / {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }},
+                </div>
+                <div class="signature-box"></div>
+                <div class="signature-name">
+                    {{ $kasubbag['name'] ?? '................................' }}
+                </div>
+                <div class="muted">
+                    NIP/Nomor Pegawai: {{ $kasubbag['employee_number'] ?? '................................' }}
                 </div>
             </td>
         </tr>

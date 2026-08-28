@@ -15,6 +15,7 @@ use App\Http\Requests\StoreInventoryRequestRequest;
 use App\Http\Requests\SubmitInventoryRequestRequest;
 use App\Models\InventoryRequest;
 use App\Models\Item;
+use App\Services\DocumentSignatoryService;
 use App\Services\DocumentVerificationService;
 use App\Services\InventoryRequestService;
 use App\Services\QrCodeService;
@@ -538,6 +539,7 @@ class InventoryRequestController extends Controller
         InventoryRequestService $service,
         DocumentVerificationService $verificationService,
         QrCodeService $qrCodes,
+        DocumentSignatoryService $signatories,
     ): Response {
         Gate::authorize('view', $inventoryRequest);
         $this->loadRequest($inventoryRequest);
@@ -587,13 +589,20 @@ class InventoryRequestController extends Controller
             'Integritas tanda tangan penerimaan gagal diverifikasi.',
         );
 
+        $documentSignatories = $signatories->for(
+            'inventory_request',
+        );
+
         $documentVerification = $verificationService->issue(
             verifiable: $inventoryRequest,
             documentType: 'inventory_request',
             documentLabel: 'Form Permintaan Persediaan',
             documentReference: $inventoryRequest->request_number,
-            payload: $verificationService
-                ->inventoryRequestPayload($inventoryRequest),
+            payload: [
+                ...$verificationService
+                    ->inventoryRequestPayload($inventoryRequest),
+                'official_signatories' => $documentSignatories,
+            ],
             actor: $actor,
             httpRequest: $request,
         );
@@ -610,6 +619,7 @@ class InventoryRequestController extends Controller
             'submissionSignature' => $submissionSignature,
             'approvalSignature' => $approvalSignature,
             'receiptSignature' => $receiptSignature,
+            'documentSignatories' => $documentSignatories,
             'institutionName' => (string) config(
                 'simantap.institution.name',
                 'Badan Pusat Statistik',

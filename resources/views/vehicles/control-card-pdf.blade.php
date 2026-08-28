@@ -223,6 +223,12 @@
 </head>
 
 <body>
+    @php
+        $kasubbag = ($documentSignatories ?? [])['kasubbag'] ?? null;
+        $administrator = ($documentSignatories ?? [])['administrator']
+            ?? null;
+    @endphp
+
     @foreach ($pages as $pageIndex => $rows)
         <section class="sheet {{ ! $loop->last ? 'page-break' : '' }}">
             @foreach ([1, 2] as $copy)
@@ -362,35 +368,33 @@
                             <tr>
                                 <td>
                                     <div class="role">
-                                        Kepala Badan Pusat Statistik
-                                        <br>
-                                        Kabupaten Jombang
+                                        {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }}
                                     </div>
 
                                     <div class="signature-space"></div>
 
                                     <div class="signer-line">
-                                        &nbsp;
+                                        {{ $kasubbag['name'] ?? '................................' }}
                                     </div>
 
                                     <div class="nip">
-                                        NIP. ....................................
+                                        NIP/Nomor Pegawai: {{ $kasubbag['employee_number'] ?? '................................' }}
                                     </div>
                                 </td>
 
                                 <td>
                                     <div class="role">
-                                        Pengelola Barang
+                                        {{ $administrator['role_label'] ?? 'Administrator / Pengelola Barang' }}
                                     </div>
 
                                     <div class="signature-space"></div>
 
                                     <div class="signer-line">
-                                        &nbsp;
+                                        {{ $administrator['name'] ?? '................................' }}
                                     </div>
 
                                     <div class="nip">
-                                        NIP. ....................................
+                                        NIP/Nomor Pegawai: {{ $administrator['employee_number'] ?? '................................' }}
                                     </div>
                                 </td>
                             </tr>

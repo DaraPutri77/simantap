@@ -12,6 +12,7 @@ use App\Http\Requests\StoreVehicleLoanRequest;
 use App\Http\Requests\SubmitVehicleLoanRequest;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use App\Services\DocumentSignatoryService;
 use App\Services\DocumentVerificationService;
 use App\Services\QrCodeService;
 use App\Services\VehicleLoanService;
@@ -453,6 +454,7 @@ class VehicleLoanController extends Controller
         VehicleLoanService $service,
         DocumentVerificationService $verificationService,
         QrCodeService $qrCodes,
+        DocumentSignatoryService $signatories,
     ): Response {
         Gate::authorize('view', $vehicleLoan);
         $this->loadLoan($vehicleLoan);
@@ -488,13 +490,20 @@ class VehicleLoanController extends Controller
             'Integritas tanda tangan persetujuan gagal diverifikasi.',
         );
 
+        $documentSignatories = $signatories->for(
+            'vehicle_loan',
+        );
+
         $documentVerification = $verificationService->issue(
             verifiable: $vehicleLoan,
             documentType: 'vehicle_loan',
             documentLabel: 'Form Peminjaman Kendaraan Dinas',
             documentReference: $vehicleLoan->loan_number,
-            payload: $verificationService
-                ->vehicleLoanPayload($vehicleLoan),
+            payload: [
+                ...$verificationService
+                    ->vehicleLoanPayload($vehicleLoan),
+                'official_signatories' => $documentSignatories,
+            ],
             actor: $actor,
             httpRequest: $request,
         );
@@ -512,6 +521,7 @@ class VehicleLoanController extends Controller
             'approvalSignature' => $approvalSignature,
             'approvalSignerName' => $approvalSignatureRecord?->signer_name_snapshot,
             'approvalSignerEmployeeNumber' => $approvalSignatureRecord?->employee_number_snapshot,
+            'documentSignatories' => $documentSignatories,
             'institutionName' => (string) config(
                 'simantap.institution.name',
                 'Badan Pusat Statistik',

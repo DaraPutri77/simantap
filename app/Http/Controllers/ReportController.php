@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\ReportExport;
 use App\Http\Requests\ReportRequest;
 use App\Services\AuditLogger;
+use App\Services\DocumentSignatoryService;
 use App\Services\ReportService;
 use App\Support\ReportCatalog;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,9 +34,11 @@ class ReportController extends Controller
         ReportRequest $request,
         ReportService $service,
         AuditLogger $auditLogger,
+        DocumentSignatoryService $signatories,
     ): Response {
         $filters = $request->filters();
         $data = $service->build($filters);
+        $data['documentSignatories'] = $signatories->for('reports');
 
         $auditLogger->log(
             event: 'report_downloaded',

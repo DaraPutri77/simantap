@@ -413,5 +413,7 @@
             </tbody>
         </table>
     </div>
+
+    @include('pdf.official-signatories')
     </body>
 </html>

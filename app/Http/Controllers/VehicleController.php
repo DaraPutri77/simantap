@@ -7,6 +7,7 @@ use App\Enums\VehicleStatus;
 use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
+use App\Services\DocumentSignatoryService;
 use App\Services\DocumentVerificationService;
 use App\Services\QrCodeService;
 use App\Services\VehicleControlCardService;
@@ -249,6 +250,7 @@ class VehicleController extends Controller
         VehicleControlCardService $service,
         DocumentVerificationService $verificationService,
         QrCodeService $qrCodes,
+        DocumentSignatoryService $signatories,
     ): Response {
         $actor = $request->user();
         abort_if($actor === null, 401);
@@ -258,17 +260,23 @@ class VehicleController extends Controller
         );
 
         $data = $service->build($vehicle);
+        $documentSignatories = $signatories->for(
+            'vehicle_control_card',
+        );
 
         $documentVerification = $verificationService->issue(
             verifiable: $vehicle,
             documentType: 'vehicle_control_card',
             documentLabel: 'Kartu Kendali Kendaraan',
             documentReference: $vehicle->vehicle_code,
-            payload: $verificationService
-                ->vehicleControlCardPayload(
-                    $vehicle,
-                    $data,
-                ),
+            payload: [
+                ...$verificationService
+                    ->vehicleControlCardPayload(
+                        $vehicle,
+                        $data,
+                    ),
+                'official_signatories' => $documentSignatories,
+            ],
             actor: $actor,
             httpRequest: $request,
         );
@@ -279,6 +287,7 @@ class VehicleController extends Controller
                 $documentVerification,
                 $qrCodes,
             );
+        $data['documentSignatories'] = $documentSignatories;
 
         $pdf = Pdf::loadView(
             'vehicles.control-card-pdf',

@@ -17,8 +17,12 @@ use App\Models\MaintenanceRecord;
 use App\Models\OperationalAsset;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use App\Services\DocumentSignatoryService;
+use App\Services\DocumentVerificationService;
 use App\Services\MaintenanceService;
+use App\Services\QrCodeService;
 use App\Support\AttachmentIntegrity;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +30,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MaintenanceRecordController extends Controller
@@ -342,6 +347,102 @@ class MaintenanceRecordController extends Controller
                 'X-Content-Type-Options' => 'nosniff',
                 'Cache-Control' => 'private, no-store',
             ],
+        );
+    }
+
+    public function downloadPdf(
+        Request $request,
+        MaintenanceRecord $maintenanceRecord,
+        MaintenanceService $service,
+        DocumentVerificationService $verificationService,
+        QrCodeService $qrCodes,
+        DocumentSignatoryService $signatories,
+    ): Response {
+        Gate::authorize('view', $maintenanceRecord);
+
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $maintenanceRecord->load([
+            'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,is_active',
+            'operationalAsset:id,public_id,asset_code,bmn_code,nup,register_code,type,brand,model,serial_number,acquisition_year,location,responsible_person,status,is_active',
+            'sourceVehicleLoan:id,public_id,loan_number',
+            'reporter:id,name,employee_number,position',
+            'handler:id,name,employee_number,position',
+            'approver:id,name,employee_number,position',
+            'canceller:id,name,employee_number,position',
+            'attachments.uploader:id,name,employee_number',
+            'statusHistories.changer:id,name,employee_number,position',
+        ]);
+
+        $evidenceData = [];
+
+        foreach ($maintenanceRecord->attachments as $attachment) {
+            abort_unless(
+                AttachmentIntegrity::checksumMatches($attachment),
+                409,
+                'Integritas bukti pemeliharaan gagal diverifikasi.',
+            );
+
+            $evidenceData[$attachment->getKey()] =
+                AttachmentIntegrity::dataUri($attachment);
+        }
+
+        $documentSignatories = $signatories->for(
+            'maintenance_record',
+        );
+
+        $documentVerification = $verificationService->issue(
+            verifiable: $maintenanceRecord,
+            documentType: 'maintenance_record',
+            documentLabel: 'Laporan Pemeliharaan Aset dan Kendaraan',
+            documentReference: $maintenanceRecord
+                ->maintenance_number,
+            payload: [
+                ...$verificationService
+                    ->maintenanceRecordPayload($maintenanceRecord),
+                'official_signatories' => $documentSignatories,
+            ],
+            actor: $actor,
+            httpRequest: $request,
+        );
+
+        $verificationQrDataUri = $verificationService->qrDataUri(
+            $documentVerification,
+            $qrCodes,
+        );
+
+        $pdf = Pdf::loadView('maintenance-records.pdf', [
+            'maintenanceRecord' => $maintenanceRecord,
+            'documentVerification' => $documentVerification,
+            'verificationQrDataUri' => $verificationQrDataUri,
+            'evidenceData' => $evidenceData,
+            'documentSignatories' => $documentSignatories,
+            'institutionName' => (string) config(
+                'simantap.institution.name',
+                'Badan Pusat Statistik Kabupaten Jombang',
+            ),
+            'institutionShortName' => (string) config(
+                'simantap.institution.short_name',
+                'BPS Kabupaten Jombang',
+            ),
+            'displayTimezone' => $this->displayTimezone(),
+        ])->setPaper('a4', 'portrait');
+
+        $service->auditPdfDownload(
+            $maintenanceRecord,
+            $actor,
+            $request,
+        );
+
+        $safeNumber = preg_replace(
+            '/[^A-Za-z0-9_-]+/',
+            '-',
+            $maintenanceRecord->maintenance_number,
+        ) ?: 'PEMELIHARAAN';
+
+        return $pdf->download(
+            $safeNumber.'-PEMELIHARAAN.pdf',
         );
     }
 
