@@ -17,6 +17,7 @@ use App\Models\MaintenanceRecord;
 use App\Models\OperationalAsset;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
+use App\Services\DocumentSignatoryService;
 use App\Services\DocumentVerificationService;
 use App\Services\MaintenanceService;
 use App\Services\QrCodeService;
@@ -355,6 +356,7 @@ class MaintenanceRecordController extends Controller
         MaintenanceService $service,
         DocumentVerificationService $verificationService,
         QrCodeService $qrCodes,
+        DocumentSignatoryService $signatories,
     ): Response {
         Gate::authorize('view', $maintenanceRecord);
 
@@ -386,14 +388,21 @@ class MaintenanceRecordController extends Controller
                 AttachmentIntegrity::dataUri($attachment);
         }
 
+        $documentSignatories = $signatories->for(
+            'maintenance_record',
+        );
+
         $documentVerification = $verificationService->issue(
             verifiable: $maintenanceRecord,
             documentType: 'maintenance_record',
             documentLabel: 'Laporan Pemeliharaan Aset dan Kendaraan',
             documentReference: $maintenanceRecord
                 ->maintenance_number,
-            payload: $verificationService
-                ->maintenanceRecordPayload($maintenanceRecord),
+            payload: [
+                ...$verificationService
+                    ->maintenanceRecordPayload($maintenanceRecord),
+                'official_signatories' => $documentSignatories,
+            ],
             actor: $actor,
             httpRequest: $request,
         );
@@ -408,6 +417,7 @@ class MaintenanceRecordController extends Controller
             'documentVerification' => $documentVerification,
             'verificationQrDataUri' => $verificationQrDataUri,
             'evidenceData' => $evidenceData,
+            'documentSignatories' => $documentSignatories,
             'institutionName' => (string) config(
                 'simantap.institution.name',
                 'Badan Pusat Statistik Kabupaten Jombang',

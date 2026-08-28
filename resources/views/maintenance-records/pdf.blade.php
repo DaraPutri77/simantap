@@ -430,6 +430,8 @@
         </table>
     </section>
 
+    @include('pdf.official-signatories')
+
     <div class="footer">
         {{ $institutionShortName }} · SIMANTAP · Dokumen elektronik
         <span class="gold">SHA256 {{ $documentVerification->payload_hash }}</span>

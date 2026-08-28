@@ -394,7 +394,8 @@
                             {{ $kasubbag['name'] ?? '........................................' }}
                         </div>
                         <div class="signature-nip">
-                            NIP. ....................................
+                            NIP/Nomor Pegawai:
+                            {{ $kasubbag['employee_number'] ?? '................................' }}
                         </div>
                     </td>
 
@@ -403,7 +404,8 @@
                             {{ $inventoryManager['name'] ?? '........................................' }}
                         </div>
                         <div class="signature-nip">
-                            NIP. ....................................
+                            NIP/Nomor Pegawai:
+                            {{ $inventoryManager['employee_number'] ?? '................................' }}
                         </div>
                     </td>
                 </tr>

@@ -79,6 +79,8 @@
         </table>
     @endif
 
+    @include('pdf.official-signatories')
+
     <div class="footer">Dokumen dibuat otomatis oleh SIMANTAP · {{ $generatedAt->translatedFormat('d/m/Y H:i:s') }} WIB</div>
 </body>
 </html>

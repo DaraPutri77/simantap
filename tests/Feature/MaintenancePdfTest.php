@@ -213,6 +213,40 @@ class MaintenancePdfTest extends TestCase
         ]);
     }
 
+    public function test_current_official_change_creates_a_new_verification_version(): void
+    {
+        $admin = $this->admin();
+        User::factory()->create([
+            'employee_number' => 'SIM-JBG-017',
+            'name' => 'PENGELOLA BARANG AKTIF',
+            'status' => AccountStatus::Active,
+        ]);
+        $kasubbag = User::factory()->create([
+            'employee_number' => 'SIM-JBG-020',
+            'name' => 'KASUBBAG AKTIF',
+            'status' => AccountStatus::Active,
+        ]);
+        $record = $this->vehicleRecord($admin);
+
+        $this->actingAs($admin)
+            ->get(route('maintenance-records.pdf', $record))
+            ->assertOk();
+
+        $kasubbag->forceFill([
+            'name' => 'KASUBBAG PENGGANTI',
+        ])->save();
+
+        $this->actingAs($admin)
+            ->get(route('maintenance-records.pdf', $record->fresh()))
+            ->assertOk();
+
+        $this->assertDatabaseHas('document_verifications', [
+            'document_type' => 'maintenance_record',
+            'verifiable_id' => $record->id,
+            'version' => 2,
+        ]);
+    }
+
     public function test_employee_cannot_download_maintenance_pdf(): void
     {
         $admin = $this->admin();

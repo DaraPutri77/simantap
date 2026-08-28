@@ -243,7 +243,7 @@
         }
 
         .signature-table td {
-            width: 50%;
+            width: 33.333%;
             vertical-align: top;
             padding: 0 5px;
         }
@@ -475,6 +475,24 @@
                         </div>
                         <div class="signature-name">{{ $approvalSignerName ?: '................................' }}</div>
                         <div class="signature-meta">{{ $approvalSignerEmployeeNumber ?: '' }}</div>
+                    </div>
+                </td>
+                <td>
+                    @php
+                        $kasubbag = ($documentSignatories ?? [])['kasubbag']
+                            ?? null;
+                    @endphp
+                    <div class="signature-card">
+                        <div class="signature-role">
+                            Mengetahui / {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }}
+                        </div>
+                        <div class="signature-image"></div>
+                        <div class="signature-name">
+                            {{ $kasubbag['name'] ?? '................................' }}
+                        </div>
+                        <div class="signature-meta">
+                            NIP/Nomor Pegawai: {{ $kasubbag['employee_number'] ?? '................................' }}
+                        </div>
                     </div>
                 </td>
             </tr>

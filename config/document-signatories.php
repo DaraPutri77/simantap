@@ -1,5 +1,26 @@
 <?php
 
+$administratorEmployeeNumber = env(
+    'SIMANTAP_SIGNATORY_ADMINISTRATOR',
+    'SIM-JBG-017',
+);
+
+$kasubbagEmployeeNumber = env(
+    'SIMANTAP_SIGNATORY_KASUBBAG',
+    'SIM-JBG-020',
+);
+
+$officialSignatories = static fn (): array => [
+    'kasubbag' => [
+        'role_label' => 'Kasubbag Umum',
+        'employee_number' => $kasubbagEmployeeNumber,
+    ],
+    'administrator' => [
+        'role_label' => 'Administrator / Pengelola Barang',
+        'employee_number' => $administratorEmployeeNumber,
+    ],
+];
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -19,7 +40,7 @@ return [
             'role_label' => 'Kasubbag Umum',
             'employee_number' => env(
                 'SIMANTAP_SIGNATORY_STOCK_CARD_KASUBBAG',
-                'SIM-JBG-020',
+                $kasubbagEmployeeNumber,
             ),
         ],
 
@@ -27,8 +48,15 @@ return [
             'role_label' => 'Pengelola Barang',
             'employee_number' => env(
                 'SIMANTAP_SIGNATORY_STOCK_CARD_MANAGER',
-                'SIM-JBG-017',
+                $administratorEmployeeNumber,
             ),
         ],
     ],
+
+    'inventory_request' => $officialSignatories(),
+    'maintenance_record' => $officialSignatories(),
+    'reports' => $officialSignatories(),
+    'vehicle_control_card' => $officialSignatories(),
+    'vehicle_loan' => $officialSignatories(),
+    'vehicle_loan_lifecycle' => $officialSignatories(),
 ];
