@@ -39,6 +39,9 @@
             <p class="mt-2 text-sm font-bold text-slate-700">{{ $maintenanceRecord->subjectSnapshot() }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
+            <a href="{{ route('maintenance-records.pdf', $maintenanceRecord) }}" class="primary-button sm:w-auto">
+                Unduh PDF
+            </a>
             <a href="{{ route('maintenance-records.index') }}" class="secondary-button sm:w-auto">Daftar Pemeliharaan</a>
             @if ($maintenanceRecord->sourceVehicleLoan)
                 <a href="{{ route('vehicle-loans.show', $maintenanceRecord->sourceVehicleLoan) }}" class="secondary-button sm:w-auto">

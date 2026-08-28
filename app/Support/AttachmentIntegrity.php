@@ -55,4 +55,24 @@ final class AttachmentIntegrity
             $actual,
         );
     }
+
+    public static function dataUri(
+        Attachment $attachment,
+    ): ?string {
+        if (
+            ! $attachment->isImage()
+            || ! self::checksumMatches($attachment)
+        ) {
+            return null;
+        }
+
+        $binary = Storage::disk($attachment->disk)
+            ->get($attachment->file_path);
+
+        return sprintf(
+            'data:%s;base64,%s',
+            $attachment->mime_type,
+            base64_encode($binary),
+        );
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DigitalSignature;
 use App\Models\DocumentVerification;
 use App\Models\InventoryRequest;
+use App\Models\MaintenanceRecord;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleConditionCheck;
@@ -327,6 +328,112 @@ class DocumentVerificationService
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function maintenanceRecordPayload(
+        MaintenanceRecord $maintenanceRecord,
+    ): array {
+        $subject = $maintenanceRecord->vehicle !== null
+            ? [
+                'type' => 'vehicle',
+                'snapshot' => $maintenanceRecord->vehicle_snapshot,
+                'code' => $maintenanceRecord->vehicle->vehicle_code,
+                'license_plate' => $maintenanceRecord->vehicle->license_plate,
+                'name' => $maintenanceRecord->vehicle->displayName(),
+                'status' => $maintenanceRecord->vehicle->status,
+            ]
+            : [
+                'type' => 'operational_asset',
+                'snapshot' => $maintenanceRecord
+                    ->operational_asset_snapshot,
+                'code' => $maintenanceRecord
+                    ->operationalAsset?->asset_code,
+                'administrative_code' => $maintenanceRecord
+                    ->operationalAsset?->administrativeCode(),
+                'name' => $maintenanceRecord
+                    ->operationalAsset?->displayName(),
+                'status' => $maintenanceRecord
+                    ->operationalAsset?->status,
+            ];
+
+        return [
+            'public_id' => $maintenanceRecord->public_id,
+            'maintenance_number' => $maintenanceRecord
+                ->maintenance_number,
+            'status' => $maintenanceRecord->status,
+            'subject' => $subject,
+            'source_vehicle_loan' => $maintenanceRecord
+                ->sourceVehicleLoan?->loan_number,
+            'maintenance_type' => $maintenanceRecord
+                ->maintenance_type,
+            'complaint' => $maintenanceRecord->complaint,
+            'initial_condition' => $maintenanceRecord
+                ->initial_condition,
+            'service_provider' => $maintenanceRecord
+                ->service_provider,
+            'reported_date' => $maintenanceRecord->reported_date,
+            'start_date' => $maintenanceRecord->start_date,
+            'completion_date' => $maintenanceRecord
+                ->completion_date,
+            'cost' => $maintenanceRecord->cost,
+            'result' => $maintenanceRecord->result,
+            'final_condition' => $maintenanceRecord
+                ->final_condition,
+            'approval_notes' => $maintenanceRecord->approval_notes,
+            'cancellation_reason' => $maintenanceRecord
+                ->cancellation_reason,
+            'people' => [
+                'reporter' => $this->userFingerprint(
+                    $maintenanceRecord->reporter,
+                ),
+                'handler' => $this->userFingerprint(
+                    $maintenanceRecord->handler,
+                ),
+                'approver' => $this->userFingerprint(
+                    $maintenanceRecord->approver,
+                ),
+                'canceller' => $this->userFingerprint(
+                    $maintenanceRecord->canceller,
+                ),
+            ],
+            'timestamps' => [
+                'approved_at' => $maintenanceRecord->approved_at,
+                'started_at' => $maintenanceRecord->started_at,
+                'completed_at' => $maintenanceRecord->completed_at,
+                'cancelled_at' => $maintenanceRecord->cancelled_at,
+            ],
+            'attachments' => $maintenanceRecord->attachments
+                ->sortBy('id')
+                ->map(
+                    static fn ($attachment): array => [
+                        'category' => $attachment->file_category,
+                        'original_name' => $attachment->original_name,
+                        'mime_type' => $attachment->mime_type,
+                        'file_size' => $attachment->file_size,
+                        'checksum' => $attachment->checksum,
+                    ],
+                )
+                ->values()
+                ->all(),
+            'status_histories' => $maintenanceRecord
+                ->statusHistories
+                ->map(
+                    fn ($history): array => [
+                        'previous_status' => $history->previous_status,
+                        'new_status' => $history->new_status,
+                        'notes' => $history->notes,
+                        'changed_at' => $history->changed_at,
+                        'changer' => $this->userFingerprint(
+                            $history->changer,
+                        ),
+                    ],
+                )
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
      * @param  array{
      *     pages: list<list<array{
      *         date: string,
@@ -439,6 +546,22 @@ class DocumentVerificationService
 
             'image_checksum' => $signature->image_checksum,
             'signed_at' => $signature->signed_at,
+        ];
+    }
+
+    /**
+     * @return array<string, string|null>|null
+     */
+    private function userFingerprint(?User $user): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        return [
+            'name' => $user->name,
+            'employee_number' => $user->employee_number,
+            'position' => $user->position,
         ];
     }
 

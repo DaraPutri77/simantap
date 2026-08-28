@@ -91,6 +91,12 @@ Route::middleware([
                     ->name('evidence');
 
                 Route::get(
+                    '/{maintenanceRecord}/pdf',
+                    [MaintenanceRecordController::class, 'downloadPdf'],
+                )->whereUuid('maintenanceRecord')
+                    ->name('pdf');
+
+                Route::get(
                     '/{maintenanceRecord}',
                     [MaintenanceRecordController::class, 'show'],
                 )->whereUuid('maintenanceRecord')

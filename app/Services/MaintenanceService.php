@@ -582,6 +582,27 @@ class MaintenanceService
         return $this->loadRecord($record);
     }
 
+    public function auditPdfDownload(
+        MaintenanceRecord $maintenanceRecord,
+        User $actor,
+        ?Request $httpRequest = null,
+    ): void {
+        $this->auditLogger->log(
+            event: 'maintenance_pdf_downloaded',
+            module: 'maintenance',
+            auditable: $maintenanceRecord,
+            oldValues: [],
+            newValues: [
+                'document_type' => 'maintenance_record',
+                'maintenance_number' => $maintenanceRecord
+                    ->maintenance_number,
+                'status' => $maintenanceRecord->status->value,
+            ],
+            request: $httpRequest,
+            actorId: (int) $actor->getKey(),
+        );
+    }
+
     private function lockRecord(int $id): MaintenanceRecord
     {
         return MaintenanceRecord::query()
