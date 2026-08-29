@@ -227,6 +227,12 @@ class DocumentVerificationService
     public function vehicleLoanPayload(
         VehicleLoan $vehicleLoan,
     ): array {
+        $returnRequestHistory = $vehicleLoan->returnRequestHistory();
+        $returnCheck = $vehicleLoan->returnCheck();
+        $hasReturnData = $vehicleLoan->actual_end_at !== null
+            || $returnRequestHistory !== null
+            || $returnCheck !== null;
+
         return [
             'public_id' => $vehicleLoan->public_id,
             'loan_number' => $vehicleLoan->loan_number,
@@ -253,6 +259,15 @@ class DocumentVerificationService
             'rejection_reason' => $vehicleLoan->rejection_reason,
             'cancellation_reason' => $vehicleLoan
                 ->cancellation_reason,
+            ...($hasReturnData ? [
+                'return' => [
+                    'returned_at' => $vehicleLoan->actual_end_at,
+                    'request_notes' => $returnRequestHistory?->notes,
+                    'condition_check' => $this->conditionCheckFingerprint(
+                        $returnCheck,
+                    ),
+                ],
+            ] : []),
             'signatures' => [
                 'submission' => $this->signatureFingerprint(
                     $vehicleLoan->submissionSignature(),

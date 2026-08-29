@@ -10,6 +10,7 @@ use App\Enums\RoleName;
 use App\Enums\VehicleLoanStatus;
 use App\Enums\VehicleOverallCondition;
 use App\Enums\VehicleStatus;
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleLoan;
@@ -660,7 +661,7 @@ class VehicleReturnTest extends TestCase
         );
         $this->assertSame(
             1,
-            \App\Models\AuditLog::query()
+            AuditLog::query()
                 ->where('event', 'vehicle_loan_return_requested')
                 ->where('auditable_type', $loan->getMorphClass())
                 ->where('auditable_id', $loan->id)
@@ -723,6 +724,96 @@ class VehicleReturnTest extends TestCase
             'event' => 'vehicle_loan_return_completed',
             'auditable_id' => $loan->id,
         ]);
+    }
+
+    public function test_main_loan_detail_and_pdf_include_verified_return_data(): void
+    {
+        [$admin, $employee, $vehicle, $loan] = $this->borrowedLoan();
+
+        $this->actingAs($admin)
+            ->get(route('vehicle-loans.pdf', $loan))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('document_verifications', [
+            'document_type' => 'vehicle_loan',
+            'verifiable_type' => $loan->getMorphClass(),
+            'verifiable_id' => $loan->id,
+            'version' => 1,
+        ]);
+
+        Carbon::setTestNow('2026-08-04 04:00:00 UTC');
+        $this->requestReturn($employee, $loan);
+
+        $this->actingAs($admin)
+            ->post(
+                route('vehicle-loan-lifecycle.admin.return-inspection', $loan),
+                $this->conditionPayload('return-main-pdf', 1025.0),
+            )
+            ->assertRedirect(route('vehicle-loan-lifecycle.admin.index'));
+
+        $loan->refresh()->load([
+            'borrower:id,employee_number,name,phone,work_unit,position',
+            'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,current_odometer,registration_expiry_date,storage_location,responsible_person',
+            'reviewer:id,name',
+            'approver:id,name,position',
+            'conditionChecks.checker:id,name,employee_number',
+            'conditionChecks.attachments',
+            'statusHistories.changer:id,name',
+            'signatures.signer:id,name',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('vehicle-loans.show', $loan))
+            ->assertOk()
+            ->assertSee('Penggunaan dan Pengembalian Kendaraan')
+            ->assertSee('Serah Terima &amp; Pengembalian', false)
+            ->assertSee(
+                route('vehicle-loan-lifecycle.admin.index')
+                    .'#loan-'.$loan->public_id,
+                false,
+            )
+            ->assertSee('1.025,0 km')
+            ->assertSee('Baik')
+            ->assertSee('Dikembalikan')
+            ->assertSee($admin->name)
+            ->assertSee('Kendaraan dikembalikan ke garasi kantor.');
+
+        $html = $this->renderLoanPdfHtml($loan);
+
+        foreach ([
+            'Pengembalian Kendaraan',
+            'Tanggal Kembali',
+            'Odometer Akhir',
+            '1.025,0 km',
+            'Kondisi',
+            'Baik',
+            'Diterima Oleh',
+            $admin->name,
+            'Kendaraan dikembalikan ke garasi kantor.',
+        ] as $expectedText) {
+            $this->assertStringContainsString($expectedText, $html);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('vehicle-loans.pdf', $loan))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertDatabaseHas('document_verifications', [
+            'document_type' => 'vehicle_loan',
+            'verifiable_type' => $loan->getMorphClass(),
+            'verifiable_id' => $loan->id,
+            'version' => 2,
+        ]);
+        $this->assertSame(
+            2,
+            DB::table('document_verifications')
+                ->where('document_type', 'vehicle_loan')
+                ->where('verifiable_type', $loan->getMorphClass())
+                ->where('verifiable_id', $loan->id)
+                ->count(),
+        );
     }
 
     public function test_good_return_keeps_vehicle_reserved_for_future_approved_schedule(): void
@@ -1372,6 +1463,27 @@ class VehicleReturnTest extends TestCase
         ])->render();
     }
 
+    private function renderLoanPdfHtml(VehicleLoan $loan): string
+    {
+        return view('vehicle-loans.pdf', [
+            'vehicleLoan' => $loan,
+            'documentVerification' => (object) [
+                'version' => 2,
+                'payload_hash' => str_repeat('b', 64),
+                'issued_at' => now(),
+            ],
+            'verificationQrDataUri' => 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==',
+            'submissionSignature' => null,
+            'approvalSignature' => null,
+            'approvalSignerName' => $loan->approver?->name,
+            'approvalSignerEmployeeNumber' => $loan->approver?->employee_number,
+            'documentSignatories' => [],
+            'institutionName' => 'Badan Pusat Statistik Kabupaten Jombang',
+            'institutionShortName' => 'BPS Kabupaten Jombang',
+            'displayTimezone' => 'Asia/Jakarta',
+        ])->render();
+    }
+
     /**
      * @return array{User, User, Vehicle, VehicleLoan}
      */
@@ -1580,8 +1692,8 @@ class VehicleReturnTest extends TestCase
         string $marker,
     ): UploadedFile {
         $hash = crc32($marker);
-        $width = 100 + ($hash & 0x1ff);
-        $height = 100 + (($hash >> 9) & 0x1ff);
+        $width = 100 + ($hash & 0x1FF);
+        $height = 100 + (($hash >> 9) & 0x1FF);
 
         return UploadedFile::fake()
             ->image($name, $width, $height)

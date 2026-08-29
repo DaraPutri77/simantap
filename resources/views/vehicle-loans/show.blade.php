@@ -2,6 +2,19 @@
     $status = $vehicleLoan->status;
     $startWib = $vehicleLoan->planned_start_at->timezone($displayTimezone);
     $endWib = $vehicleLoan->planned_end_at->timezone($displayTimezone);
+    $returnCheck = $vehicleLoan->returnCheck();
+    $returnRequestHistory = $vehicleLoan->returnRequestHistory();
+    $hasLifecycle = in_array($status, [
+        \App\Enums\VehicleLoanStatus::Approved,
+        \App\Enums\VehicleLoanStatus::ReadyForPickup,
+        \App\Enums\VehicleLoanStatus::Borrowed,
+        \App\Enums\VehicleLoanStatus::AwaitingReturnInspection,
+        \App\Enums\VehicleLoanStatus::Completed,
+        \App\Enums\VehicleLoanStatus::ReturnIssue,
+    ], true);
+    $lifecycleUrl = $hasLifecycle && $lifecycleRoute !== null
+        ? route($lifecycleRoute).'#loan-'.$vehicleLoan->public_id
+        : null;
 @endphp
 
 <x-layouts.app
@@ -26,6 +39,14 @@
         </div>
 
         <div class="flex flex-col gap-2 sm:flex-row">
+            @if ($lifecycleUrl !== null)
+                <a
+                    href="{{ $lifecycleUrl }}"
+                    class="secondary-button sm:w-auto"
+                >
+                    {{ $lifecycleRoute === 'vehicle-loan-lifecycle.admin.index' ? 'Serah Terima & Pengembalian' : 'Pengambilan & Pengembalian' }}
+                </a>
+            @endif
             <a
                 href="{{ route($routePrefix.'.pdf', $vehicleLoan) }}"
                 class="secondary-button sm:w-auto"
@@ -255,6 +276,84 @@
                 </dl>
             </section>
 
+            @if (
+                $vehicleLoan->actual_start_at !== null
+                || $vehicleLoan->actual_end_at !== null
+                || $returnRequestHistory !== null
+                || $returnCheck !== null
+            )
+                <section class="panel p-5 sm:p-6">
+                    <div class="border-b border-slate-200 pb-5">
+                        <p class="eyebrow">Lifecycle Kendaraan</p>
+                        <h2 class="mt-2 text-xl font-black text-slate-950">
+                            Penggunaan dan Pengembalian Kendaraan
+                        </h2>
+                    </div>
+
+                    <dl class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <dt class="text-xs font-black uppercase tracking-[.12em] text-slate-500">
+                                Mulai Digunakan
+                            </dt>
+                            <dd class="mt-2 text-sm font-bold text-slate-900">
+                                {{ $vehicleLoan->actual_start_at?->timezone($displayTimezone)->translatedFormat('d M Y, H:i') ?: '-' }}{{ $vehicleLoan->actual_start_at ? ' WIB' : '' }}
+                            </dd>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <dt class="text-xs font-black uppercase tracking-[.12em] text-slate-500">
+                                Tanggal Kembali
+                            </dt>
+                            <dd class="mt-2 text-sm font-bold text-slate-900">
+                                {{ $vehicleLoan->actual_end_at?->timezone($displayTimezone)->translatedFormat('d M Y, H:i') ?: '-' }}{{ $vehicleLoan->actual_end_at ? ' WIB' : '' }}
+                            </dd>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <dt class="text-xs font-black uppercase tracking-[.12em] text-slate-500">
+                                Odometer Akhir
+                            </dt>
+                            <dd class="mt-2 text-sm font-bold text-slate-900">
+                                {{ $returnCheck ? number_format((float) $returnCheck->odometer, 1, ',', '.').' km' : '-' }}
+                            </dd>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <dt class="text-xs font-black uppercase tracking-[.12em] text-slate-500">
+                                Kondisi Kendaraan
+                            </dt>
+                            <dd class="mt-2 text-sm font-bold text-slate-900">
+                                {{ $returnCheck?->overall_condition->label() ?: 'Menunggu pemeriksaan' }}
+                            </dd>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 p-4 sm:col-span-2">
+                            <dt class="text-xs font-black uppercase tracking-[.12em] text-slate-500">
+                                Diterima dan Diperiksa Oleh
+                            </dt>
+                            <dd class="mt-2 text-sm font-bold text-slate-900">
+                                {{ $returnCheck?->checker_name_snapshot ?: ($returnCheck?->checker?->name ?: '-') }}
+                            </dd>
+                            @if ($returnCheck?->checked_at)
+                                <p class="mt-1 text-xs font-semibold text-slate-500">
+                                    {{ $returnCheck->checked_at->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }} WIB
+                                </p>
+                            @endif
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 p-4 sm:col-span-2 xl:col-span-3">
+                            <dt class="text-xs font-black uppercase tracking-[.12em] text-slate-500">
+                                Catatan Pengembalian
+                            </dt>
+                            <dd class="mt-2 whitespace-pre-line text-sm font-semibold leading-6 text-slate-700">{{ $returnRequestHistory?->notes ?: '-' }}</dd>
+                        </div>
+                        @if ($returnCheck?->damage_notes)
+                            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:col-span-2 xl:col-span-3">
+                                <dt class="text-xs font-black uppercase tracking-[.12em] text-amber-800">
+                                    Catatan Kondisi
+                                </dt>
+                                <dd class="mt-2 whitespace-pre-line text-sm font-semibold leading-6 text-amber-950">{{ $returnCheck->damage_notes }}</dd>
+                            </div>
+                        @endif
+                    </dl>
+                </section>
+            @endif
+
             <section class="panel p-5 sm:p-6">
                 <div class="border-b border-slate-200 pb-5">
                     <p class="eyebrow">Jejak Proses</p>
@@ -355,13 +454,13 @@
                     @csrf
                     <p class="eyebrow">Antrean Approval</p>
                     <h2 class="mt-2 text-lg font-black text-slate-950">
-                        Mulai Pemeriksaan
+                        Verifikasi Pengajuan
                     </h2>
                     <p class="mt-2 text-xs font-semibold leading-5 text-slate-600">
                         Pastikan jadwal, tujuan, STNK, dan kondisi operasional kendaraan sesuai.
                     </p>
                     <button type="submit" class="primary-button mt-5">
-                        Mulai Periksa
+                        Verifikasi Pengajuan
                     </button>
                 </form>
             @endif

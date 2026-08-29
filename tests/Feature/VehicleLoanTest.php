@@ -364,6 +364,22 @@ class VehicleLoanTest extends TestCase
                 false,
             );
 
+        $submittedLoan = $this->vehicleLoan(
+            $employee,
+            $this->vehicle(),
+            [
+                'status' => VehicleLoanStatus::Submitted,
+                'submitted_at' => now(),
+            ],
+        );
+
+        $this->actingAs($admin)
+            ->get(route('vehicle-loans.show', $submittedLoan))
+            ->assertOk()
+            ->assertSee('Verifikasi Pengajuan')
+            ->assertDontSee('Mulai Pemeriksaan')
+            ->assertDontSee('Mulai Periksa');
+
         $reviewedLoan = $this->vehicleLoan(
             $employee,
             $this->vehicle(),

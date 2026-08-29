@@ -51,7 +51,7 @@
             ['label' => 'Total', 'value' => $summary['total'], 'tone' => 'bg-sky-100 text-sky-900 ring-sky-300'],
             ['label' => 'Menunggu', 'value' => $summary['waiting'], 'tone' => 'bg-amber-100 text-amber-950 ring-amber-300'],
             ['label' => 'Disetujui', 'value' => $summary['approved'], 'tone' => 'bg-emerald-100 text-emerald-900 ring-emerald-300'],
-            ['label' => 'Sedang Dipinjam', 'value' => $summary['active'], 'tone' => 'bg-cyan-100 text-cyan-950 ring-cyan-300'],
+            ['label' => 'Sedang Digunakan', 'value' => $summary['active'], 'tone' => 'bg-cyan-100 text-cyan-950 ring-cyan-300'],
         ] as $card)
             <article class="stat-card p-4 sm:p-5">
                 <span class="inline-flex rounded-xl px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] ring-1 ring-inset {{ $card['tone'] }}">

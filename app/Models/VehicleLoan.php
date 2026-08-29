@@ -181,8 +181,7 @@ class VehicleLoan extends Model
 
     private function latestSignature(
         DigitalSignaturePurpose $purpose,
-    ): ?DigitalSignature
-    {
+    ): ?DigitalSignature {
         if ($this->relationLoaded('signatures')) {
             return $this->signatures
                 ->filter(
@@ -221,6 +220,26 @@ class VehicleLoan extends Model
 
         return $this->conditionChecks()
             ->where('check_type', ConditionCheckType::Return->value)
+            ->first();
+    }
+
+    public function returnRequestHistory(): ?VehicleLoanStatusHistory
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            return $this->statusHistories
+                ->firstWhere(
+                    'new_status',
+                    VehicleLoanStatus::AwaitingReturnInspection,
+                );
+        }
+
+        return $this->statusHistories()
+            ->reorder('changed_at', 'desc')
+            ->orderByDesc('id')
+            ->where(
+                'new_status',
+                VehicleLoanStatus::AwaitingReturnInspection->value,
+            )
             ->first();
     }
 

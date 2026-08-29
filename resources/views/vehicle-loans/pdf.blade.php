@@ -317,6 +317,11 @@
     </style>
 </head>
 <body>
+    @php
+        $returnCheck = $vehicleLoan->returnCheck();
+        $returnRequestHistory = $vehicleLoan->returnRequestHistory();
+    @endphp
+
     <table class="header-table">
         <tr>
             <td class="header-logo">
@@ -404,6 +409,58 @@
             </tr>
         </table>
     </section>
+
+    @if (
+        $vehicleLoan->actual_end_at !== null
+        || $returnRequestHistory !== null
+        || $returnCheck !== null
+    )
+        <section class="section">
+            <div class="section-title">Pengembalian Kendaraan</div>
+            <table class="detail-grid">
+                <tr>
+                    <td class="field-label">Tanggal Kembali</td>
+                    <td class="field-value">
+                        {{ $vehicleLoan->actual_end_at?->timezone($displayTimezone)->translatedFormat('d F Y, H:i') ?: '-' }}{{ $vehicleLoan->actual_end_at ? ' WIB' : '' }}
+                    </td>
+                    <td class="field-label">Odometer Akhir</td>
+                    <td class="field-value">
+                        {{ $returnCheck ? number_format((float) $returnCheck->odometer, 1, ',', '.').' km' : 'Menunggu pemeriksaan' }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="field-label">Kondisi</td>
+                    <td class="field-value">
+                        {{ $returnCheck?->overall_condition->label() ?: 'Menunggu pemeriksaan' }}
+                    </td>
+                    <td class="field-label">Diterima Oleh</td>
+                    <td class="field-value">
+                        {{ $returnCheck?->checker_name_snapshot ?: ($returnCheck?->checker?->name ?: '-') }}
+                        @if ($returnCheck?->checker_employee_number_snapshot || $returnCheck?->checker?->employee_number)
+                            <br>
+                            <span style="color: #66758d; font-size: 7pt;">
+                                NIP/Nomor Pegawai: {{ $returnCheck->checker_employee_number_snapshot ?: $returnCheck->checker?->employee_number }}
+                            </span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="full-label">Catatan</td>
+                    <td class="full-value" colspan="3">
+                        {!! nl2br(e($returnRequestHistory?->notes ?: '-')) !!}
+                    </td>
+                </tr>
+                @if ($returnCheck?->damage_notes)
+                    <tr>
+                        <td class="full-label">Catatan Kondisi</td>
+                        <td class="full-value" colspan="3">
+                            {!! nl2br(e($returnCheck->damage_notes)) !!}
+                        </td>
+                    </tr>
+                @endif
+            </table>
+        </section>
+    @endif
 
     <section class="section">
         <div class="section-title">Verifikasi dan Persetujuan</div>

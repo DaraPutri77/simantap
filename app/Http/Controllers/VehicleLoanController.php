@@ -47,7 +47,7 @@ class VehicleLoanController extends Controller
                 VehicleLoanStatus::Draft->value => 'Draft',
                 'waiting' => 'Menunggu Persetujuan',
                 'approved' => 'Disetujui / Siap Diambil',
-                'active' => 'Sedang Dipinjam / Pengembalian',
+                'active' => 'Sedang Digunakan / Pengembalian',
                 VehicleLoanStatus::Completed->value => 'Selesai',
                 'closed' => 'Ditolak / Dibatalkan',
             ];
@@ -283,12 +283,26 @@ class VehicleLoanController extends Controller
         Gate::authorize('view', $vehicleLoan);
         $this->loadLoan($vehicleLoan);
 
+        $actor = $request->user();
+        abort_if($actor === null, 401);
+
+        $lifecycleRoute = match (true) {
+            $actor->can(
+                PermissionName::VehicleLoanCheck->value,
+            ) => 'vehicle-loan-lifecycle.admin.index',
+            $actor->can(
+                PermissionName::VehicleLoanReturn->value,
+            ) => 'vehicle-loan-lifecycle.employee.index',
+            default => null,
+        };
+
         return view('vehicle-loans.show', [
             'vehicleLoan' => $vehicleLoan,
             'routePrefix' => $this->routePrefix($request),
-            'canManage' => $request->user()?->can(
+            'canManage' => $actor->can(
                 PermissionName::VehicleLoanApprove->value,
-            ) === true,
+            ),
+            'lifecycleRoute' => $lifecycleRoute,
             'submissionSignature' => $service->signatureDataUri(
                 $vehicleLoan->submissionSignature(),
             ),
@@ -370,7 +384,7 @@ class VehicleLoanController extends Controller
 
         return redirect()
             ->route('vehicle-loans.show', $vehicleLoan)
-            ->with('status', 'Pemeriksaan peminjaman dimulai.');
+            ->with('status', 'Verifikasi pengajuan dimulai.');
     }
 
     public function approve(
@@ -577,6 +591,8 @@ class VehicleLoanController extends Controller
             'vehicle:id,public_id,vehicle_code,license_plate,brand,model,status,registration_expiry_date,storage_location,responsible_person',
             'reviewer:id,name',
             'approver:id,name,position',
+            'conditionChecks.checker:id,name,employee_number',
+            'conditionChecks.attachments',
             'statusHistories.changer:id,name',
             'signatures.signer:id,name',
         ]);

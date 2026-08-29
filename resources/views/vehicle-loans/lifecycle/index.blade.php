@@ -46,8 +46,8 @@
         @foreach ([
             ['label' => 'Menunggu Checkout', 'value' => $summary['ready_for_checkout'], 'tone' => 'bg-sky-100 text-sky-900 ring-sky-300'],
             ['label' => 'Siap Diambil', 'value' => $summary['ready_for_pickup'], 'tone' => 'bg-emerald-100 text-emerald-900 ring-emerald-300'],
-            ['label' => 'Sedang Dipinjam', 'value' => $summary['borrowed'], 'tone' => 'bg-cyan-100 text-cyan-950 ring-cyan-300'],
-            ['label' => 'Menunggu Return Check', 'value' => $summary['awaiting_return'], 'tone' => 'bg-amber-100 text-amber-950 ring-amber-300'],
+            ['label' => 'Sedang Digunakan', 'value' => $summary['borrowed'], 'tone' => 'bg-cyan-100 text-cyan-950 ring-cyan-300'],
+            ['label' => 'Dikembalikan / Menunggu Periksa', 'value' => $summary['awaiting_return'], 'tone' => 'bg-amber-100 text-amber-950 ring-amber-300'],
         ] as $card)
             <article class="stat-card p-4 sm:p-5">
                 <span class="inline-flex rounded-xl px-2.5 py-1 text-[10px] font-black uppercase tracking-[.12em] ring-1 ring-inset {{ $card['tone'] }}">
@@ -76,7 +76,10 @@
                     );
             @endphp
 
-            <article class="panel overflow-hidden">
+            <article
+                id="loan-{{ $vehicleLoan->public_id }}"
+                class="panel scroll-mt-28 overflow-hidden"
+            >
                 <div class="border-b border-slate-200 p-5 sm:p-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
