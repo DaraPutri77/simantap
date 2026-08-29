@@ -165,25 +165,30 @@
             border-collapse: collapse;
             table-layout: fixed;
         }
-        .evidence-wrap td {
+                .evidence-wrap td {
             width: 50%;
             border: .25mm solid #cad4df;
-            padding: 1.5mm;
+            padding: 2.5mm;
             vertical-align: top;
         }
-        .thumb {
-            float: left;
-            width: 25mm;
-            height: 17mm;
-            margin-right: 2mm;
+            .thumb {
+            display: block;
+            width: 45mm;
+            height: 32mm;
+            margin: 0 auto 2mm;
             border: .25mm solid #cad4df;
             object-fit: cover;
         }
-        .evidence-title { font-size: 6pt; font-weight: bold; }
-        .evidence-meta {
-            margin-top: .8mm;
+            .evidence-title {
+            font-size: 6.5pt;
+            font-weight: bold;
+            text-align: center;
+        }
+                .evidence-meta {
+            margin-top: 1mm;
             color: #66758a;
-            font-size: 4.8pt;
+            font-size: 5pt;
+            text-align: center;
             word-break: break-all;
         }
         .history {
@@ -341,11 +346,26 @@
                 <td>{{ $maintenanceRecord->completion_date?->translatedFormat('d M Y') ?: '-' }}</td>
             </tr>
             <tr>
-                <th>Biaya</th>
-                <td>{{ $maintenanceRecord->cost !== null ? 'Rp '.number_format((float) $maintenanceRecord->cost, 0, ',', '.') : '-' }}</td>
-                <th>Catatan Persetujuan</th>
-                <td>{{ \Illuminate\Support\Str::limit($maintenanceRecord->approval_notes ?: '-', 120) }}</td>
-            </tr>
+    <th>Biaya</th>
+    <td>{{ $maintenanceRecord->cost !== null ? 'Rp '.number_format((float) $maintenanceRecord->cost, 0, ',', '.') : '-' }}</td>
+    <th>Catatan Persetujuan</th>
+    <td>{{ \Illuminate\Support\Str::limit($maintenanceRecord->approval_notes ?: '-', 120) }}</td>
+</tr>
+<tr>
+    <th>Pelaksana Pekerjaan</th>
+    <td>
+        {{ $maintenanceRecord->handler?->name
+            ?: ($maintenanceRecord->reporter?->name ?: '-') }}
+    </td>
+    <th>Durasi</th>
+    <td>
+        @if ($maintenanceRecord->start_date && $maintenanceRecord->completion_date)
+            {{ $maintenanceRecord->start_date->diffInDays($maintenanceRecord->completion_date) + 1 }} hari
+        @else
+            -
+        @endif
+    </td>
+</tr>
         </table>
         <table class="narrative">
             <tr>
