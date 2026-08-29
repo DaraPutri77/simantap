@@ -4,61 +4,78 @@
     <meta charset="UTF-8">
     <title>{{ $maintenanceRecord->maintenance_number }}</title>
     <style>
-        @page { size: A4 portrait; margin: 8mm 9mm 9mm; }
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
+        @page { size: A4 portrait; margin: 15mm 9mm 9mm; }
+
+        { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             color: #172033;
             font-family: DejaVu Sans, sans-serif;
             font-size: 6.8pt;
             line-height: 1.25;
         }
-        p, h1, h2 { margin: 0; }
+
+        p, h1, h2 {
+            margin: 0;
+        }
+
         .header {
             position: relative;
-            height: 23mm;
+            height: 30mm;
             border-bottom: 1.2mm solid #163A5F;
         }
+
         .logo {
             position: absolute;
-            top: 0;
+            top: 3mm;
             left: 0;
             width: 46mm;
             max-height: 17mm;
             object-fit: contain;
         }
+
         .heading {
             margin: 0 27mm 0 50mm;
-            padding-top: 1.5mm;
+            padding-top: 5mm;
             text-align: center;
         }
+
         .heading h1 {
             color: #163A5F;
             font-size: 13.5pt;
             letter-spacing: .4px;
         }
+
         .heading p {
             margin-top: 1mm;
             color: #52637a;
             font-size: 7pt;
             font-weight: bold;
         }
+
         .verification {
             position: absolute;
-            top: 0;
+            top: 3mm;
             right: 0;
             width: 25mm;
             text-align: center;
         }
+
         .verification img {
             width: 14mm;
             height: 14mm;
         }
+
         .verification div {
             color: #52637a;
             font-size: 4.3pt;
             line-height: 1.1;
-        }
+        }   
         .meta {
             width: 100%;
             margin-top: 2.5mm;
