@@ -205,7 +205,6 @@ class UserManagementTest extends TestCase
         ]);
     }
 
-
     public function test_admin_is_prompted_to_complete_incomplete_employee_data(): void
     {
         $admin = $this->admin();

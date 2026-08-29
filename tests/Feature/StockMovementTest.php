@@ -336,7 +336,6 @@ class StockMovementTest extends TestCase
             ->assertSee('Konsisten');
     }
 
-
     public function test_admin_can_download_filtered_stock_ledger_excel(): void
     {
         $admin = $this->admin();

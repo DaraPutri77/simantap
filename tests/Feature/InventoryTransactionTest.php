@@ -362,7 +362,6 @@ class InventoryTransactionTest extends TestCase
         $this->assertDatabaseCount('inventory_receipt_items', 0);
     }
 
-
     public function test_adjustment_workspace_explains_stock_opname_and_physical_quantity(): void
     {
         $admin = $this->admin();

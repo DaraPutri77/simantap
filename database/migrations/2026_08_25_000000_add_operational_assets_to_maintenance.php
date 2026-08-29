@@ -69,7 +69,7 @@ return new class extends Migration
                 ->whereNotNull('operational_asset_id')
                 ->exists()
         ) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'Rollback ditolak karena terdapat histori pemeliharaan aset perangkat. Data harus dipertahankan.',
             );
         }

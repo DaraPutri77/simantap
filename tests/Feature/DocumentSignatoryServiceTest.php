@@ -135,6 +135,10 @@ class DocumentSignatoryServiceTest extends TestCase
         $this->assertStringContainsString('PEJABAT KASUBBAG', $html);
         $this->assertStringContainsString('PEJABAT ADMINISTRATOR', $html);
         $this->assertStringContainsString(
+            'Pengesahan administratif.',
+            $html,
+        );
+        $this->assertStringNotContainsString(
             'tidak menggantikan tanda tangan digital',
             $html,
         );

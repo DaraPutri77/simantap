@@ -216,7 +216,6 @@ class StockMovementController extends Controller
         ]);
     }
 
-
     public function downloadExcel(Request $request): BinaryFileResponse
     {
         $validated = $request->validate([
@@ -550,7 +549,6 @@ class StockMovementController extends Controller
             ->download("kartu-stok-{$safeCode}.pdf");
     }
 
-
     public function downloadCardExcel(
         Request $request,
         Item $item,
@@ -837,7 +835,6 @@ class StockMovementController extends Controller
             'balanceConsistent' => $balanceConsistent,
         ];
     }
-
 
     private function periodLabel(
         string $from,

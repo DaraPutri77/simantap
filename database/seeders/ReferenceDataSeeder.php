@@ -71,7 +71,6 @@ class ReferenceDataSeeder extends Seeder
         ],
     ];
 
-
     /**
      * @var list<array{
      *     name:string,
@@ -121,7 +120,6 @@ class ReferenceDataSeeder extends Seeder
         ],
     ];
 
-
     public function run(): void
     {
         DB::transaction(function (): void {
@@ -135,7 +133,6 @@ class ReferenceDataSeeder extends Seeder
         });
     }
 
-
     private function seedItemCategories(): void
     {
         foreach (self::ITEM_CATEGORIES as $data) {
@@ -143,7 +140,6 @@ class ReferenceDataSeeder extends Seeder
             $category = ItemCategory::withTrashed()
                 ->where('name', $data['name'])
                 ->first();
-
 
             if ($category === null) {
 
@@ -155,11 +151,9 @@ class ReferenceDataSeeder extends Seeder
                 continue;
             }
 
-
             if ($category->trashed()) {
                 $category->restore();
             }
-
 
             $category->forceFill([
                 'description' => $data['description'],
@@ -168,8 +162,6 @@ class ReferenceDataSeeder extends Seeder
         }
     }
 
-
-
     private function seedUnits(): void
     {
         foreach (self::UNITS as $data) {
@@ -177,7 +169,6 @@ class ReferenceDataSeeder extends Seeder
             $unit = Unit::withTrashed()
                 ->where('symbol', $data['symbol'])
                 ->first();
-
 
             if ($unit === null) {
 
@@ -189,11 +180,9 @@ class ReferenceDataSeeder extends Seeder
                 continue;
             }
 
-
             if ($unit->trashed()) {
                 $unit->restore();
             }
-
 
             $unit->forceFill([
                 'name' => $data['name'],
@@ -201,8 +190,6 @@ class ReferenceDataSeeder extends Seeder
             ])->save();
         }
     }
-
-
 
     private function seedSettings(): void
     {
@@ -220,7 +207,6 @@ class ReferenceDataSeeder extends Seeder
                 'is_public' => true,
             ],
 
-
             [
                 'key' => 'organization.name',
                 'value' => [
@@ -232,7 +218,6 @@ class ReferenceDataSeeder extends Seeder
                 'group' => 'organization',
                 'is_public' => true,
             ],
-
 
             [
                 'key' => 'organization.short_name',
@@ -246,7 +231,6 @@ class ReferenceDataSeeder extends Seeder
                 'is_public' => true,
             ],
 
-
             [
                 'key' => 'system.display_timezone',
                 'value' => [
@@ -258,7 +242,6 @@ class ReferenceDataSeeder extends Seeder
                 'group' => 'system',
                 'is_public' => false,
             ],
-
 
             [
                 'key' => 'vehicle.max_loan_days',
@@ -273,7 +256,6 @@ class ReferenceDataSeeder extends Seeder
             ],
 
         ];
-
 
         foreach ($settings as $setting) {
 

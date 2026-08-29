@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AccountStatus;
 use App\Enums\RoleName;
 use App\Exports\ReportExport;
+use App\Models\AuditLog;
 use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\Unit;
@@ -145,7 +146,7 @@ class ReportTest extends TestCase
 
         $this->assertSame(
             count(ReportCatalog::keys()),
-            \App\Models\AuditLog::query()
+            AuditLog::query()
                 ->where('actor_id', $admin->id)
                 ->where('event', 'report_downloaded')
                 ->where('module', 'report')
