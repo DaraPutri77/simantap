@@ -151,7 +151,7 @@
                         Akses aman untuk pengguna terverifikasi
                     </span>
 
-                    <span>© {{ now()->year }} {{ config('simantap.institution.short_name') }}</span>
+                    <span>©  {{ config('simantap.institution.short_name') }}</span>
                 </footer>
             </section>
 
@@ -212,7 +212,7 @@
                     </div>
 
                     <p class="mt-5 text-center text-[11px] font-medium leading-5 text-slate-500">
-                        © {{ now()->year }} {{ config('simantap.institution.name') }}
+                        ©  {{ config('simantap.institution.name') }}
                         <span class="mx-1.5 text-slate-700">•</span>
                         Akses terbatas untuk pengguna terdaftar
                     </p>

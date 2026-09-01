@@ -183,9 +183,7 @@
 
                 <p class="mt-4 max-w-2xl text-sm font-medium leading-7 text-slate-300 sm:text-base">
                     @if ($isAdmin)
-                        Pantau persediaan, permintaan barang, kendaraan, dan
-                        pemeliharaan melalui data operasional yang tercatat di
-                        dalam sistem.
+                        Pantau persediaan dan BMN melalui data operasional yang tercatat di dalam sistem.
                     @else
                         Pantau permintaan barang dan peminjaman motor Anda,
                         sekaligus lihat persediaan yang tersedia saat ini.

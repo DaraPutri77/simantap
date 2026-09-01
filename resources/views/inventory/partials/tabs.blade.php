@@ -1,3 +1,5 @@
+{{-- SIMANTAP: navigasi persediaan khusus administrator --}}
+@if(auth()->user()?->hasRole(\App\Enums\RoleName::Administrator->value))
 @php
     $canManageItems = auth()->user()?->can(
         \App\Enums\PermissionName::ItemManage->value,
@@ -28,12 +30,6 @@
             'label' => 'Barang Masuk',
             'route' => 'inventory-receipts.index',
             'active' => ['inventory-receipts.*'],
-            'visible' => $canManageStock,
-        ],
-        [
-            'label' => 'Penyesuaian',
-            'route' => 'stock-adjustments.index',
-            'active' => ['stock-adjustments.*'],
             'visible' => $canManageStock,
         ],
         [
@@ -74,3 +70,4 @@
         @endforeach
     </div>
 </nav>
+@endif
