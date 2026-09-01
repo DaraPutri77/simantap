@@ -1,3 +1,7 @@
+@php
+    $isSelfService = request()->routeIs('my.*');
+    $canViewAll = $isSelfService ? false : ($canViewAll ?? false);
+@endphp
 <x-layouts.app
     :title="$canViewAll ? 'Permintaan Barang' : 'Permintaan Saya'"
     :header="$canViewAll ? 'Permintaan Barang' : 'Permintaan Saya'"
@@ -254,3 +258,4 @@
         @endif
     </section>
 </x-layouts.app>
+

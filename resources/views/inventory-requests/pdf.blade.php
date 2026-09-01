@@ -401,9 +401,7 @@
                     Mengetahui / {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }},
                 </div>
                 <div class="signature-box">
-                    <div class="signature-guidance">
-                        Tanda tangan basah (opsional)
-                    </div>
+                    
                 </div>
                 <div class="signature-name">
                     {{ $kasubbag['name'] ?? '................................' }}
@@ -422,3 +420,4 @@
     </div>
 </body>
 </html>
+
