@@ -185,8 +185,7 @@
                     @if ($isAdmin)
                         Pantau persediaan dan BMN melalui data operasional yang tercatat di dalam sistem.
                     @else
-                        Pantau permintaan barang dan peminjaman motor Anda,
-                        sekaligus lihat persediaan yang tersedia saat ini.
+                        layanan terpadu permintaan barang dan peminjaman BMN serta stok persediaan barang secara real-time
                     @endif
                 </p>
             </div>

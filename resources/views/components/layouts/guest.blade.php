@@ -84,8 +84,8 @@
                     </h1>
 
                     <p class="mt-7 max-w-xl text-base font-medium leading-8 text-slate-300 xl:text-lg">
-                        Persediaan, permintaan barang, kendaraan dinas, dan jejak
-                        audit tersusun rapi agar pekerjaan lebih cepat dan transparan.
+                        Pengelolaan permintaan barang dan peminjaman BMN untuk
+                        kerja yang lebih efisien dan transparan.
                     </p>
 
                     <div class="mt-9 grid max-w-2xl grid-cols-3 gap-3">
