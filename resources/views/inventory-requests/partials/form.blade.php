@@ -3,12 +3,10 @@
         ? $inventoryRequest->items->map(fn ($line) => [
             'item_id' => $line->item_id,
             'requested_quantity' => $line->requested_quantity,
-            'notes' => $line->notes,
         ])->values()->all()
         : [[
             'item_id' => '',
             'requested_quantity' => '',
-            'notes' => '',
         ]];
     $formLines = old('items', $defaultLines);
     $requestDate = old(
@@ -74,37 +72,6 @@
             </p>
         </div>
 
-        <div class="sm:col-span-2">
-            <label for="purpose" class="form-label">Keperluan</label>
-            <textarea
-                id="purpose"
-                name="purpose"
-                rows="4"
-                class="form-input min-h-32 py-4 @error('purpose') form-input-error @enderror"
-                placeholder="Contoh: Kebutuhan ATK kegiatan pendataan bulan Agustus"
-                required
-            >{{ old('purpose', $inventoryRequest?->purpose) }}</textarea>
-            @error('purpose')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
-        </div>
-
-        <div class="sm:col-span-2">
-            <label for="notes" class="form-label">
-                Catatan
-                <span class="font-medium text-slate-600">(opsional)</span>
-            </label>
-            <textarea
-                id="notes"
-                name="notes"
-                rows="3"
-                class="form-input min-h-24 py-4 @error('notes') form-input-error @enderror"
-                placeholder="Tambahkan informasi yang perlu diketahui Administrator"
-            >{{ old('notes', $inventoryRequest?->notes) }}</textarea>
-            @error('notes')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
-        </div>
     </div>
 </section>
 
@@ -207,24 +174,6 @@
                         @enderror
                     </div>
 
-                    <div>
-                        <label
-                            class="form-label"
-                            for="items_{{ $index }}_notes"
-                        >
-                            Catatan
-                            <span class="font-medium text-slate-600">(opsional)</span>
-                        </label>
-                        <input
-                            id="items_{{ $index }}_notes"
-                            name="items[{{ $index }}][notes]"
-                            type="text"
-                            value="{{ $line['notes'] ?? '' }}"
-                            class="form-input"
-                            maxlength="1000"
-                        >
-                    </div>
-
                     <button
                         type="button"
                         class="danger-button"
@@ -292,19 +241,6 @@
                         required
                     >
                 </div>
-                <div>
-                    <label class="form-label" for="items___INDEX___notes">
-                        Catatan
-                        <span class="font-medium text-slate-600">(opsional)</span>
-                    </label>
-                    <input
-                        id="items___INDEX___notes"
-                        name="items[__INDEX__][notes]"
-                        type="text"
-                        class="form-input"
-                        maxlength="1000"
-                    >
-                </div>
                 <button
                     type="button"
                     class="danger-button"
@@ -318,6 +254,6 @@
 </section>
 
 <div class="alert-warning">
-    Menyimpan formulir hanya membuat draft. Tanda tangan dibubuhkan pada halaman
-    detail ketika kamu siap mengajukannya.
+    Menyimpan formulir hanya membuat draft. Periksa kembali daftar barang pada
+    halaman detail sebelum mengajukannya.
 </div>

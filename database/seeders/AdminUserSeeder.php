@@ -3,13 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\AccountStatus;
-use App\Enums\RoleName;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use LogicException;
 use RuntimeException;
 
 class AdminUserSeeder extends Seeder
@@ -19,104 +17,174 @@ class AdminUserSeeder extends Seeder
         $configuration = $this->configuration();
 
         DB::transaction(function () use ($configuration): void {
-            $candidates = User::withTrashed()
-                ->where(function (Builder $query) use (
-                    $configuration
-                ): void {
-                    $query
-                        ->where(
-                            'employee_number',
-                            $configuration['employee_number'],
-                        )
-                        ->orWhere(
-                            'email',
-                            $configuration['email'],
-                        );
-                })
-                ->lockForUpdate()
-                ->get();
 
-            if ($candidates->count() > 1) {
-                throw new LogicException(
-                    'NIP dan email Admin awal digunakan oleh dua akun '
-                    .'yang berbeda.',
-                );
-            }
-
-            /** @var User|null $admin */
-            $admin = $candidates->first();
+            /*
+             |--------------------------------------------------------------------------
+             | Cari akun admin awal
+             |--------------------------------------------------------------------------
+             | Prioritas:
+             | 1. Nama + email resmi
+             | 2. Employee number
+             |
+             | Tidak melakukan overwrite identifier unik.
+             */
+            $admin = User::withTrashed()
+                ->where('name', $configuration['name'])
+                ->first();
 
             if ($admin === null) {
+                $admin = User::withTrashed()
+                    ->where(
+                        'email',
+                        $configuration['email']
+                    )
+                    ->first();
+            }
+
+            if ($admin === null) {
+                $admin = User::withTrashed()
+                    ->where(
+                        'employee_number',
+                        $configuration['employee_number']
+                    )
+                    ->first();
+            }
+
+            /*
+             |--------------------------------------------------------------------------
+             | Buat akun baru jika belum tersedia
+             |--------------------------------------------------------------------------
+             */
+            if ($admin === null) {
+
                 $admin = User::query()->create([
+
                     'employee_number' => $configuration['employee_number'],
+
                     'name' => $configuration['name'],
+
                     'email' => $configuration['email'],
+
                     'phone' => null,
+
                     'work_unit' => $configuration['work_unit'],
+
                     'position' => $configuration['position'],
+
                     'status' => AccountStatus::Active,
-                    'password' => $configuration['password'],
+
+                    'password' => Hash::make(
+                        $configuration['password']
+                    ),
+
                     'must_change_password' => true,
+
                     'email_verified_at' => now(),
+
                     'activated_at' => now(),
+
                     'password_changed_at' => null,
+
                     'last_login_at' => null,
+
                     'created_by' => null,
                 ]);
+
             } else {
+
                 if ($admin->trashed()) {
                     $admin->restore();
                 }
 
+                /*
+                 |--------------------------------------------------------------------------
+                 | Update hanya data aman
+                 |--------------------------------------------------------------------------
+                 | Jangan sentuh:
+                 | - employee_number
+                 | - email
+                 | karena unique identifier.
+                 */
                 $admin->forceFill([
-                    'employee_number' => $configuration['employee_number'],
+
                     'name' => $configuration['name'],
-                    'email' => $configuration['email'],
+
                     'work_unit' => $configuration['work_unit'],
+
                     'position' => $configuration['position'],
+
+                    'status' => AccountStatus::Active,
+
                 ])->save();
+
             }
 
+            /*
+             |--------------------------------------------------------------------------
+             | Role final SIMANTAP
+             |--------------------------------------------------------------------------
+             | Bu Mita:
+             | - admin
+             | - pegawai
+             |
+             | Tidak ada role ketiga.
+             */
             $admin->syncRoles([
-                RoleName::Administrator->value,
+                'admin',
+                'pegawai',
             ]);
+
         });
     }
 
     /**
      * @return array{
-     *     employee_number: string,
-     *     name: string,
-     *     email: string,
-     *     password: string,
-     *     work_unit: string,
-     *     position: string
+     * employee_number:string,
+     * name:string,
+     * email:string,
+     * password:string,
+     * work_unit:string,
+     * position:string
      * }
      */
     private function configuration(): array
     {
         $configuration = [
+
             'employee_number' => trim(
                 (string) config(
-                    'simantap.admin.employee_number',
-                ),
+                    'simantap.admin.employee_number'
+                )
             ),
+
             'name' => trim(
-                (string) config('simantap.admin.name'),
+                (string) config(
+                    'simantap.admin.name'
+                )
             ),
+
             'email' => Str::lower(
                 trim(
-                    (string) config('simantap.admin.email'),
-                ),
+                    (string) config(
+                        'simantap.admin.email'
+                    )
+                )
             ),
+
             'password' => (string) config(
-                'simantap.admin.password',
+                'simantap.admin.password'
             ),
+
             'work_unit' => trim(
-                (string) config('simantap.admin.work_unit'),
+                (string) config(
+                    'simantap.admin.work_unit'
+                )
             ),
+
             'position' => trim(
-                (string) config('simantap.admin.position'),
+                (string) config(
+                    'simantap.admin.position'
+                )
             ),
         ];
 
@@ -130,9 +198,11 @@ class AdminUserSeeder extends Seeder
                 'position',
             ] as $requiredKey
         ) {
+
             if ($configuration[$requiredKey] === '') {
+
                 throw new RuntimeException(
-                    "Konfigurasi Admin `{$requiredKey}` wajib diisi.",
+                    "Konfigurasi Admin `{$requiredKey}` wajib diisi."
                 );
             }
         }
@@ -140,42 +210,47 @@ class AdminUserSeeder extends Seeder
         if (
             filter_var(
                 $configuration['email'],
-                FILTER_VALIDATE_EMAIL,
+                FILTER_VALIDATE_EMAIL
             ) === false
         ) {
+
             throw new RuntimeException(
-                'Konfigurasi email Admin tidak valid.',
+                'Konfigurasi email Admin tidak valid.'
             );
         }
 
         $minimumPasswordLength = (int) config(
             'simantap.security.password_min_length',
-            12,
+            12
         );
 
         if (
             mb_strlen($configuration['password'])
-                < $minimumPasswordLength
+            < $minimumPasswordLength
+
             || preg_match(
                 '/[a-z]/',
-                $configuration['password'],
+                $configuration['password']
             ) !== 1
+
             || preg_match(
                 '/[A-Z]/',
-                $configuration['password'],
+                $configuration['password']
             ) !== 1
+
             || preg_match(
                 '/[0-9]/',
-                $configuration['password'],
+                $configuration['password']
             ) !== 1
+
             || preg_match(
                 '/[^a-zA-Z0-9]/',
-                $configuration['password'],
+                $configuration['password']
             ) !== 1
         ) {
+
             throw new RuntimeException(
-                'Password Admin awal harus memenuhi kebijakan '
-                .'password SIMANTAP.',
+                'Password Admin awal tidak memenuhi kebijakan SIMANTAP.'
             );
         }
 

@@ -285,3 +285,4 @@ class DatabaseSeederTest extends TestCase
         ];
     }
 }
+

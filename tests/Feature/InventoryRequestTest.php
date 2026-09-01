@@ -14,7 +14,6 @@ use App\Models\ItemCategory;
 use App\Models\StockMovement;
 use App\Models\Unit;
 use App\Models\User;
-use App\Services\InventoryRequestService;
 use Carbon\CarbonImmutable;
 use Database\Seeders\ReferenceDataSeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -101,7 +100,7 @@ class InventoryRequestTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_submission_stores_signature_without_changing_stock(): void
+    public function test_submission_does_not_require_applicant_signature_or_change_stock(): void
     {
         $employee = $this->employee();
         $item = $this->item();
@@ -117,7 +116,7 @@ class InventoryRequestTest extends TestCase
                     'my.inventory-requests.submit',
                     $inventoryRequest,
                 ),
-                $this->signaturePayload(),
+                [],
             )
             ->assertRedirect();
 
@@ -127,107 +126,39 @@ class InventoryRequestTest extends TestCase
         );
         $this->assertSame('10.00', $item->refresh()->current_stock);
         $this->assertSame('0.00', $item->reserved_stock);
-        $this->assertDatabaseHas('digital_signatures', [
-            'signable_type' => 'inventory_request',
-            'signable_id' => $inventoryRequest->id,
-            'signer_id' => $employee->id,
-            'purpose' => DigitalSignaturePurpose::InventoryRequestSubmission->value,
-            'version' => 1,
-        ]);
-
-        $signature = $inventoryRequest->signatures()
-            ->where(
-                'purpose',
-                DigitalSignaturePurpose::InventoryRequestSubmission->value,
-            )
-            ->firstOrFail();
-
-        $this->assertSame(
-            DigitalSignaturePurpose::InventoryRequestSubmission,
-            $signature->purpose,
-        );
-        $this->assertSame(1, $signature->version);
+        $this->assertDatabaseCount('digital_signatures', 0);
+        $this->assertNull($inventoryRequest->submissionSignature());
     }
 
-    public function test_submission_cleans_signature_file_when_transaction_rolls_back_after_signature_create(): void
+    public function test_request_form_uses_fixed_purpose_and_discards_employee_notes(): void
     {
-        $employee = $this->employee([
-            'employee_number' => 'PEG-SIGN-ROLLBACK-001',
-            'email' => 'signature.rollback.inventory@example.test',
-        ]);
-        $item = $this->item([
-            'item_code' => 'BRG-SIGN-ROLLBACK-001',
-            'name' => 'Barang Rollback Signature',
-        ]);
-        $inventoryRequest = $this->draftRequest(
-            $employee,
-            $item,
-            2,
-        );
+        $employee = $this->employee();
+        $item = $this->item();
+        $payload = $this->draftPayload($item, 2);
+        $payload['purpose'] = 'Nilai dari klien harus diabaikan.';
+        $payload['notes'] = 'Catatan umum harus dibuang.';
+        $payload['items'][0]['notes'] = 'Catatan barang harus dibuang.';
 
-        $signatureObservedBeforeFailure = false;
-        $shouldFail = true;
+        $this->actingAs($employee)
+            ->get(route('my.inventory-requests.create'))
+            ->assertOk()
+            ->assertDontSee('id="purpose"', false)
+            ->assertDontSee('id="notes"', false)
+            ->assertDontSee('items_0_notes', false);
 
-        User::retrieved(function (User $retrieved) use (
-            $employee,
-            $inventoryRequest,
-            &$signatureObservedBeforeFailure,
-            &$shouldFail,
-        ): void {
-            if (! $shouldFail || $retrieved->id !== $employee->id) {
-                return;
-            }
+        $this->actingAs($employee)
+            ->post(route('my.inventory-requests.store'), $payload)
+            ->assertRedirect();
 
-            $signatureObservedBeforeFailure = DigitalSignature::query()
-                ->where('signable_type', $inventoryRequest->getMorphClass())
-                ->where('signable_id', $inventoryRequest->id)
-                ->where(
-                    'purpose',
-                    DigitalSignaturePurpose::InventoryRequestSubmission->value,
-                )
-                ->exists();
+        $inventoryRequest = InventoryRequest::query()->firstOrFail();
 
-            if (! $signatureObservedBeforeFailure) {
-                return;
-            }
-
-            $shouldFail = false;
-
-            throw new \RuntimeException(
-                'SIMANTAP inventory signature rollback probe.',
-            );
-        });
-
-        try {
-            app(InventoryRequestService::class)->submit(
-                $inventoryRequest,
-                $this->signaturePayload(),
-                $employee,
-            );
-
-            $this->fail(
-                'Transaction rollback probe seharusnya melempar exception.',
-            );
-        } catch (\RuntimeException $exception) {
-            $this->assertSame(
-                'SIMANTAP inventory signature rollback probe.',
-                $exception->getMessage(),
-            );
-        }
-
-        $this->assertTrue($signatureObservedBeforeFailure);
         $this->assertSame(
-            InventoryRequestStatus::Draft,
-            $inventoryRequest->refresh()->status,
+            InventoryRequest::DEFAULT_PURPOSE,
+            $inventoryRequest->purpose,
         );
-        $this->assertDatabaseCount('digital_signatures', 0);
-        $this->assertSame(
-            [],
-            Storage::disk(
-                (string) config('simantap.uploads.disk', 'local'),
-            )->allFiles(
-                'signatures/inventory-requests/'.$inventoryRequest->id,
-            ),
+        $this->assertNull($inventoryRequest->notes);
+        $this->assertNull(
+            $inventoryRequest->items()->firstOrFail()->notes,
         );
     }
 
@@ -437,14 +368,14 @@ class InventoryRequestTest extends TestCase
         $this->assertNotNull($inventoryRequest->received_at);
         $this->assertNotNull($inventoryRequest->completed_at);
         $this->assertSame(
-            3,
+            2,
             DigitalSignature::query()
                 ->where('signable_id', $inventoryRequest->id)
                 ->count(),
         );
     }
 
-    public function test_revision_preserves_prior_signature_and_resubmission_appends_new_version(): void
+    public function test_revision_and_resubmission_do_not_create_applicant_signatures(): void
     {
         $admin = $this->admin();
         $employee = $this->employee();
@@ -455,16 +386,7 @@ class InventoryRequestTest extends TestCase
             3,
         );
 
-        $firstSignature = $inventoryRequest->signatures()
-            ->where(
-                'purpose',
-                DigitalSignaturePurpose::InventoryRequestSubmission->value,
-            )
-            ->firstOrFail();
-        $firstPath = $firstSignature->image_path;
-
-        $this->assertSame(1, $firstSignature->version);
-        Storage::disk('local')->assertExists($firstPath);
+        $this->assertDatabaseCount('digital_signatures', 0);
 
         $this->actingAs($admin)
             ->post(route('inventory-requests.review', $inventoryRequest));
@@ -475,7 +397,7 @@ class InventoryRequestTest extends TestCase
                     $inventoryRequest,
                 ),
                 [
-                    'revision_note' => 'Jelaskan keperluan secara lebih rinci.',
+                    'revision_note' => 'Periksa kembali daftar barang.',
                 ],
             )
             ->assertRedirect();
@@ -486,17 +408,9 @@ class InventoryRequestTest extends TestCase
             InventoryRequestStatus::RevisionRequired,
             $inventoryRequest->status,
         );
-        $this->assertDatabaseHas('digital_signatures', [
-            'id' => $firstSignature->id,
-            'signable_id' => $inventoryRequest->id,
-            'purpose' => DigitalSignaturePurpose::InventoryRequestSubmission->value,
-            'version' => 1,
-        ]);
-        Storage::disk('local')->assertExists($firstPath);
         $this->assertNull($inventoryRequest->submissionSignature());
 
         $payload = $this->draftPayload($item, 2);
-        $payload['purpose'] = 'Keperluan rapat koordinasi bulan Agustus.';
         $this->actingAs($employee)
             ->put(
                 route(
@@ -512,49 +426,20 @@ class InventoryRequestTest extends TestCase
                     'my.inventory-requests.submit',
                     $inventoryRequest,
                 ),
-                $this->signaturePayload(),
+                [],
             )
             ->assertRedirect();
 
         $inventoryRequest->refresh();
-        $submissionSignatures = $inventoryRequest->signatures()
-            ->where(
-                'purpose',
-                DigitalSignaturePurpose::InventoryRequestSubmission->value,
-            )
-            ->orderBy('version')
-            ->get();
-
         $this->assertSame(
             InventoryRequestStatus::Submitted,
             $inventoryRequest->status,
         );
-        $this->assertCount(2, $submissionSignatures);
-        $this->assertSame(
-            [1, 2],
-            $submissionSignatures->pluck('version')->all(),
-        );
-        $this->assertSame(
-            $firstSignature->id,
-            $submissionSignatures->first()->id,
-        );
-        $this->assertNotSame(
-            $firstPath,
-            $submissionSignatures->last()->image_path,
-        );
-        Storage::disk('local')->assertExists($firstPath);
-        Storage::disk('local')->assertExists(
-            $submissionSignatures->last()->image_path,
-        );
-
-        $currentSignature = $inventoryRequest->submissionSignature();
-
-        $this->assertNotNull($currentSignature);
-        $this->assertSame(2, $currentSignature->version);
-        $this->assertSame(
-            $submissionSignatures->last()->id,
-            $currentSignature->id,
-        );
+        $this->assertDatabaseMissing('digital_signatures', [
+            'signable_type' => 'inventory_request',
+            'signable_id' => $inventoryRequest->id,
+            'purpose' => DigitalSignaturePurpose::InventoryRequestSubmission->value,
+        ]);
     }
 
     public function test_cancellation_releases_existing_reservation(): void
@@ -1023,7 +908,7 @@ class InventoryRequestTest extends TestCase
                 'my.inventory-requests.submit',
                 $inventoryRequest,
             ),
-            $this->signaturePayload(),
+            [],
         );
 
         return $inventoryRequest->refresh();

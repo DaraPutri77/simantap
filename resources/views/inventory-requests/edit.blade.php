@@ -9,8 +9,8 @@
             Ubah {{ $inventoryRequest->request_number }}
         </h1>
         <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-            Periksa kembali barang, jumlah, dan keperluan. Setelah tersimpan,
-            buka detail untuk membubuhkan tanda tangan dan mengirim ulang.
+            Periksa kembali barang dan jumlahnya. Setelah tersimpan, buka
+            halaman detail untuk mengirim ulang.
         </p>
     </section>
 

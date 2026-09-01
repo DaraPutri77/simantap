@@ -182,8 +182,6 @@ class DocumentVerificationService
                 'work_unit' => $inventoryRequest->work_unit_snapshot,
                 'position' => $inventoryRequest->requester?->position,
             ],
-            'purpose' => $inventoryRequest->purpose,
-            'notes' => $inventoryRequest->notes,
             'status' => $inventoryRequest->status,
             'admin_notes' => $inventoryRequest->admin_notes,
             'received_at' => $inventoryRequest->received_at,
@@ -208,9 +206,6 @@ class DocumentVerificationService
                 ->values()
                 ->all(),
             'signatures' => [
-                'submission' => $this->signatureFingerprint(
-                    $inventoryRequest->submissionSignature(),
-                ),
                 'approval' => $this->signatureFingerprint(
                     $inventoryRequest->approvalSignature(),
                 ),

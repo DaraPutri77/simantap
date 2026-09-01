@@ -20,9 +20,18 @@ final class Navigation
      */
     public static function for(User $user): array
     {
-        $items = $user->hasRole(RoleName::Administrator->value)
-            ? self::administratorItems()
-            : self::employeeItems();
+        if ($user->hasRole(RoleName::Administrator->value)) {
+            $items = self::administratorItems();
+
+            if ($user->hasRole(RoleName::Employee->value)) {
+                $items = [
+                    ...$items,
+                    ...self::employeeSelfServiceItems(),
+                ];
+            }
+        } else {
+            $items = self::employeeItems();
+        }
 
         return array_values(array_map(
             static function (array $item): array {
@@ -228,6 +237,44 @@ final class Navigation
                     'password.change',
                 ],
                 'permission' => PermissionName::DashboardView,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{
+     *     label: string,
+     *     route: string,
+     *     icon: string,
+     *     active_patterns: list<string>,
+     *     permission: PermissionName|null
+     * }>
+     */
+    private static function employeeSelfServiceItems(): array
+    {
+        return [
+            [
+                'label' => 'Permintaan Saya',
+                'route' => 'my.inventory-requests.index',
+                'icon' => 'request',
+                'active_patterns' => ['my.inventory-requests.*'],
+                'permission' => PermissionName::InventoryRequestViewOwn,
+            ],
+            [
+                'label' => 'Peminjaman Saya',
+                'route' => 'my.vehicle-loans.index',
+                'icon' => 'vehicle',
+                'active_patterns' => ['my.vehicle-loans.*'],
+                'permission' => PermissionName::VehicleLoanViewOwn,
+            ],
+            [
+                'label' => 'Pengembalian Saya',
+                'route' => 'vehicle-loan-lifecycle.employee.index',
+                'icon' => 'vehicle',
+                'active_patterns' => [
+                    'vehicle-loan-lifecycle.employee.*',
+                ],
+                'permission' => PermissionName::VehicleLoanReturn,
             ],
         ];
     }

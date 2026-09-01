@@ -99,11 +99,6 @@ class InventoryRequestController extends Controller
                                 'employee_number_snapshot',
                                 'like',
                                 "%{$search}%",
-                            )
-                            ->orWhere(
-                                'purpose',
-                                'like',
-                                "%{$search}%",
                             );
                     });
                 },
@@ -231,9 +226,6 @@ class InventoryRequestController extends Controller
             'canManage' => $request->user()?->can(
                 PermissionName::InventoryRequestApprove->value,
             ) === true,
-            'submissionSignature' => $service->signatureDataUri(
-                $inventoryRequest->submissionSignature(),
-            ),
             'approvalSignature' => $service->signatureDataUri(
                 $inventoryRequest->approvalSignature(),
             ),
@@ -302,7 +294,6 @@ class InventoryRequestController extends Controller
 
         $service->submit(
             $inventoryRequest,
-            $request->validated(),
             $actor,
             $request,
         );
@@ -547,18 +538,11 @@ class InventoryRequestController extends Controller
         $actor = $request->user();
         abort_if($actor === null, 401);
 
-        $submissionSignatureRecord =
-            $inventoryRequest->submissionSignature();
-
         $approvalSignatureRecord =
             $inventoryRequest->approvalSignature();
 
         $receiptSignatureRecord =
             $inventoryRequest->receiptSignature();
-
-        $submissionSignature = $service->signatureDataUri(
-            $submissionSignatureRecord,
-        );
 
         $approvalSignature = $service->signatureDataUri(
             $approvalSignatureRecord,
@@ -566,13 +550,6 @@ class InventoryRequestController extends Controller
 
         $receiptSignature = $service->signatureDataUri(
             $receiptSignatureRecord,
-        );
-
-        abort_if(
-            $submissionSignatureRecord !== null
-                && $submissionSignature === null,
-            409,
-            'Integritas tanda tangan pemohon gagal diverifikasi.',
         );
 
         abort_if(
@@ -616,7 +593,6 @@ class InventoryRequestController extends Controller
             'inventoryRequest' => $inventoryRequest,
             'documentVerification' => $documentVerification,
             'verificationQrDataUri' => $verificationQrDataUri,
-            'submissionSignature' => $submissionSignature,
             'approvalSignature' => $approvalSignature,
             'receiptSignature' => $receiptSignature,
             'documentSignatories' => $documentSignatories,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\InventoryRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,14 +20,17 @@ class StoreInventoryRequestRequest extends FormRequest
                 static fn (mixed $line): bool => is_array($line)
                     && filled($line['item_id'] ?? null),
             )
+            ->map(static function (array $line): array {
+                $line['notes'] = null;
+
+                return $line;
+            })
             ->values()
             ->all();
 
         $this->merge([
-            'purpose' => trim((string) $this->input('purpose')),
-            'notes' => $this->filled('notes')
-                ? trim((string) $this->input('notes'))
-                : null,
+            'purpose' => InventoryRequest::DEFAULT_PURPOSE,
+            'notes' => null,
             'items' => $items,
         ]);
     }

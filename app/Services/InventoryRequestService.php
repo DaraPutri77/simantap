@@ -148,101 +148,75 @@ class InventoryRequestService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function submit(
         InventoryRequest $inventoryRequest,
-        array $data,
         User $actor,
         ?Request $httpRequest = null,
     ): InventoryRequest {
-        $signatureFile = $this->storeSignatureFile(
+        return DB::transaction(function () use (
             $inventoryRequest,
-            (string) $data['signature_data'],
-        );
+            $actor,
+            $httpRequest,
+        ): InventoryRequest {
+            $locked = $this->lockRequest($inventoryRequest);
+            $this->requireStatus(
+                $locked,
+                [
+                    InventoryRequestStatus::Draft,
+                    InventoryRequestStatus::RevisionRequired,
+                ],
+                'Permintaan pada status ini tidak dapat diajukan.',
+            );
 
-        try {
-            return DB::transaction(function () use (
-                $inventoryRequest,
-                $actor,
-                $httpRequest,
-                $signatureFile,
-            ): InventoryRequest {
-                $locked = $this->lockRequest($inventoryRequest);
-                $this->requireStatus(
-                    $locked,
-                    [
-                        InventoryRequestStatus::Draft,
-                        InventoryRequestStatus::RevisionRequired,
-                    ],
-                    'Permintaan pada status ini tidak dapat diajukan.',
-                );
+            if (! $locked->items()->exists()) {
+                throw ValidationException::withMessages([
+                    'items' => 'Permintaan harus memiliki minimal satu barang.',
+                ]);
+            }
 
-                if (! $locked->items()->exists()) {
+            $requestItems = $this->lockRequestItems($locked);
+            $masterItems = $this->lockMasterItems($requestItems);
+
+            foreach ($requestItems as $line) {
+                $item = $masterItems->get($line->item_id);
+
+                if (! $item instanceof Item) {
                     throw ValidationException::withMessages([
-                        'items' => 'Permintaan harus memiliki minimal satu barang.',
+                        'items' => 'Salah satu barang tidak ditemukan.',
                     ]);
                 }
 
-                $requestItems = $this->lockRequestItems($locked);
-                $masterItems = $this->lockMasterItems($requestItems);
-
-                foreach ($requestItems as $line) {
-                    $item = $masterItems->get($line->item_id);
-
-                    if (! $item instanceof Item) {
-                        throw ValidationException::withMessages([
-                            'items' => 'Salah satu barang tidak ditemukan.',
-                        ]);
-                    }
-
-                    $this->assertItemRequestable(
-                        $item,
-                        'items',
-                    );
-                }
-
-                $previousStatus = $locked->status;
-                $locked->forceFill([
-                    'status' => InventoryRequestStatus::Submitted,
-                    'submitted_at' => now(),
-
-                    'rejection_reason' => null,
-                    'rejected_at' => null,
-                ])->save();
-                $this->recordStatus(
-                    $locked,
-                    $previousStatus,
-                    InventoryRequestStatus::Submitted,
-                    'Permintaan diajukan oleh pegawai.',
-                    $actor,
+                $this->assertItemRequestable(
+                    $item,
+                    'items',
                 );
-                $this->auditTransition(
-                    $locked,
-                    $previousStatus,
-                    InventoryRequestStatus::Submitted,
-                    'inventory_request_submitted',
-                    $actor,
-                    $httpRequest,
-                );
-                $this->appendSignature(
-                    $locked,
-                    $actor,
-                    DigitalSignaturePurpose::InventoryRequestSubmission,
-                    $signatureFile,
-                    $httpRequest,
-                );
+            }
 
-                return $this->loadRequest($locked);
-            }, 3);
-        } catch (Throwable $exception) {
-            Storage::disk($this->signatureDisk())->delete(
-                $signatureFile['path'],
+            $previousStatus = $locked->status;
+            $locked->forceFill([
+                'status' => InventoryRequestStatus::Submitted,
+                'submitted_at' => now(),
+                'rejection_reason' => null,
+                'rejected_at' => null,
+            ])->save();
+            $this->recordStatus(
+                $locked,
+                $previousStatus,
+                InventoryRequestStatus::Submitted,
+                'Permintaan diajukan oleh pegawai.',
+                $actor,
+            );
+            $this->auditTransition(
+                $locked,
+                $previousStatus,
+                InventoryRequestStatus::Submitted,
+                'inventory_request_submitted',
+                $actor,
+                $httpRequest,
             );
 
-            throw $exception;
-        }
+            return $this->loadRequest($locked);
+        }, 3);
     }
 
     public function startReview(

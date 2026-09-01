@@ -126,7 +126,7 @@
                         <tr>
                             <th>Prioritas & Permintaan</th>
                             <th>Pegawai</th>
-                            <th>Keperluan</th>
+                            <th>Barang</th>
                             <th>Kecukupan Stok</th>
                             <th>Tahap</th>
                             <th>Pemeriksa</th>
@@ -167,9 +167,6 @@
                                     </p>
                                 </td>
                                 <td class="max-w-72">
-                                    <p class="line-clamp-2 font-semibold leading-5 text-slate-800">
-                                        {{ $inventoryRequest->purpose }}
-                                    </p>
                                     <p class="mt-1 text-xs font-bold text-slate-600">
                                         {{ $inventoryRequest->items->count() }} jenis barang
                                     </p>
@@ -248,7 +245,7 @@
                                     · {{ $inventoryRequest->request_number }}
                                 </p>
                                 <h3 class="mt-1 line-clamp-2 font-black text-slate-950">
-                                    {{ $inventoryRequest->purpose }}
+                                    {{ $inventoryRequest->items->count() }} jenis barang
                                 </h3>
                                 <p class="mt-1 text-xs font-semibold text-slate-700">
                                     {{ $inventoryRequest->requester_name_snapshot }}

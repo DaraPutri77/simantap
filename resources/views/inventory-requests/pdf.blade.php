@@ -170,7 +170,7 @@
         }
 
         .signatures td {
-            width: 25%;
+            width: 33.333%;
             padding: 0 7px;
             text-align: center;
             vertical-align: top;
@@ -200,6 +200,13 @@
             color: #0f172a;
             font-size: 8pt;
             font-weight: bold;
+        }
+
+        .signature-guidance {
+            padding-top: 28px;
+            color: #64748b;
+            font-size: 7pt;
+            font-style: italic;
         }
 
         .footer {
@@ -301,14 +308,6 @@
             <td class="label">Jabatan</td>
             <td>{{ $inventoryRequest->requester?->position ?: '-' }}</td>
         </tr>
-        <tr>
-            <td class="label">Keperluan</td>
-            <td colspan="3">{{ $inventoryRequest->purpose }}</td>
-        </tr>
-        <tr>
-            <td class="label">Catatan</td>
-            <td colspan="3">{{ $inventoryRequest->notes ?: '-' }}</td>
-        </tr>
     </table>
 
     <h2 class="section-title">Daftar Barang</h2>
@@ -321,7 +320,6 @@
                 <th style="width: 54px;">Diminta</th>
                 <th style="width: 58px;">Disetujui</th>
                 <th style="width: 58px;">Diserahkan</th>
-                <th style="width: 100px;">Catatan</th>
             </tr>
         </thead>
         <tbody>
@@ -346,12 +344,6 @@
                             ? number_format((float) $line->delivered_quantity, 2, ',', '.')
                             : '-' }}
                     </td>
-                    <td>
-                        {{ $line->notes ?: '-' }}
-                        @if ($line->admin_notes)
-                            <br><span class="muted">Admin: {{ $line->admin_notes }}</span>
-                        @endif
-                    </td>
                 </tr>
             @endforeach
         </tbody>
@@ -369,21 +361,7 @@
     <table class="signatures">
         <tr>
             <td>
-                <div class="signature-label">Pemohon,</div>
-                <div class="signature-box">
-                    @if ($submissionSignature)
-                        <img src="{{ $submissionSignature }}" alt="Tanda tangan pemohon">
-                    @endif
-                </div>
-                <div class="signature-name">
-                    {{ $inventoryRequest->requester_name_snapshot }}
-                </div>
-                <div class="muted">
-                    {{ $inventoryRequest->employee_number_snapshot ?: 'Tanpa NIP' }}
-                </div>
-            </td>
-            <td>
-                <div class="signature-label">Disetujui / Pengelola Barang,</div>
+                <div class="signature-label">Pengelola Barang,</div>
                 <div class="signature-box">
                     @if ($approvalSignature)
                         <img src="{{ $approvalSignature }}" alt="Tanda tangan pemeriksa">
@@ -397,7 +375,7 @@
                 </div>
             </td>
             <td>
-                <div class="signature-label">Penerima,</div>
+                <div class="signature-label">Penerima Barang,</div>
                 <div class="signature-box">
                     @if ($receiptSignature)
                         <img src="{{ $receiptSignature }}" alt="Tanda tangan penerima">
@@ -422,7 +400,11 @@
                 <div class="signature-label">
                     Mengetahui / {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }},
                 </div>
-                <div class="signature-box"></div>
+                <div class="signature-box">
+                    <div class="signature-guidance">
+                        Tanda tangan basah (opsional)
+                    </div>
+                </div>
                 <div class="signature-name">
                     {{ $kasubbag['name'] ?? '................................' }}
                 </div>

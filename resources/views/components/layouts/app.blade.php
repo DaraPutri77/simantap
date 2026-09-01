@@ -9,9 +9,14 @@
     $isAdministrator = $currentUser->hasRole(
         \App\Enums\RoleName::Administrator->value,
     );
-    $roleLabel = $isAdministrator
-        ? \App\Enums\RoleName::Administrator->label()
-        : \App\Enums\RoleName::Employee->label();
+    $isEmployee = $currentUser->hasRole(
+        \App\Enums\RoleName::Employee->value,
+    );
+    $roleLabel = $isAdministrator && $isEmployee
+        ? 'Administrator / Pegawai'
+        : ($isAdministrator
+            ? \App\Enums\RoleName::Administrator->label()
+            : \App\Enums\RoleName::Employee->label());
     $displayNow = now()->timezone(
         config('simantap.display_timezone', 'Asia/Jakarta'),
     );

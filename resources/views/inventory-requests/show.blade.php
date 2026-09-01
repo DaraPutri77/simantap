@@ -129,18 +129,6 @@
                         </dd>
                     </div>
                 @endforeach
-                <div class="sm:col-span-2">
-                    <dt class="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">
-                        Keperluan
-                    </dt>
-                    <dd class="mt-1.5 whitespace-pre-line text-sm font-semibold leading-6 text-slate-800">{{ $inventoryRequest->purpose }}</dd>
-                </div>
-                <div class="sm:col-span-2">
-                    <dt class="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">
-                        Catatan Pegawai
-                    </dt>
-                    <dd class="mt-1.5 whitespace-pre-line text-sm font-semibold leading-6 text-slate-800">{{ $inventoryRequest->notes ?: 'Tidak ada catatan.' }}</dd>
-                </div>
             </dl>
         </article>
 
@@ -286,7 +274,7 @@
                 <div>
                     <h2 class="panel-title">Ajukan Permintaan</h2>
                     <p class="panel-subtitle">
-                        Periksa data, bubuhkan tanda tangan, lalu kirim.
+                        Periksa daftar barang, lalu kirim ke Pengelola Barang.
                     </p>
                 </div>
                 <a
@@ -299,21 +287,15 @@
             <form
                 method="POST"
                 action="{{ route('my.inventory-requests.submit', $inventoryRequest) }}"
-                class="space-y-5 p-5 sm:p-6"
-                data-signature-form
+                class="p-5 sm:p-6"
             >
                 @csrf
-                @include('inventory-requests.partials.signature-pad', [
-                    'padId' => 'submission',
-                    'consentName' => 'signature_consent',
-                    'consentText' => 'Saya menyatakan data permintaan ini benar dan tanda tangan dibubuhkan oleh saya.',
-                ])
                 <button
                     type="submit"
                     class="button-primary-inline w-full sm:w-auto"
                     data-submit-label="Mengajukan..."
                 >
-                    Tanda Tangan & Ajukan
+                    Ajukan Permintaan
                 </button>
             </form>
         </section>
@@ -756,9 +738,8 @@
             </div>
             <div class="space-y-4 p-5 sm:p-6">
                 @foreach ([
-                    ['label' => 'Pengajuan Pegawai', 'image' => $submissionSignature, 'signature' => $inventoryRequest->submissionSignature()],
-                    ['label' => 'Persetujuan Administrator', 'image' => $approvalSignature, 'signature' => $inventoryRequest->approvalSignature()],
-                    ['label' => 'Konfirmasi Penerimaan', 'image' => $receiptSignature, 'signature' => $inventoryRequest->receiptSignature()],
+                    ['label' => 'Pengelola Barang', 'image' => $approvalSignature, 'signature' => $inventoryRequest->approvalSignature()],
+                    ['label' => 'Penerima Barang', 'image' => $receiptSignature, 'signature' => $inventoryRequest->receiptSignature()],
                 ] as $signatureCard)
                     <div class="rounded-2xl border border-slate-300 bg-slate-50 p-4">
                         <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">

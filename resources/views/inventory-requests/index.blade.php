@@ -80,7 +80,7 @@
                     type="search"
                     value="{{ $filters['search'] }}"
                     class="form-input"
-                    placeholder="Nomor, pegawai, NIP, atau keperluan"
+                    placeholder="Nomor, nama pegawai, atau NIP"
                 >
             </div>
             <div>
@@ -146,7 +146,6 @@
                             @if ($canViewAll)
                                 <th>Pegawai</th>
                             @endif
-                            <th>Keperluan</th>
                             <th>Barang</th>
                             <th>Status</th>
                             <th class="text-right">Aksi</th>
@@ -175,11 +174,6 @@
                                         </p>
                                     </td>
                                 @endif
-                                <td class="max-w-80">
-                                    <p class="line-clamp-2 font-semibold leading-5 text-slate-800">
-                                        {{ $inventoryRequest->purpose }}
-                                    </p>
-                                </td>
                                 <td>
                                     <span class="font-black text-slate-950">
                                         {{ $inventoryRequest->items_count }}
@@ -214,7 +208,7 @@
                                     {{ $inventoryRequest->request_number }}
                                 </p>
                                 <h3 class="mt-1 line-clamp-2 font-black text-slate-950">
-                                    {{ $inventoryRequest->purpose }}
+                                    {{ $inventoryRequest->items_count }} jenis barang
                                 </h3>
                                 @if ($canViewAll)
                                     <p class="mt-1 text-xs font-semibold text-slate-600">

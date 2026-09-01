@@ -16,6 +16,8 @@ class InventoryRequest extends Model
     use HasFactory;
     use SoftDeletes;
 
+    public const DEFAULT_PURPOSE = 'Permintaan persediaan';
+
     protected $fillable = [
         'request_number',
         'requested_by',
