@@ -1,4 +1,9 @@
 @php
+    $isSelfService = request()->routeIs('my.*');
+    $canViewAll = $isSelfService ? false : ($canViewAll ?? false);
+    $canManage = $isSelfService ? false : ($canManage ?? false);
+@endphp
+@php
     $hasFilters = $filters['search'] !== ''
         || $filters['status'] !== ''
         || $filters['from'] !== ''
@@ -278,3 +283,4 @@
         @endif
     </section>
 </x-layouts.app>
+
