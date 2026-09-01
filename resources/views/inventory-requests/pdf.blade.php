@@ -190,10 +190,7 @@
             text-align: center;
         }
 
-        .signature-box img {
-            max-width: 145px;
-            max-height: 70px;
-        }
+        
 
         .signature-name {
             margin-top: 5px;
@@ -247,6 +244,7 @@
             font-size: 6pt;
             line-height: 1.25;
         }
+    .signature-box img { height: 75px; width: auto; max-width: 100%; margin: 0 auto; display: block; }
     </style>
 </head>
 <body>
@@ -420,4 +418,5 @@
     </div>
 </body>
 </html>
+
 
