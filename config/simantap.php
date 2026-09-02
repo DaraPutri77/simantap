@@ -85,6 +85,76 @@ return [
         'hash_algorithm' => 'sha256',
     ],
 
+    'production_database' => env(
+        'SIMANTAP_PRODUCTION_DATABASE',
+        'simantap',
+    ),
+
+    'demo' => [
+        'enabled' => filter_var(
+            env('SIMANTAP_DEMO_MODE', false),
+            FILTER_VALIDATE_BOOL,
+        ),
+        'database' => env(
+            'SIMANTAP_DEMO_DATABASE',
+            'simantapdemo',
+        ),
+        'accounts' => [
+            'administrator' => [
+                'employee_number' => env(
+                    'SIMANTAP_DEMO_ADMIN_EMPLOYEE_NUMBER',
+                    'DEMO-ADMIN-001',
+                ),
+                'name' => env(
+                    'SIMANTAP_DEMO_ADMIN_NAME',
+                    'Administrator Demo',
+                ),
+                'email' => env(
+                    'SIMANTAP_DEMO_ADMIN_EMAIL',
+                    '',
+                ),
+                'password' => env(
+                    'SIMANTAP_DEMO_ADMIN_PASSWORD',
+                    '',
+                ),
+                'work_unit' => env(
+                    'SIMANTAP_DEMO_ADMIN_WORK_UNIT',
+                    'BPS Kabupaten Jombang - Demo',
+                ),
+                'position' => env(
+                    'SIMANTAP_DEMO_ADMIN_POSITION',
+                    'Administrator Demo',
+                ),
+            ],
+            'employee' => [
+                'employee_number' => env(
+                    'SIMANTAP_DEMO_EMPLOYEE_EMPLOYEE_NUMBER',
+                    'DEMO-PEGAWAI-001',
+                ),
+                'name' => env(
+                    'SIMANTAP_DEMO_EMPLOYEE_NAME',
+                    'Pegawai Demo',
+                ),
+                'email' => env(
+                    'SIMANTAP_DEMO_EMPLOYEE_EMAIL',
+                    '',
+                ),
+                'password' => env(
+                    'SIMANTAP_DEMO_EMPLOYEE_PASSWORD',
+                    '',
+                ),
+                'work_unit' => env(
+                    'SIMANTAP_DEMO_EMPLOYEE_WORK_UNIT',
+                    'BPS Kabupaten Jombang - Demo',
+                ),
+                'position' => env(
+                    'SIMANTAP_DEMO_EMPLOYEE_POSITION',
+                    'Pegawai Demo',
+                ),
+            ],
+        ],
+    ],
+
     'admin' => [
         'employee_number' => env(
             'SIMANTAP_ADMIN_EMPLOYEE_NUMBER',
