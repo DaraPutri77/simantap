@@ -96,7 +96,7 @@
                                 'M4 6h16v12H4zM8 3h8v3H8zM8 10h3m2 0h3M8 14h3m2 0h3',
                             ],
                             [
-                                'Kendaraan',
+                                'Aset',
                                 'Jadwal terkendali',
                                 'M5 17h14M6 17l1-7h10l1 7M8 17v2m8-2v2M8 13h8M9 7h6',
                             ],

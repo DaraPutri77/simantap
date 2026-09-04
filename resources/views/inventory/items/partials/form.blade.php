@@ -40,6 +40,28 @@
         @enderror
     </div>
 
+    @role('Administrator')
+    <div>
+        <label for="harga" class="form-label">
+            Harga Barang (Rp)
+            <span class="font-medium text-slate-500">(khusus Admin)</span>
+        </label>
+        <input
+            id="harga"
+            name="harga"
+            type="number"
+            value="{{ old('harga', $managedItem?->harga) }}"
+            class="form-input @error('harga') form-input-error @enderror"
+            min="0"
+            step="0.01"
+            placeholder="Contoh: 50000"
+        >
+        @error('harga')
+            <p class="form-error">{{ $message }}</p>
+        @enderror
+    </div>
+    @endrole
+
     <div>
         <label for="category_id" class="form-label">Kategori</label>
         <select

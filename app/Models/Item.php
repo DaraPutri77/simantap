@@ -20,6 +20,7 @@ class Item extends Model
         'category_id',
         'unit_id',
         'name',
+        'harga', // Telah ditambahkan
         'description',
         'current_stock',
         'reserved_stock',
@@ -37,6 +38,7 @@ class Item extends Model
     protected function casts(): array
     {
         return [
+            'harga' => 'decimal:2', // Telah ditambahkan
             'current_stock' => 'decimal:2',
             'reserved_stock' => 'decimal:2',
             'minimum_stock' => 'decimal:2',
