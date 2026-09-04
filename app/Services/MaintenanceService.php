@@ -102,6 +102,7 @@ class MaintenanceService
                     'maintenance_type' => $data['maintenance_type'],
                     'complaint' => $data['complaint'],
                     'initial_condition' => $data['initial_condition'],
+                    'cost' => $data['cost'] ?? null,
                     'reported_date' => $data['reported_date'],
                     'status' => MaintenanceStatus::Reported,
                 ]);
@@ -201,6 +202,7 @@ class MaintenanceService
                     'maintenance_type' => $data['maintenance_type'],
                     'complaint' => $data['complaint'],
                     'initial_condition' => $data['initial_condition'],
+                    'cost' => $data['cost'] ?? null,
                     'reported_date' => $data['reported_date'],
                     'status' => MaintenanceStatus::Reported,
                 ]);

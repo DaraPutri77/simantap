@@ -180,7 +180,7 @@
             </div>
 
             <div class="lg:col-span-2">
-                <label for="complaint" class="form-label">Keluhan / Kerusakan</label>
+                <label for="complaint" class="form-label">Jenis / Uraian</label>
                 <textarea
                     id="complaint"
                     name="complaint"
@@ -192,7 +192,7 @@
             </div>
 
             <div class="lg:col-span-2">
-                <label for="initial_condition" class="form-label">Kondisi Awal</label>
+                <label for="initial_condition" class="form-label">Pelaksana / Penyedia</label>
                 <textarea
                     id="initial_condition"
                     name="initial_condition"
@@ -203,21 +203,22 @@
                 @error('initial_condition')<p class="form-error">{{ $message }}</p>@enderror
             </div>
 
-            <div>
-                <label for="photo_before" class="form-label">Foto Sebelum Pemeliharaan</label>
-                <input
-                    id="photo_before"
-                    name="photo_before"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    class="form-input py-2"
-                    required
+            <div class="lg:col-span-2">
+                <label for="cost" class="form-label">Biaya (Rp) <span class="font-medium text-slate-500">(Opsional)</span></label>
+                <input 
+                    type="number" 
+                    id="cost" 
+                    name="cost" 
+                    class="form-input" 
+                    value="{{ old('cost') }}" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="Contoh: 150000"
                 >
-                <p class="mt-1 text-xs font-semibold text-slate-500">JPG, PNG, atau WebP. Maksimal 5 MB.</p>
-                @error('photo_before')<p class="form-error">{{ $message }}</p>@enderror
+                @error('cost')<p class="form-error">{{ $message }}</p>@enderror
             </div>
 
-            <div>
+            <div class="lg:col-span-2">
                 <label for="supporting_document" class="form-label">Dokumen Pendukung</label>
                 <input
                     id="supporting_document"

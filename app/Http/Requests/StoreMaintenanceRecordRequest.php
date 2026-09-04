@@ -56,10 +56,12 @@ class StoreMaintenanceRecordRequest extends FormRequest
             ],
             'maintenance_type' => ['required', 'string', 'max:100'],
             'complaint' => ['required', 'string', 'max:5000'],
-            'initial_condition' => ['required', 'string', 'max:5000'],
+            // Menjaga initial_condition (wajib) karena struktur DB, namun label di UI adalah "Pelaksana/Penyedia"
+            'initial_condition' => ['required', 'string', 'max:5000'], 
+            'cost' => ['nullable', 'numeric', 'min:0'], // Tambahan untuk biaya
             'reported_date' => ['required', 'date'],
             'photo_before' => [
-                'required',
+                'nullable', // Mengubah menjadi opsional (tidak wajib)
                 'file',
                 'mimetypes:image/jpeg,image/png,image/webp',
                 "max:{$maxSize}",
@@ -84,8 +86,9 @@ class StoreMaintenanceRecordRequest extends FormRequest
             'operational_asset_public_id' => 'aset perangkat',
             'source_vehicle_loan_public_id' => 'sumber masalah pengembalian',
             'maintenance_type' => 'jenis pemeliharaan',
-            'complaint' => 'keluhan atau kerusakan',
-            'initial_condition' => 'kondisi awal',
+            'complaint' => 'jenis / uraian', // Ubah nama atribut untuk pesan error
+            'initial_condition' => 'pelaksana / penyedia', // Ubah nama atribut untuk pesan error
+            'cost' => 'biaya pemeliharaan', // Tambahan atribut biaya
             'reported_date' => 'tanggal laporan',
             'photo_before' => 'foto sebelum pemeliharaan',
             'supporting_document' => 'dokumen pendukung',
