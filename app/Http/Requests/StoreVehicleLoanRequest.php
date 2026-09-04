@@ -41,6 +41,8 @@ class StoreVehicleLoanRequest extends FormRequest
             'purpose' => ['required', 'string', 'min:10', 'max:2000'],
             'destination' => ['required', 'string', 'min:3', 'max:255'],
             'reason' => ['nullable', 'string', 'max:2000'],
+            // Menambahkan validasi foto agar hanya menerima gambar (opsional)
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }
@@ -113,6 +115,7 @@ class StoreVehicleLoanRequest extends FormRequest
             'purpose' => 'keperluan',
             'destination' => 'tujuan perjalanan',
             'reason' => 'keterangan pendukung',
+            'foto' => 'foto peminjaman', // Nama atribut untuk pesan error
             'notes' => 'catatan',
         ];
     }

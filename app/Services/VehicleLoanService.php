@@ -51,6 +51,12 @@ class VehicleLoanService
                 $end,
             );
 
+            // TANGKAP DAN SIMPAN FOTO
+            $fotoPath = null;
+            if ($httpRequest !== null && $httpRequest->hasFile('foto')) {
+                $fotoPath = $httpRequest->file('foto')->store('peminjaman-kendaraan', 'public');
+            }
+
             $vehicleLoan = VehicleLoan::query()->create([
                 'loan_number' => $this->documentNumberService->next(
                     DocumentType::VehicleLoan,
@@ -67,6 +73,7 @@ class VehicleLoanService
                 'purpose' => $data['purpose'],
                 'destination' => $data['destination'],
                 'reason' => $data['reason'] ?? null,
+                'foto' => $fotoPath, // SIMPAN PATH FOTO KE DATABASE
                 'phone_snapshot' => $actor->phone,
                 'planned_start_at' => $start,
                 'planned_end_at' => $end,
@@ -131,6 +138,16 @@ class VehicleLoanService
                 $end,
                 $locked,
             );
+
+            // LOGIKA UPDATE FOTO (MENGHAPUS FOTO LAMA JIKA ADA YANG BARU)
+            $fotoPath = $locked->foto;
+            if ($httpRequest !== null && $httpRequest->hasFile('foto')) {
+                if ($fotoPath) {
+                    Storage::disk('public')->delete($fotoPath);
+                }
+                $fotoPath = $httpRequest->file('foto')->store('peminjaman-kendaraan', 'public');
+            }
+
             $oldValues = [
                 ...$locked->only([
                     'vehicle_id',
@@ -155,6 +172,7 @@ class VehicleLoanService
                 'purpose' => $data['purpose'],
                 'destination' => $data['destination'],
                 'reason' => $data['reason'] ?? null,
+                'foto' => $fotoPath, // UPDATE KOLOM FOTO
                 'phone_snapshot' => $actor->phone,
                 'planned_start_at' => $start,
                 'planned_end_at' => $end,

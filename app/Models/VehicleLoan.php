@@ -31,6 +31,7 @@ class VehicleLoan extends Model
         'purpose',
         'destination',
         'reason',
+        'foto', // Kolom foto ditambahkan di sini
         'phone_snapshot',
         'planned_start_at',
         'planned_end_at',
