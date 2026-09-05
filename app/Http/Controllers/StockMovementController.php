@@ -517,6 +517,178 @@ class StockMovementController extends Controller
         );
     }
 
+    // PENAMBAHAN FUNGSI DOWNLOAD PDF
+    public function downloadPdf(Request $request): Response
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:255'],
+            'item' => ['nullable', 'integer'],
+            'type' => [
+                'nullable',
+                'in:'.implode(',', StockMovementType::values()),
+            ],
+            'direction' => ['nullable', 'in:inbound,outbound'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'until' => [
+                'nullable',
+                'date_format:Y-m-d',
+                Rule::when(
+                    $request->filled('from'),
+                    'after_or_equal:from',
+                ),
+            ],
+        ]);
+
+        $search = trim((string) ($validated['q'] ?? ''));
+        $itemId = (int) ($validated['item'] ?? 0);
+        $type = (string) ($validated['type'] ?? '');
+        $direction = (string) ($validated['direction'] ?? '');
+        $from = (string) ($validated['from'] ?? '');
+        $until = (string) ($validated['until'] ?? '');
+        $bounds = DisplayDateRange::utcBounds($from, $until);
+
+        $movements = StockMovement::query()
+            ->with([
+                'item' => static function (BelongsTo $itemQuery): void {
+                    $itemQuery
+                        ->withTrashed()
+                        ->with(['category', 'unit']);
+                },
+                'creator' => static function (BelongsTo $creatorQuery): void {
+                    $creatorQuery
+                        ->withTrashed()
+                        ->select(['id', 'name', 'employee_number']);
+                },
+            ])
+            ->when(
+                $search !== '',
+                static function (
+                    Builder $movementQuery,
+                ) use ($search): void {
+                    $movementQuery->where(function (
+                        Builder $nested,
+                    ) use ($search): void {
+                        $nested
+                            ->where(
+                                'transaction_number',
+                                'like',
+                                "%{$search}%",
+                            )
+                            ->orWhere(
+                                'description',
+                                'like',
+                                "%{$search}%",
+                            )
+                            ->orWhere(
+                                'reference_number',
+                                'like',
+                                "%{$search}%",
+                            )
+                            ->orWhereHas(
+                                'item',
+                                static fn (Builder $itemQuery): Builder => $itemQuery
+                                    ->where(function (
+                                        Builder $itemSearch,
+                                    ) use ($search): void {
+                                        $itemSearch
+                                            ->where(
+                                                'name',
+                                                'like',
+                                                "%{$search}%",
+                                            )
+                                            ->orWhere(
+                                                'item_code',
+                                                'like',
+                                                "%{$search}%",
+                                            );
+                                    }),
+                            )
+                            ->orWhereHas(
+                                'creator',
+                                static fn (Builder $creatorQuery): Builder => $creatorQuery
+                                    ->withTrashed()
+                                    ->where('name', 'like', "%{$search}%"),
+                            );
+                    });
+                },
+            )
+            ->when(
+                $itemId > 0,
+                static fn (Builder $movementQuery): Builder => $movementQuery
+                    ->where('item_id', $itemId),
+            )
+            ->when(
+                $type !== '',
+                static fn (Builder $movementQuery): Builder => $movementQuery
+                    ->where('movement_type', $type),
+            )
+            ->when(
+                $direction === 'inbound',
+                static fn (Builder $movementQuery): Builder => $movementQuery
+                    ->where('quantity_in', '>', 0),
+            )
+            ->when(
+                $direction === 'outbound',
+                static fn (Builder $movementQuery): Builder => $movementQuery
+                    ->where('quantity_out', '>', 0),
+            )
+            ->when(
+                $bounds['from'] !== null,
+                static fn (Builder $movementQuery): Builder => $movementQuery
+                    ->where('transaction_date', '>=', $bounds['from']),
+            )
+            ->when(
+                $bounds['until'] !== null,
+                static fn (Builder $movementQuery): Builder => $movementQuery
+                    ->where('transaction_date', '<=', $bounds['until']),
+            )
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get();
+
+        $selectedItem = $itemId > 0
+            ? Item::query()
+                ->withTrashed()
+                ->with(['category', 'unit'])
+                ->find($itemId)
+            : null;
+
+        $displayTimezone = (string) config(
+            'simantap.display_timezone',
+            'Asia/Jakarta',
+        );
+        
+        $periodLabel = $this->periodLabel(
+            $from,
+            $until,
+            $displayTimezone,
+        );
+
+        // Render to PDF using card-pdf view template
+        // We reuse the existing stockCardData format so the blade template works
+        $data = [
+            'item' => $selectedItem,
+            'movements' => $movements,
+            'from' => $from,
+            'until' => $until,
+            'periodLabel' => $periodLabel,
+            'displayTimezone' => $displayTimezone,
+            'generatedAt' => CarbonImmutable::now($displayTimezone),
+            'totalIn' => (float) $movements->sum('quantity_in'),
+            'totalOut' => (float) $movements->sum('quantity_out'),
+            'openingBalance' => 0,
+            'closingBalance' => 0,
+            'balanceConsistent' => true,
+        ];
+
+        return Pdf::loadView(
+            'inventory.stock.card-pdf',
+            $data,
+        )
+            ->setPaper('a4', 'landscape')
+            ->download('kartu-stok-ledger-'.CarbonImmutable::now($displayTimezone)->format('Ymd-His').'.pdf');
+    }
+
     public function card(Request $request, Item $item): View
     {
         return view(

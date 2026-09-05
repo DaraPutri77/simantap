@@ -284,6 +284,13 @@ class ItemController extends Controller
         );
     }
 
+    // PENAMBAHAN FUNGSI HAPUS BARANG
+    public function destroy(Item $item): RedirectResponse
+    {
+        $item->delete();
+        return redirect()->route('items.index')->with('status', 'Barang berhasil dihapus permanen.');
+    }
+
     /**
      * @return array{
      *     categories: Collection<int, ItemCategory>,

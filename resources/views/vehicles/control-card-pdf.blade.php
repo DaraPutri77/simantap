@@ -108,6 +108,8 @@
             padding: 0.35mm 0;
             line-height: 1.15;
             vertical-align: top;
+            word-wrap: break-word; /* Mencegah teks meluber */
+            overflow-wrap: break-word; /* Mencegah teks meluber */
         }
 
         .identity-label {
@@ -136,6 +138,8 @@
         .history td {
             border: 0.25mm solid #000;
             vertical-align: middle;
+            word-wrap: break-word; /* Mencegah teks panjang merusak tabel */
+            overflow-wrap: break-word;
         }
 
         .history th {
@@ -197,6 +201,7 @@
             padding: 0 2mm;
             text-align: center;
             vertical-align: top;
+            word-wrap: break-word;
         }
 
         .role {

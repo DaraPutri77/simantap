@@ -40,7 +40,7 @@
         @enderror
     </div>
 
-    @role('Administrator')
+    @if(auth()->user()->can('item.manage'))
     <div>
         <label for="harga" class="form-label">
             Harga Barang (Rp)
@@ -60,7 +60,7 @@
             <p class="form-error">{{ $message }}</p>
         @enderror
     </div>
-    @endrole
+    @endif
 
     <div>
         <label for="category_id" class="form-label">Kategori</label>

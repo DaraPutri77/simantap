@@ -57,19 +57,36 @@
                 <p class="panel-subtitle">{{ $movements->total() }} catatan ditemukan</p>
             </div>
 
-            <a
-                href="{{ route('stock.excel', [
-                    'q' => $filters['search'] ?: null,
-                    'item' => $filters['itemId'] ?: null,
-                    'type' => $filters['type'] ?: null,
-                    'direction' => $filters['direction'] ?: null,
-                    'from' => $filters['from'] ?: null,
-                    'until' => $filters['until'] ?: null,
-                ]) }}"
-                class="button-primary-inline"
-            >
-                Unduh Excel Sesuai Filter
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a
+                    href="{{ route('stock.excel', [
+                        'q' => $filters['search'] ?: null,
+                        'item' => $filters['itemId'] ?: null,
+                        'type' => $filters['type'] ?: null,
+                        'direction' => $filters['direction'] ?: null,
+                        'from' => $filters['from'] ?: null,
+                        'until' => $filters['until'] ?: null,
+                    ]) }}"
+                    class="button-primary-inline"
+                >
+                    Unduh Excel Sesuai Filter
+                </a>
+
+                <!-- Penambahan tombol PDF sesuai format export yang ada -->
+                <a
+                    href="{{ route('stock.pdf', [
+                        'q' => $filters['search'] ?: null,
+                        'item' => $filters['itemId'] ?: null,
+                        'type' => $filters['type'] ?: null,
+                        'direction' => $filters['direction'] ?: null,
+                        'from' => $filters['from'] ?: null,
+                        'until' => $filters['until'] ?: null,
+                    ]) }}"
+                    class="button-secondary-dark !text-red-600 !border-red-200 hover:!bg-red-50"
+                >
+                    Unduh PDF Sesuai Filter
+                </a>
+            </div>
         </div>
 
         <form
@@ -375,7 +392,7 @@
                                             : $movement->quantity_out),
                                         2,
                                         ',',
-                                        '.',
+                                        ',',
                                     ) }}
                                 </p>
                             </div>

@@ -201,6 +201,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     [ItemController::class, 'activate'],
                 )->name('items.activate');
 
+                // Route Hapus Barang
+                Route::delete(
+                    '/barang/{item}',
+                    [ItemController::class, 'destroy'],
+                )->name('items.destroy');
+
                 Route::get(
                     '/kategori',
                     [ItemCategoryController::class, 'index'],
@@ -256,6 +262,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     '/kartu-stok/excel',
                     [StockMovementController::class, 'downloadExcel'],
                 )->name('stock.excel');
+                // PENAMBAHAN ROUTE STOCK PDF
+                Route::get(
+                    '/kartu-stok/pdf',
+                    [StockMovementController::class, 'downloadPdf'],
+                )->name('stock.pdf');
+
                 Route::get(
                     '/kartu-stok/barang/{item}',
                     [StockMovementController::class, 'card'],
@@ -628,6 +640,13 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     '/{vehicle}/aktifkan',
                     [VehicleController::class, 'activate'],
                 )->name('vehicles.activate');
+
+                // Route Hapus Kendaraan Permanen
+                Route::delete(
+                    '/{vehicle}',
+                    [VehicleController::class, 'destroy'],
+                )->name('vehicles.destroy');
+
                 Route::get(
                     '/{vehicle}/kartu-kendali',
                     [VehicleController::class, 'downloadControlCard'],

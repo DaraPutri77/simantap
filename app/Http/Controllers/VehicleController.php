@@ -289,6 +289,7 @@ class VehicleController extends Controller
             );
         $data['documentSignatories'] = $documentSignatories;
 
+        // PERUBAHAN: Menjadikan orientasi kertas menjadi landscape
         $pdf = Pdf::loadView(
             'vehicles.control-card-pdf',
             $data,
@@ -377,6 +378,13 @@ class VehicleController extends Controller
             'status',
             'Kendaraan berhasil diaktifkan dan berstatus Tersedia.',
         );
+    }
+
+    // PENAMBAHAN: Fungsi Hapus Permanen Kendaraan
+    public function destroy(Vehicle $vehicle): RedirectResponse
+    {
+        $vehicle->delete();
+        return redirect()->route('vehicles.index')->with('status', 'Kendaraan berhasil dihapus permanen.');
     }
 
     /**
