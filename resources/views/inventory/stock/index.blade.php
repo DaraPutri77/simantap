@@ -258,15 +258,19 @@
                                     </p>
                                 </td>
                                 <td>
-                                    <a
-                                        href="{{ route('items.show', $movement->item) }}"
-                                        class="font-extrabold text-slate-900 hover:text-sky-700"
-                                    >
-                                        {{ $movement->item->name }}
-                                    </a>
-                                    <p class="mt-1 text-xs text-slate-500">
-                                        {{ $movement->item->item_code }}
-                                    </p>
+                                    @if($movement->item)
+                                        <a
+                                            href="{{ route('items.show', $movement->item) }}"
+                                            class="font-extrabold text-slate-900 hover:text-sky-700"
+                                        >
+                                            {{ $movement->item->name }}
+                                        </a>
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            {{ $movement->item->item_code }}
+                                        </p>
+                                    @else
+                                        <span class="font-extrabold text-slate-500">Barang Dihapus</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @php
@@ -302,7 +306,7 @@
                                 </td>
                                 <td class="font-black text-slate-950">
                                     {{ number_format((float) $movement->stock_after, 2, ',', '.') }}
-                                    {{ $movement->item->unit->symbol }}
+                                    {{ $movement->item?->unit?->symbol ?? '' }}
                                 </td>
                                 <td>
                                     <p class="font-extrabold text-slate-900">
@@ -345,7 +349,7 @@
                                     {{ $movement->transaction_number }}
                                 </p>
                                 <h3 class="mt-1 truncate font-black text-slate-950">
-                                    {{ $movement->item->name }}
+                                    {{ $movement->item?->name ?? 'Barang Dihapus' }}
                                 </h3>
                                 <p class="mt-1 text-xs text-slate-500">
                                     {{ $movement->transaction_date->copy()->timezone($displayTimezone)->translatedFormat('d M Y, H:i') }}
