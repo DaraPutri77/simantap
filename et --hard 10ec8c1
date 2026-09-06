@@ -1,0 +1,72 @@
+[33m1997421[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: Branch: renamed refs/heads/branch-baru to refs/heads/main
+[33m1997421[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2}: commit (initial): chore: initial commit simantap
+[33m10ec8c1[m[33m ([m[1;31morigin/feature/fondasi-aplikasi[m[33m, [m[1;32mfeature/fondasi-aplikasi[m[33m)[m HEAD@{3}: merge feature/fondasi-aplikasi: Fast-forward
+[33m09e4940[m HEAD@{4}: checkout: moving from feature/fondasi-aplikasi to main
+[33m10ec8c1[m[33m ([m[1;31morigin/feature/fondasi-aplikasi[m[33m, [m[1;32mfeature/fondasi-aplikasi[m[33m)[m HEAD@{5}: commit: fix: menampilkan tombol unduh pdf filter kartu stok dan build asset terbaru
+[33m2b1f3c0[m HEAD@{6}: commit: fix: menangani error 500 saat data barang kosong atau terhapus di kartu stok
+[33mba0d0f0[m HEAD@{7}: commit: fix: mempertebal margin kertas dan perbaikan layout tabel PDF kartu kendali
+[33m6dcba25[m HEAD@{8}: commit: fix: memperbaiki error PDF kartu stok dengan membuat view ledger khusus
+[33m35d6593[m HEAD@{9}: commit: fix: perbaikan form harga, layout PDF kartu kendali, dan fitur cetak PDF kartu stok
+[33mb2c8c2a[m HEAD@{10}: commit: feat: update form pemeliharaan dan penambahan upload foto peminjaman kendaraan
+[33m91e0a43[m HEAD@{11}: commit: fix: penyelesaian seluruh revisi UI, penambahan fitur harga, hapus, dan upload foto
+[33mc1b8ed3[m HEAD@{12}: commit: fix: penyelesaian seluruh revisi dari UI, penambahan harga, fitur hapus, hingga form pemeliharaan
+[33m06a93ae[m HEAD@{13}: commit: feat: finalisasi tampilan SIMANTAP sebelum hosting
+[33m2fd8507[m HEAD@{14}: commit: refactor: finalize interface before hosting
+[33mc2320ca[m HEAD@{15}: commit: fix: tambahkan menu kendaraan tersedia dan perbaiki layout peminjaman ganda
+[33m8ceb75d[m HEAD@{16}: commit: style: perbesar ukuran render tanda tangan digital pada dokumen pdf
+[33m042bd87[m HEAD@{17}: commit: fix: hapus teks placeholder dari kotak tanda tangan basah kasubbag pada pdf
+[33m1be1178[m HEAD@{18}: commit: feat: revisi final form persediaan, penyesuaian PDF, dan role ganda admin
+[33me6ecd2e[m HEAD@{19}: commit: chore: add guarded go-live UAT cleanup
+[33m12fa9ab[m HEAD@{20}: commit: chore: restore repository quality gates
+[33m0884774[m HEAD@{21}: commit: feat: finalize vehicle loan return integration
+[33m7c77d8a[m HEAD@{22}: commit: finalize maintenance pdf report layout and signatory section
+[33m8aae2e2[m HEAD@{23}: commit: fix maintenance pdf layout
+[33m8d0ccc5[m HEAD@{24}: pull --ff-only origin feature/fondasi-aplikasi: Fast-forward
+[33md5b7727[m HEAD@{25}: checkout: moving from fix/nanoid-cve-2026-67213 to feature/fondasi-aplikasi
+[33m2446e65[m[33m ([m[1;31morigin/fix/nanoid-cve-2026-67213[m[33m, [m[1;32mfix/nanoid-cve-2026-67213[m[33m)[m HEAD@{26}: commit: fix: update nanoid to patched version
+[33md5b7727[m HEAD@{27}: checkout: moving from feature/fondasi-aplikasi to fix/nanoid-cve-2026-67213
+[33md5b7727[m HEAD@{28}: pull --ff-only origin feature/fondasi-aplikasi: Fast-forward
+[33m21ea7f2[m HEAD@{29}: checkout: moving from review/target-5-final-20260828 to feature/fondasi-aplikasi
+[33m3709011[m[33m ([m[1;31morigin/feature/target-4-5-final-20260828[m[33m, [m[1;31mfinal/target-5-document-signatures[m[33m, [m[1;32mreview/target-5-final-20260828[m[33m)[m HEAD@{30}: checkout: moving from feature/fondasi-aplikasi to review/target-5-final-20260828
+[33m21ea7f2[m HEAD@{31}: commit: feat: complete vehicle handover evidence workflow
+[33meb8a3a4[m HEAD@{32}: commit: feat: finalize operational workflows and document coverage
+[33m59d3349[m HEAD@{33}: commit: fix: harden private attachment access
+[33m75c53d8[m HEAD@{34}: commit: feat: add document verification qr
+[33mcfd40c0[m HEAD@{35}: commit: feat: add vehicle control card document
+[33m9050b22[m HEAD@{36}: commit: feat: formalize vehicle operational documents
+[33m3fb4d51[m HEAD@{37}: commit: feat: enforce append-only digital signature history
+[33m20ebc26[m HEAD@{38}: commit: feat: harden accountable vehicle approval signatures
+[33m94db48a[m HEAD@{39}: commit: feat: add authentication security alerts
+[33mc981a8a[m HEAD@{40}: commit: feat: finalize BPS Jombang branding and responsive UI
+[33mbb51c30[m HEAD@{41}: commit: feat: add qr code identity labels
+[33m73b54cc[m HEAD@{42}: commit: feat: add excel report exports
+[33m9861611[m HEAD@{43}: commit: feat: add pdf reporting center
+[33ma9ee033[m HEAD@{44}: commit: feat: add audit log workspace
+[33m23bbedc[m HEAD@{45}: commit: feat: add operational notifications
+[33m09bfb3e[m HEAD@{46}: commit: feat: add vehicle maintenance workflow
+[33mb160291[m HEAD@{47}: commit: feat: add vehicle return workflow
+[33m5d325cf[m HEAD@{48}: commit: feat: add vehicle loan workflow
+[33m2d68d5f[m HEAD@{49}: commit: feat: add operational vehicle management
+[33m05dbc56[m HEAD@{50}: commit: feat: enhance stock movement audit workspace
+[33maee2c7e[m HEAD@{51}: commit: fix: standardize application display time to WIB
+[33m6c0fdca[m HEAD@{52}: commit: feat: add inventory request approval workspace
+[33mb9cb58d[m HEAD@{53}: commit: feat: complete inventory and item request workflows
+[33ma463229[m HEAD@{54}: commit: feat: complete dashboard profile and user management
+[33m55f910c[m HEAD@{55}: commit: feat: implement authentication and account activation
+[33m5615783[m HEAD@{56}: commit: feat: add final application seeders
+[33me6ec95f[m HEAD@{57}: commit: feat: add supporting system models and services
+[33mde36f1c[m HEAD@{58}: commit: feat: add vehicle loan and maintenance models
+[33m38abef4[m HEAD@{59}: commit: feat: add inventory transaction models
+[33m557427b[m HEAD@{60}: commit: feat: add domain status enums and foundation models
+[33m4a93792[m HEAD@{61}: commit: feat: add digital evidence and support migrations
+[33mb4def6c[m HEAD@{62}: commit: feat: add vehicle maintenance migration
+[33mbc95dd9[m HEAD@{63}: commit: feat: add vehicle loan and condition migrations
+[33m2abd2a0[m HEAD@{64}: commit: feat: add inventory request and stock ledger migrations
+[33m095c6c9[m HEAD@{65}: commit: feat: add inventory master and stock intake migrations
+[33m021dfff[m HEAD@{66}: commit: feat: add account and permission migrations
+[33m514e43d[m HEAD@{67}: commit: docs: finalize SIMANTAP database design
+[33md255b23[m HEAD@{68}: commit: chore: configure SIMANTAP application
+[33m903901c[m HEAD@{69}: commit: chore: install role permission and PDF dependencies
+[33m6765a29[m HEAD@{70}: commit: docs: define SIMANTAP application foundation
+[33m09e4940[m HEAD@{71}: checkout: moving from main to feature/fondasi-aplikasi
+[33m09e4940[m HEAD@{72}: commit (initial): chore: initialize SIMANTAP with Laravel 13

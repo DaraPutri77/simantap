@@ -19,14 +19,16 @@
             </p>
         </div>
 
-        @if ($canManage)
-            <a
-                href="{{ route('items.create') }}"
-                class="button-primary-inline"
-            >
-                Tambah Barang
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{{ route('items.export.pdf') }}" class="button-secondary-dark">
+                Unduh Daftar (PDF)
             </a>
-        @endif
+            @if ($canManage)
+                <a href="{{ route('items.create') }}" class="button-primary-inline">
+                    Tambah Barang
+                </a>
+            @endif
+        </div>
     </section>
 
     <section class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

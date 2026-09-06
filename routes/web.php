@@ -170,6 +170,11 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                         '/barang',
                         [ItemController::class, 'index'],
                     )->name('items.index');
+                    // RUTE PDF BARU ADA DI SINI
+                    Route::get(
+                        '/barang/export/pdf', 
+                        [ItemController::class, 'exportPdf']
+                    )->name('items.export.pdf');
                 });
 
             Route::middleware([
