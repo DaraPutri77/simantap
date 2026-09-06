@@ -72,7 +72,6 @@
                     Unduh Excel Sesuai Filter
                 </a>
 
-                <!-- Penambahan tombol PDF sesuai format export yang ada -->
                 <a
                     href="{{ route('stock.pdf', [
                         'q' => $filters['search'] ?: null,
@@ -392,7 +391,7 @@
                                             : $movement->quantity_out),
                                         2,
                                         ',',
-                                        ',',
+                                        '.',
                                     ) }}
                                 </p>
                             </div>

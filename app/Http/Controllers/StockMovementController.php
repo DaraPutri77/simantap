@@ -664,8 +664,6 @@ class StockMovementController extends Controller
             $displayTimezone,
         );
 
-        // Render to PDF using card-pdf view template
-        // We reuse the existing stockCardData format so the blade template works
         $data = [
             'item' => $selectedItem,
             'movements' => $movements,
@@ -679,10 +677,15 @@ class StockMovementController extends Controller
             'openingBalance' => 0,
             'closingBalance' => 0,
             'balanceConsistent' => true,
+            'filters' => [
+                'search' => $search,
+                'direction' => $direction
+            ]
         ];
 
+        // UBAH: MENGGUNAKAN VIEW KHUSUS LEDGER
         return Pdf::loadView(
-            'inventory.stock.card-pdf',
+            'inventory.stock.ledger-pdf',
             $data,
         )
             ->setPaper('a4', 'landscape')
