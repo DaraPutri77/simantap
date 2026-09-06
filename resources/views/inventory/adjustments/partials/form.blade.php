@@ -35,7 +35,34 @@
 
 <div class="grid gap-6 md:grid-cols-2">
     <div>
-        <label for="adjustment_date" class="form-label">Tanggal Pemeriksaan</label>
+        <label for="adjustment_number" class="form-label">
+            Nomor Dokumen Penyesuaian
+            <span class="font-medium text-slate-500">(Bisa Custom)</span>
+        </label>
+        <input
+            id="adjustment_number"
+            name="adjustment_number"
+            type="text"
+            value="{{ old('adjustment_number', $managedAdjustment?->adjustment_number) }}"
+            class="form-input @error('adjustment_number') form-input-error @enderror"
+            maxlength="80"
+            placeholder="Contoh: SO/001/01/2026"
+            autocomplete="off"
+        >
+        @error('adjustment_number')
+            <p class="form-error">{{ $message }}</p>
+        @enderror
+        <p class="mt-2 text-[11px] font-medium leading-5 text-sky-700 bg-sky-50 p-2 rounded-lg border border-sky-100">
+            <strong>Untuk Input Arsip Lama:</strong> Ketik nomor dokumen fisik secara manual di sini. 
+            Jika dikosongkan, sistem akan membuatkan nomor otomatis.
+        </p>
+    </div>
+
+    <div>
+        <label for="adjustment_date" class="form-label">
+            Tanggal Pemeriksaan
+            <span class="font-medium text-slate-500">(Bisa Dimundurkan)</span>
+        </label>
         <input
             id="adjustment_date"
             name="adjustment_date"
@@ -47,17 +74,20 @@
         @error('adjustment_date')
             <p class="form-error">{{ $message }}</p>
         @enderror
+        <p class="mt-2 text-[11px] font-medium leading-5 text-slate-500">
+            Klik ikon kalender untuk memundurkan tanggal (Backdate) ke bulan Januari atau bulan lainnya.
+        </p>
     </div>
 
-    <div>
+    <div class="md:col-span-2">
         <label for="reason" class="form-label">Alasan Penyesuaian</label>
         <textarea
             id="reason"
             name="reason"
-            rows="3"
-            class="form-input py-4 @error('reason') form-input-error @enderror"
+            rows="2"
+            class="form-input py-3 @error('reason') form-input-error @enderror"
             maxlength="3000"
-            placeholder="Contoh: Hasil stock opname bulanan"
+            placeholder="Contoh: Hasil stock opname bulanan / Sinkronisasi data historis Januari"
             required
         >{{ old('reason', $managedAdjustment?->reason) }}</textarea>
         @error('reason')
@@ -275,7 +305,7 @@
     </template>
 </section>
 
-<div class="alert-warning">
+<div class="alert-warning mt-4">
     Sistem menyimpan stok saat draft dibuat. Jika stok berubah sebelum posting,
     draft wajib diperbarui agar hasil stock opname tetap akurat.
 </div>
