@@ -33,6 +33,12 @@
             'visible' => $canManageStock,
         ],
         [
+            'label' => 'Penyesuaian Stok',
+            'route' => 'stock-adjustments.index',
+            'active' => ['stock-adjustments.*'],
+            'visible' => $canManageStock,
+        ],
+        [
             'label' => 'Kartu Stok',
             'route' => 'stock.index',
             'active' => ['stock.*'],
