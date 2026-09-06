@@ -190,8 +190,6 @@
             text-align: center;
         }
 
-        
-
         .signature-name {
             margin-top: 5px;
             color: #0f172a;
@@ -244,7 +242,7 @@
             font-size: 6pt;
             line-height: 1.25;
         }
-    .signature-box img { height: 75px; width: auto; max-width: 100%; margin: 0 auto; display: block; }
+        .signature-box img { height: 75px; width: auto; max-width: 100%; margin: 0 auto; display: block; }
     </style>
 </head>
 <body>
@@ -254,7 +252,6 @@
                 <img class="institution-logo" src="{{ public_path(config('simantap.institution.logo')) }}" alt="{{ $institutionName }}">
             </td>
             <td class="institution">
-                <!-- Nama instansi sudah tercantum pada logo resmi. -->
                 <span>Sistem Manajemen Aset dan Persediaan</span>
             </td>
             <td class="document-meta">
@@ -268,7 +265,7 @@
                         <td>: {{ $inventoryRequest->request_date->copy()->timezone($displayTimezone)->translatedFormat('d F Y') }}</td>
                     </tr>
                 </table>
-                            <div class="document-verification">
+                <div class="document-verification">
                     <img
                         src="{{ $verificationQrDataUri }}"
                         alt="QR verifikasi dokumen"
@@ -283,7 +280,7 @@
                         QR bukan tanda tangan digital
                     </div>
                 </div>
-</td>
+            </td>
         </tr>
     </table>
 
@@ -356,56 +353,64 @@
         @endif
     </div>
 
+    <!-- Pengecekan Logika Status TTD -->
+    @php
+        $rawStatus = strtolower($inventoryRequest->status->value ?? $inventoryRequest->status);
+        $isApproved = in_array($rawStatus, ['approved', 'completed', 'delivered', 'disetujui', 'selesai']);
+        $isDelivered = in_array($rawStatus, ['completed', 'delivered', 'selesai']);
+    @endphp
+
     <table class="signatures">
         <tr>
             <td>
                 <div class="signature-label">Pengelola Barang,</div>
                 <div class="signature-box">
-                    @if ($approvalSignature)
+                    @if ($isApproved && $approvalSignature)
                         <img src="{{ $approvalSignature }}" alt="Tanda tangan pemeriksa">
                     @endif
                 </div>
                 <div class="signature-name">
-                    {{ $inventoryRequest->approver?->name ?: '(belum disetujui)' }}
+                    {{ $isApproved ? ($inventoryRequest->approver?->name ?: '................................') : '(belum disetujui)' }}
                 </div>
                 <div class="muted">
-                    {{ $inventoryRequest->approver?->position ?: '' }}
+                    {{ $isApproved ? ($inventoryRequest->approver?->position ?: '') : '' }}
                 </div>
             </td>
             <td>
                 <div class="signature-label">Penerima Barang,</div>
                 <div class="signature-box">
-                    @if ($receiptSignature)
+                    @if ($isDelivered && $receiptSignature)
                         <img src="{{ $receiptSignature }}" alt="Tanda tangan penerima">
                     @endif
                 </div>
                 <div class="signature-name">
-                    {{ $receiptSignature
-                        ? $inventoryRequest->requester_name_snapshot
-                        : '(belum dikonfirmasi)' }}
+                    {{ $isDelivered ? ($inventoryRequest->requester_name_snapshot ?: '................................') : '(belum diserahkan)' }}
                 </div>
                 <div class="muted">
-                    {{ $inventoryRequest->received_at
+                    {{ ($isDelivered && $inventoryRequest->received_at)
                         ? $inventoryRequest->received_at->copy()->timezone($displayTimezone)->translatedFormat('d F Y, H:i').' WIB'
                         : '' }}
                 </div>
             </td>
             <td>
                 @php
-                    $kasubbag = ($documentSignatories ?? [])['kasubbag']
-                        ?? null;
+                    $kasubbag = ($documentSignatories ?? [])['kasubbag'] ?? null;
                 @endphp
                 <div class="signature-label">
                     Mengetahui / {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }},
                 </div>
                 <div class="signature-box">
-                    
+                    @if ($isApproved && !empty($kasubbag['signature']))
+                        <img src="{{ $kasubbag['signature'] }}" alt="Tanda tangan Kasubbag">
+                    @endif
                 </div>
                 <div class="signature-name">
-                    {{ $kasubbag['name'] ?? '................................' }}
+                    {{ $isApproved ? ($kasubbag['name'] ?? '................................') : '(menunggu persetujuan)' }}
                 </div>
                 <div class="muted">
-                    NIP/Nomor Pegawai: {{ $kasubbag['employee_number'] ?? '................................' }}
+                    @if($isApproved)
+                        NIP/Nomor Pegawai: {{ $kasubbag['employee_number'] ?? '................................' }}
+                    @endif
                 </div>
             </td>
         </tr>
@@ -418,5 +423,3 @@
     </div>
 </body>
 </html>
-
-

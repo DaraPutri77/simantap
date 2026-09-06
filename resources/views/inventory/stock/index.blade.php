@@ -59,28 +59,14 @@
 
             <div class="flex flex-wrap gap-2">
                 <a
-                    href="{{ route('stock.excel', [
-                        'q' => $filters['search'] ?: null,
-                        'item' => $filters['itemId'] ?: null,
-                        'type' => $filters['type'] ?: null,
-                        'direction' => $filters['direction'] ?: null,
-                        'from' => $filters['from'] ?: null,
-                        'until' => $filters['until'] ?: null,
-                    ]) }}"
+                    href="{{ route('stock.excel', request()->query()) }}"
                     class="button-primary-inline"
                 >
                     Unduh Excel Sesuai Filter
                 </a>
 
                 <a
-                    href="{{ route('stock.pdf', [
-                        'q' => $filters['search'] ?: null,
-                        'item' => $filters['itemId'] ?: null,
-                        'type' => $filters['type'] ?: null,
-                        'direction' => $filters['direction'] ?: null,
-                        'from' => $filters['from'] ?: null,
-                        'until' => $filters['until'] ?: null,
-                    ]) }}"
+                    href="{{ route('stock.pdf', request()->query()) }}"
                     class="button-secondary-dark !text-red-600 !border-red-200 hover:!bg-red-50"
                 >
                     Unduh PDF Sesuai Filter
