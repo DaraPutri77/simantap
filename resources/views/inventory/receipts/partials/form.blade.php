@@ -36,8 +36,8 @@
 <div class="grid gap-6 md:grid-cols-2">
     <div>
         <label for="receipt_number" class="form-label">
-            Nomor Barang Masuk
-            <span class="font-medium text-slate-500">(opsional)</span>
+            Nomor Dokumen Transaksi
+            <span class="font-medium text-slate-500">(Bisa Custom)</span>
         </label>
         <input
             id="receipt_number"
@@ -46,20 +46,23 @@
             value="{{ old('receipt_number', $managedReceipt?->receipt_number) }}"
             class="form-input @error('receipt_number') form-input-error @enderror"
             maxlength="80"
-            placeholder="Contoh: BAST/001/2026"
+            placeholder="Contoh: BAST/001/01/2026"
             autocomplete="off"
         >
         @error('receipt_number')
             <p class="form-error">{{ $message }}</p>
         @enderror
-        <p class="mt-2 text-xs font-medium leading-5 text-slate-500">
-            Isi jika memakai nomor dokumen eksternal/manual. Jika dikosongkan,
-            SIMANTAP membuat nomor otomatis STK-IN/YYYY/MM/NNNN.
+        <p class="mt-2 text-[11px] font-medium leading-5 text-sky-700 bg-sky-50 p-2 rounded-lg border border-sky-100">
+            <strong>Untuk Input Arsip Lama:</strong> Ketik nomor dokumen fisik secara manual di sini. 
+            Jika dikosongkan, sistem akan membuatkan nomor otomatis.
         </p>
     </div>
 
     <div>
-        <label for="receipt_date" class="form-label">Tanggal Penerimaan</label>
+        <label for="receipt_date" class="form-label">
+            Tanggal Penerimaan 
+            <span class="font-medium text-slate-500">(Bisa Dimundurkan)</span>
+        </label>
         <input
             id="receipt_date"
             name="receipt_date"
@@ -71,6 +74,9 @@
         @error('receipt_date')
             <p class="form-error">{{ $message }}</p>
         @enderror
+        <p class="mt-2 text-[11px] font-medium leading-5 text-slate-500">
+            Klik ikon kalender untuk memundurkan tanggal (Backdate) ke bulan Januari atau bulan lainnya.
+        </p>
     </div>
 
     <div>
@@ -82,7 +88,7 @@
             value="{{ old('source', $managedReceipt?->source) }}"
             class="form-input @error('source') form-input-error @enderror"
             maxlength="255"
-            placeholder="Contoh: Pengadaan APBN 2026"
+            placeholder="Contoh: Pengadaan APBN 2026 / Mutasi"
             required
         >
         @error('source')
@@ -92,7 +98,7 @@
 
     <div>
         <label for="reference_number" class="form-label">
-            Nomor Referensi
+            Nomor Referensi Eksternal
             <span class="font-medium text-slate-500">(opsional)</span>
         </label>
         <input
@@ -102,7 +108,7 @@
             value="{{ old('reference_number', $managedReceipt?->reference_number) }}"
             class="form-input @error('reference_number') form-input-error @enderror"
             maxlength="255"
-            placeholder="Nomor faktur, SPK, atau BAST"
+            placeholder="Nomor faktur, Nota, SPK, atau BAST"
         >
         @error('reference_number')
             <p class="form-error">{{ $message }}</p>
@@ -121,6 +127,7 @@
             value="{{ old('notes', $managedReceipt?->notes) }}"
             class="form-input @error('notes') form-input-error @enderror"
             maxlength="3000"
+            placeholder="Tuliskan keterangan tambahan jika ada..."
         >
         @error('notes')
             <p class="form-error">{{ $message }}</p>
@@ -308,8 +315,7 @@
     </template>
 </section>
 
-<div class="alert-warning">
+<div class="alert-warning mt-4">
     Menyimpan formulir hanya membuat draft. Stok baru bertambah setelah draft
     diperiksa dan diposting oleh Administrator.
 </div>
-
