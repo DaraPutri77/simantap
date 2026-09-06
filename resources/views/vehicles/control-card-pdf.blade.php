@@ -3,411 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <title>Kartu Kendali Kendaraan</title>
-
     <style>
+        /* Mempertebal margin terluar kertas menjadi 1.5 cm agar tidak menabrak tepi */
         @page {
             size: A4 landscape;
-            margin: 7mm;
+            margin: 15mm; 
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-        }
-
         body {
             color: #000;
             font-family: "Times New Roman", Times, serif;
-            font-size: 6.8pt;
+            font-size: 7.5pt;
         }
-
-        .sheet {
-            position: relative;
-            width: 100%;
-            height: 194mm;
-            overflow: hidden;
-        }
-
-        .sheet.page-break {
+        .page-break {
             page-break-after: always;
         }
-
-        .card-copy {
-            position: absolute;
-            top: 0;
-            width: 137.5mm;
-            height: 191mm;
-            overflow: hidden;
-        }
-
-        .card-left {
-            left: 0;
-        }
-
-        .card-right {
-            right: 0;
-        }
-
-        .header {
-            position: relative;
-            height: 16mm;
-        }
-
-        .institution-logo {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 34mm;
-            height: auto;
-        }
-
-        .title {
-            margin: 0 25mm 0 36mm;
-            padding-top: 3mm;
-            font-size: 9.5pt;
-            font-weight: bold;
-            text-align: center;
-            text-decoration: underline;
-            line-height: 1.15;
-        }
-
-        .document-verification {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 23mm;
-            text-align: center;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-
-        .document-verification img {
-            display: block;
-            width: 8.5mm;
-            height: 8.5mm;
-            margin: 0 auto 0.3mm;
-        }
-
-        .document-verification-meta {
-            color: #222;
-            font-size: 3.8pt;
-            line-height: 1.05;
-        }
-
-        .identity {
-            width: 100%;
-            margin: 1mm 0 2mm;
-            border-collapse: collapse;
-        }
-
-        .identity td {
-            padding: 0.35mm 0;
-            line-height: 1.15;
-            vertical-align: top;
-            word-wrap: break-word; /* Mencegah teks meluber */
-            overflow-wrap: break-word; /* Mencegah teks meluber */
-        }
-
-        .identity-label {
-            width: 31%;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-
-        .identity-colon {
-            width: 4%;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .identity-value {
-            width: 65%;
-        }
-
-        .history {
+        /* Pembungkus utama agar terbagi 2 dengan aman */
+        .wrapper-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
         }
-
-        .history th,
-        .history td {
-            border: 0.25mm solid #000;
-            vertical-align: middle;
-            word-wrap: break-word; /* Mencegah teks panjang merusak tabel */
-            overflow-wrap: break-word;
-        }
-
-        .history th {
-            height: 8mm;
-            padding: 0.45mm;
-            font-size: 5.7pt;
-            font-weight: bold;
-            line-height: 1.05;
-            text-align: center;
-        }
-
-        .history td {
-            height: 4.45mm;
-            padding: 0.35mm 0.5mm;
-            font-size: 5.9pt;
-            line-height: 1.05;
-            text-align: center;
-        }
-
-        .history .col-no {
-            width: 6%;
-        }
-
-        .history .col-date {
-            width: 14%;
-        }
-
-        .history .col-type {
-            width: 27%;
-        }
-
-        .history .col-place {
-            width: 25%;
-        }
-
-        .history .col-sign {
-            width: 14%;
-        }
-
-        .history .text-left {
-            text-align: left;
-        }
-
-        .knowing {
-            margin-top: 2mm;
-            margin-bottom: 1mm;
-            font-size: 6.3pt;
-            text-align: center;
-        }
-
-        .signatures {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
-        .signatures td {
+        /* Memberi jarak ekstra di tengah dan di sisi paling luar */
+        .wrapper-td-left {
             width: 50%;
-            padding: 0 2mm;
+            padding-right: 8mm;
+            padding-left: 2mm;
+            vertical-align: top;
+        }
+        .wrapper-td-right {
+            width: 50%;
+            padding-left: 8mm;
+            padding-right: 2mm;
+            vertical-align: top;
+        }
+        
+        /* Header Kop Surat */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4mm;
+        }
+        .header-logo {
+            width: 25%;
+            vertical-align: top;
+        }
+        .header-title {
+            width: 50%;
+            vertical-align: top;
+            text-align: center;
+            padding-top: 3mm;
+        }
+        .header-title-text {
+            font-size: 10pt;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .header-qr {
+            width: 25%;
+            vertical-align: top;
+            text-align: right;
+        }
+        .qr-meta {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 4.5pt;
+            color: #222;
+            margin-top: 1mm;
+        }
+
+        /* Identitas Kendaraan */
+        .identity-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 3mm;
+        }
+        .identity-table td {
+            padding: 0.5mm 0;
+            vertical-align: top;
+            line-height: 1.3;
+        }
+
+        /* Tabel Riwayat Service */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .history-table th, .history-table td {
+            border: 0.5px solid #000;
+            padding: 1.8mm 1mm;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            vertical-align: middle;
+        }
+        .history-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .history-table td {
+            text-align: center;
+        }
+        .text-left {
+            text-align: left !important;
+        }
+
+        /* Tanda Tangan */
+        .sign-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 3mm;
+        }
+        .sign-table td {
+            width: 50%;
             text-align: center;
             vertical-align: top;
-            word-wrap: break-word;
         }
-
-        .role {
-            min-height: 7mm;
-            font-size: 6.2pt;
-            line-height: 1.15;
+        .sign-role {
+            min-height: 8mm;
         }
-
-        .signature-space {
-            height: 9mm;
+        .sign-space {
+            height: 12mm;
         }
-
-        .signer-line {
-            min-height: 3mm;
-            font-size: 6pt;
-            line-height: 1.1;
-        }
-
-        .nip {
-            margin-top: 0.5mm;
-            font-size: 5.8pt;
+        .sign-name {
+            font-weight: bold;
+            text-decoration: underline;
         }
     </style>
 </head>
-
 <body>
     @php
         $kasubbag = ($documentSignatories ?? [])['kasubbag'] ?? null;
-        $administrator = ($documentSignatories ?? [])['administrator']
-            ?? null;
+        $administrator = ($documentSignatories ?? [])['administrator'] ?? null;
     @endphp
 
     @foreach ($pages as $pageIndex => $rows)
-        <section class="sheet {{ ! $loop->last ? 'page-break' : '' }}">
-            @foreach ([1, 2] as $copy)
-                <div
-                    class="card-copy {{ $copy === 1 ? 'card-left' : 'card-right' }}"
-                    data-card-copy="{{ $copy }}"
-                >
-                    <header class="header">
-                        <img
-                            class="institution-logo"
-                            src="{{ public_path(config('simantap.institution.logo')) }}"
-                            alt="Badan Pusat Statistik Kabupaten Jombang"
-                        >
-
-                        <div class="title">
-                            KARTU KENDALI KENDARAAN
-                        </div>
-
-                        <div class="document-verification">
-                            <img
-                                src="{{ $verificationQrDataUri }}"
-                                alt="QR verifikasi dokumen"
-                            >
-
-                            <div class="document-verification-meta">
-                                <strong>Verifikasi SIMANTAP</strong>
-                                <br>
-                                Versi {{ $documentVerification->version }}
-                                ·
-                                {{ substr($documentVerification->payload_hash, 0, 12) }}
-                                <br>
-                                QR bukan tanda tangan digital
-                            </div>
-                        </div>
-                    </header>
-
-                    <table class="identity">
-                        <tbody>
-                            <tr>
-                                <td class="identity-label">
-                                    NAMA KENDARAAN
-                                </td>
-                                <td class="identity-colon">:</td>
-                                <td class="identity-value">
-                                    {{ $vehicle->displayName() }}
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td class="identity-label">
-                                    NOMOR POLISI
-                                </td>
-                                <td class="identity-colon">:</td>
-                                <td class="identity-value">
-                                    {{ $vehicle->license_plate }}
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td class="identity-label">
-                                    MERK/TYPE
-                                </td>
-                                <td class="identity-colon">:</td>
-                                <td class="identity-value">
-                                    {{ trim($vehicle->brand.' '.$vehicle->model) }}
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <td class="identity-label">
-                                    PENANGGUNG JAWAB
-                                </td>
-                                <td class="identity-colon">:</td>
-                                <td class="identity-value">
-                                    {{ $vehicle->responsible_person ?: '' }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <table class="history">
-                        <thead>
-                            <tr>
-                                <th class="col-no">No</th>
-                                <th class="col-date">Tgl</th>
-                                <th class="col-type">
-                                    Jenis<br>Pemeliharaan
-                                </th>
-                                <th class="col-place">
-                                    Tempat<br>Pemeliharaan
-                                </th>
-                                <th class="col-sign">
-                                    Paraf<br>Pelaksana
-                                </th>
-                                <th class="col-sign">
-                                    Paraf<br>Pengelola
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach ($rows as $index => $row)
-                                <tr data-control-row="1">
-                                    <td>
-                                        {{
-                                            $row !== null
-                                                ? (($pageIndex * $rowsPerCard) + $index + 1)
-                                                : ''
-                                        }}
+        <div class="{{ ! $loop->last ? 'page-break' : '' }}">
+            <table class="wrapper-table">
+                <tr>
+                    @foreach ([1, 2] as $copy)
+                        <td class="{{ $copy === 1 ? 'wrapper-td-left' : 'wrapper-td-right' }}">
+                            
+                            <!-- HEADER -->
+                            <table class="header-table">
+                                <tr>
+                                    <td class="header-logo">
+                                        <img src="{{ public_path(config('simantap.institution.logo')) }}" style="width: 30mm; height: auto;" alt="Logo BPS">
                                     </td>
-
-                                    <td>
-                                        {{ $row['date'] ?? '' }}
+                                    <td class="header-title">
+                                        <div class="header-title-text">KARTU KENDALI KENDARAAN</div>
                                     </td>
-
-                                    <td class="text-left">
-                                        {{ $row['maintenance_type'] ?? '' }}
+                                    <td class="header-qr">
+                                        <img src="{{ $verificationQrDataUri }}" style="width: 10mm; height: 10mm;" alt="QR Code">
+                                        <div class="qr-meta">
+                                            <strong>Verifikasi SIMANTAP</strong><br>
+                                            Versi {{ $documentVerification->version }}<br>
+                                            {{ substr($documentVerification->payload_hash, 0, 12) }}
+                                        </div>
                                     </td>
-
-                                    <td class="text-left">
-                                        {{ $row['service_provider'] ?? '' }}
-                                    </td>
-
-                                    <td>&nbsp;</td>
-                                    <td>&nbsp;</td>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </table>
 
-                    <div class="knowing">
-                        Mengetahui,
-                    </div>
+                            <!-- IDENTITAS -->
+                            <table class="identity-table">
+                                <tr>
+                                    <td style="width: 28%; font-weight: bold;">NAMA KENDARAAN</td>
+                                    <td style="width: 3%;">:</td>
+                                    <td style="width: 69%;">{{ $vehicle->displayName() }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold;">NOMOR POLISI</td>
+                                    <td>:</td>
+                                    <td>{{ $vehicle->license_plate }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold;">MERK/TYPE</td>
+                                    <td>:</td>
+                                    <td>{{ trim($vehicle->brand.' '.$vehicle->model) }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold;">PENANGGUNG JAWAB</td>
+                                    <td>:</td>
+                                    <td>{{ $vehicle->responsible_person ?: '-' }}</td>
+                                </tr>
+                            </table>
 
-                    <table class="signatures">
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <div class="role">
-                                        {{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }}
-                                    </div>
+                            <!-- HISTORY -->
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 6%;">No</th>
+                                        <th style="width: 14%;">Tgl</th>
+                                        <th style="width: 26%;">Jenis Pemeliharaan</th>
+                                        <th style="width: 24%;">Tempat Pemeliharaan</th>
+                                        <th style="width: 15%;">Paraf Pelaksana</th>
+                                        <th style="width: 15%;">Paraf Pengelola</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($rows as $index => $row)
+                                        <tr>
+                                            <td>{{ $row !== null ? (($pageIndex * $rowsPerCard) + $index + 1) : '' }}</td>
+                                            <td>{{ $row['date'] ?? '' }}</td>
+                                            <td class="text-left">{{ $row['maintenance_type'] ?? '' }}</td>
+                                            <td class="text-left">{{ $row['service_provider'] ?? '' }}</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
 
-                                    <div class="signature-space"></div>
+                            <!-- SIGNATURES -->
+                            <div style="text-align: center; margin-top: 4mm; margin-bottom: 1mm;">Mengetahui,</div>
+                            <table class="sign-table">
+                                <tr>
+                                    <td>
+                                        <div class="sign-role">{{ $kasubbag['role_label'] ?? 'Kasubbag Umum' }}</div>
+                                        <div class="sign-space"></div>
+                                        <div class="sign-name">{{ $kasubbag['name'] ?? '................................' }}</div>
+                                        <div>NIP. {{ $kasubbag['employee_number'] ?? '................................' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="sign-role">{{ $administrator['role_label'] ?? 'Administrator / Pengelola Barang' }}</div>
+                                        <div class="sign-space"></div>
+                                        <div class="sign-name">{{ $administrator['name'] ?? '................................' }}</div>
+                                        <div>NIP. {{ $administrator['employee_number'] ?? '................................' }}</div>
+                                    </td>
+                                </tr>
+                            </table>
 
-                                    <div class="signer-line">
-                                        {{ $kasubbag['name'] ?? '................................' }}
-                                    </div>
-
-                                    <div class="nip">
-                                        NIP/Nomor Pegawai: {{ $kasubbag['employee_number'] ?? '................................' }}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div class="role">
-                                        {{ $administrator['role_label'] ?? 'Administrator / Pengelola Barang' }}
-                                    </div>
-
-                                    <div class="signature-space"></div>
-
-                                    <div class="signer-line">
-                                        {{ $administrator['name'] ?? '................................' }}
-                                    </div>
-
-                                    <div class="nip">
-                                        NIP/Nomor Pegawai: {{ $administrator['employee_number'] ?? '................................' }}
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            @endforeach
-        </section>
+                        </td>
+                    @endforeach
+                </tr>
+            </table>
+        </div>
     @endforeach
 </body>
 </html>
