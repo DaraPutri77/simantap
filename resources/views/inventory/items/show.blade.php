@@ -163,7 +163,7 @@
                     @foreach ([
                         'Kategori' => $item->category->name,
                         'Satuan' => $item->unit->name.' ('.$item->unit->symbol.')',
-                        'Harga' => $item->harga ? 'Rp ' . number_format($item->harga, 0, ',', '.') : 'Belum diatur',
+                        'Harga' => !is_null($item->harga) ? 'Rp ' . number_format($item->harga, 0, ',', '.') : 'Belum diatur',
                         'Stok minimum' => number_format((float) $item->minimum_stock, 2, ',', '.').' '.$item->unit->symbol,
                         'Lokasi' => $item->storage_location ?: 'Belum diisi',
                     ] as $label => $value)

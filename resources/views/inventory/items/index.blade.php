@@ -14,7 +14,7 @@
             </h1>
 
             <p class="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-500">
-                Pantau stok tersedia, batas minimum, kategori, satuan, dan
+                Pantau stok tersedia, batas minimum, kategori, harga, satuan, dan
                 lokasi penyimpanan setiap barang.
             </p>
         </div>
@@ -157,11 +157,12 @@
             </div>
         @else
             <div class="hidden overflow-x-auto lg:block">
-                <table class="data-table min-w-[900px]">
+                <table class="data-table min-w-[1000px]">
                     <thead>
                         <tr>
                             <th>Barang</th>
                             <th>Kategori</th>
+                            <th>Harga</th>
                             <th>Stok Tersedia</th>
                             <th>Stok Minimum</th>
                             <th>Lokasi</th>
@@ -193,6 +194,9 @@
                                     </p>
                                 </td>
                                 <td>{{ $item->category->name }}</td>
+                                <td class="font-medium text-slate-700">
+                                    {{ !is_null($item->harga) ? 'Rp ' . number_format($item->harga, 0, ',', '.') : '—' }}
+                                </td>
                                 <td>
                                     <span class="rounded-full px-2.5 py-1 text-xs font-extrabold ring-1 ring-inset {{ $stockTone }}">
                                         {{ number_format($available, 2, ',', '.') }}
@@ -247,7 +251,7 @@
                                     {{ $item->name }}
                                 </h3>
                                 <p class="mt-1 text-xs text-slate-500">
-                                    {{ $item->category->name }}
+                                    {{ $item->category->name }} · {{ !is_null($item->harga) ? 'Rp ' . number_format($item->harga, 0, ',', '.') : 'Harga belum diatur' }}
                                 </p>
                             </div>
                             <span class="rounded-full px-2.5 py-1 text-[10px] font-extrabold {{ $item->is_active
