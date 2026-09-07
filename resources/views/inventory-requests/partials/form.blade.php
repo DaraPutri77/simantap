@@ -40,25 +40,55 @@
         </div>
     </div>
 
-    <div class="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
-        <div>
-            <label for="request_date" class="form-label">
-                Tanggal Permintaan
-            </label>
-            <input
-                id="request_date"
-                name="request_date"
-                type="date"
-                value="{{ $requestDate }}"
-                class="form-input @error('request_date') form-input-error @enderror"
-                required
-            >
-            @error('request_date')
-                <p class="form-error">{{ $message }}</p>
-            @enderror
+    <div class="grid gap-5 p-5 md:grid-cols-2 sm:p-6">
+        <div class="space-y-5">
+            <div>
+                <label for="request_number" class="form-label">
+                    Nomor Permintaan
+                    <span class="font-medium text-slate-500">(Bisa Custom)</span>
+                </label>
+                <input
+                    id="request_number"
+                    name="request_number"
+                    type="text"
+                    value="{{ old('request_number', $inventoryRequest?->request_number) }}"
+                    class="form-input @error('request_number') form-input-error @enderror"
+                    maxlength="80"
+                    placeholder="Contoh: REQ/2025/11/0001"
+                    autocomplete="off"
+                >
+                @error('request_number')
+                    <p class="form-error">{{ $message }}</p>
+                @enderror
+                <p class="mt-2 text-[11px] font-medium leading-5 text-sky-700 bg-sky-50 p-2 rounded-lg border border-sky-100">
+                    <strong>Untuk Input Arsip Lama:</strong> Ketik nomor dokumen fisik secara manual di sini.
+                    Jika dikosongkan, sistem akan membuatkan nomor otomatis.
+                </p>
+            </div>
+
+            <div>
+                <label for="request_date" class="form-label">
+                    Tanggal Permintaan
+                    <span class="font-medium text-slate-500">(Bisa Dimundurkan)</span>
+                </label>
+                <input
+                    id="request_date"
+                    name="request_date"
+                    type="date"
+                    value="{{ $requestDate }}"
+                    class="form-input @error('request_date') form-input-error @enderror"
+                    required
+                >
+                @error('request_date')
+                    <p class="form-error">{{ $message }}</p>
+                @enderror
+                <p class="mt-2 text-[11px] font-medium leading-5 text-slate-500">
+                    Klik ikon kalender untuk memundurkan tanggal ke bulan arsip lama.
+                </p>
+            </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-300 bg-slate-50 p-4">
+        <div class="rounded-2xl border border-slate-300 bg-slate-50 p-4 h-fit">
             <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">
                 Pemohon
             </p>
@@ -71,7 +101,6 @@
                 {{ auth()->user()->work_unit ?: 'Unit kerja belum diisi' }}
             </p>
         </div>
-
     </div>
 </section>
 

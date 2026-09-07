@@ -9,8 +9,7 @@
             Ajukan Permintaan Barang
         </h1>
         <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-            Simpan sebagai draft dahulu. Nomor formulir dibuat otomatis dan
-            stok belum berubah sampai barang benar-benar diserahkan.
+            Simpan sebagai draft dahulu. Nomor formulir dapat diketik manual untuk arsip lama atau dikosongkan agar dibuat otomatis oleh sistem. Stok belum berubah sampai barang diserahkan.
         </p>
     </section>
 
