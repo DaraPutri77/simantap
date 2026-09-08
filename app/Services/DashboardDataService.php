@@ -381,7 +381,7 @@ final class DashboardDataService
         Collection $requests,
         Collection $loans,
     ): Collection {
-        return $requests
+        return $requests->toBase()
             ->map(
                 fn (InventoryRequest $inventoryRequest): array => [
                     'type' => 'Permintaan barang',
@@ -392,8 +392,8 @@ final class DashboardDataService
                         ?? $inventoryRequest->created_at,
                 ],
             )
-            ->merge(
-                $loans->map(
+            ->concat(
+                $loans->toBase()->map(
                     fn (VehicleLoan $loan): array => [
                         'type' => 'Peminjaman motor',
                         'title' => $loan->vehicle === null
