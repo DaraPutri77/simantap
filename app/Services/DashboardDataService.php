@@ -235,6 +235,7 @@ final class DashboardDataService
         $end = $months->last()->copy()->endOfMonth()->utc();
         $movements = StockMovement::query()
             ->whereBetween('transaction_date', [$start, $end])
+            ->limit(1000)
             ->get([
                 'transaction_date',
                 'quantity_in',
@@ -246,6 +247,7 @@ final class DashboardDataService
                 InventoryRequestStatus::Draft->value,
                 InventoryRequestStatus::Cancelled->value,
             ])
+            ->limit(1000)
             ->get(['request_date']);
 
         return [
@@ -321,12 +323,14 @@ final class DashboardDataService
                 VehicleLoanStatus::Draft->value,
                 VehicleLoanStatus::Cancelled->value,
             ])
+            ->limit(1000)
             ->get(['created_at']);
         $maintenance = MaintenanceRecord::query()
             ->whereBetween('reported_date', [
                 $displayStart->toDateString(),
                 $displayEnd->toDateString(),
             ])
+            ->limit(1000)
             ->get(['reported_date']);
 
         return [
