@@ -96,11 +96,6 @@ class VehicleLoanLifecycleService
                     $locked,
                     ConditionCheckType::Checkout,
                 );
-                $this->assertOdometerNotLower(
-                    (float) $data['odometer'],
-                    (float) $vehicle->current_odometer,
-                    'Odometer awal tidak boleh lebih kecil daripada odometer master kendaraan.',
-                );
 
                 $signature = $this->createSignatureRecord(
                     $locked,
@@ -109,12 +104,15 @@ class VehicleLoanLifecycleService
                     $signatureFile,
                     $httpRequest,
                 );
+                
+                // Menambahkan $vehicle untuk mengambil nilai default odometer
                 $conditionCheck = $this->createConditionCheck(
                     $locked,
                     ConditionCheckType::Checkout,
                     $data,
                     $actor,
                     $signature->signed_at,
+                    $vehicle, 
                 );
                 $this->createAttachmentRecords(
                     $conditionCheck,
@@ -489,16 +487,8 @@ class VehicleLoanLifecycleService
                     ConditionCheckType::Return,
                 );
 
-                $returnOdometer = (float) $data['odometer'];
-                $minimumOdometer = max(
-                    (float) $checkout->odometer,
-                    (float) $vehicle->current_odometer,
-                );
-                $this->assertOdometerNotLower(
-                    $returnOdometer,
-                    $minimumOdometer,
-                    'Odometer akhir tidak boleh lebih kecil daripada odometer awal atau odometer master kendaraan.',
-                );
+                // Odometer sekarang selalu mengambil dari data master kendaraan jika form tidak dikirim
+                $returnOdometer = (float) ($data['odometer'] ?? $vehicle->current_odometer);
 
                 $signature = $this->createSignatureRecord(
                     $locked,
@@ -507,12 +497,14 @@ class VehicleLoanLifecycleService
                     $signatureFile,
                     $httpRequest,
                 );
+                
                 $returnCheck = $this->createConditionCheck(
                     $locked,
                     ConditionCheckType::Return,
                     $data,
                     $actor,
                     $signature->signed_at,
+                    $vehicle, // New param
                 );
                 $this->createAttachmentRecords(
                     $returnCheck,
@@ -664,16 +656,18 @@ class VehicleLoanLifecycleService
         array $data,
         User $actor,
         DateTimeInterface $checkedAt,
+        Vehicle $vehicle,
     ): VehicleConditionCheck {
+        // Data yang hilang dari form akan otomatis disi dengan default aman 
         return $vehicleLoan->conditionChecks()->create([
             'check_type' => $type,
-            'odometer' => $data['odometer'],
-            'fuel_level' => $data['fuel_level'],
-            'overall_condition' => $data['overall_condition'],
-            'body_condition' => $data['body_condition'],
-            'engine_condition' => $data['engine_condition'],
-            'tire_condition' => $data['tire_condition'],
-            'equipment_condition' => $data['equipment_condition'],
+            'odometer' => $data['odometer'] ?? $vehicle->current_odometer,
+            'fuel_level' => $data['fuel_level'] ?? 100, 
+            'overall_condition' => $data['overall_condition'] ?? VehicleOverallCondition::Good,
+            'body_condition' => $data['body_condition'] ?? VehicleOverallCondition::Good,
+            'engine_condition' => $data['engine_condition'] ?? VehicleOverallCondition::Good,
+            'tire_condition' => $data['tire_condition'] ?? VehicleOverallCondition::Good,
+            'equipment_condition' => $data['equipment_condition'] ?? VehicleOverallCondition::Good,
             'damage_notes' => $data['damage_notes'] ?? null,
             'checked_by' => $actor->getKey(),
             'checker_name_snapshot' => $actor->name,
@@ -720,20 +714,6 @@ class VehicleLoanLifecycleService
 
         throw ValidationException::withMessages([
             'loan' => 'Tindakan ini hanya dapat dilakukan oleh peminjam yang tercatat.',
-        ]);
-    }
-
-    private function assertOdometerNotLower(
-        float $actual,
-        float $minimum,
-        string $message,
-    ): void {
-        if ($actual + 0.00001 >= $minimum) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'odometer' => $message,
         ]);
     }
 
