@@ -31,9 +31,6 @@ class InventoryService
         private readonly DocumentNumberService $documentNumberService,
     ) {}
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function createItem(
         array $data,
         User $actor,
@@ -57,6 +54,7 @@ class InventoryService
                     'category_id' => $data['category_id'],
                     'unit_id' => $data['unit_id'],
                     'name' => $data['name'],
+                    'harga' => $data['harga'] ?? null,
                     'description' => $data['description'] ?? null,
                     'current_stock' => $initialStock,
                     'reserved_stock' => 0,
@@ -101,6 +99,7 @@ class InventoryService
                             'category_id',
                             'unit_id',
                             'name',
+                            'harga',
                             'minimum_stock',
                             'storage_location',
                             'is_active',
@@ -122,9 +121,6 @@ class InventoryService
         }
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function updateItem(
         Item $item,
         array $data,
@@ -151,6 +147,7 @@ class InventoryService
                     'category_id',
                     'unit_id',
                     'name',
+                    'harga',
                     'description',
                     'minimum_stock',
                     'storage_location',
@@ -164,6 +161,7 @@ class InventoryService
                     'category_id' => $data['category_id'],
                     'unit_id' => $data['unit_id'],
                     'name' => $data['name'],
+                    'harga' => $data['harga'] ?? null,
                     'description' => $data['description'] ?? null,
                     'minimum_stock' => $this->quantity(
                         $data['minimum_stock'],
@@ -266,9 +264,6 @@ class InventoryService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function createCategory(
         array $data,
         User $actor,
@@ -298,9 +293,6 @@ class InventoryService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function updateCategory(
         ItemCategory $category,
         array $data,
@@ -316,9 +308,6 @@ class InventoryService
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function createUnit(
         array $data,
         User $actor,
@@ -348,9 +337,6 @@ class InventoryService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function updateUnit(
         Unit $unit,
         array $data,
@@ -366,9 +352,6 @@ class InventoryService
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function createReceipt(
         array $data,
         User $actor,
@@ -425,9 +408,6 @@ class InventoryService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function updateReceipt(
         InventoryReceipt $receipt,
         array $data,
@@ -619,9 +599,6 @@ class InventoryService
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function createAdjustment(
         array $data,
         User $actor,
@@ -675,9 +652,6 @@ class InventoryService
         }, 3);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function updateAdjustment(
         StockAdjustment $adjustment,
         array $data,
@@ -886,9 +860,6 @@ class InventoryService
         );
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $items
-     */
     private function replaceReceiptItems(
         InventoryReceipt $receipt,
         array $items,
@@ -912,9 +883,6 @@ class InventoryService
         }
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $items
-     */
     private function replaceAdjustmentItems(
         StockAdjustment $adjustment,
         array $items,
@@ -947,10 +915,6 @@ class InventoryService
         }
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $items
-     * @return Collection<int, Item>
-     */
     private function lockedActiveItems(array $items): Collection
     {
         $ids = collect($items)
@@ -1019,9 +983,6 @@ class InventoryService
         };
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     private function updateReferenceMaster(
         ItemCategory|Unit $model,
         array $data,
@@ -1058,12 +1019,6 @@ class InventoryService
         }, 3);
     }
 
-    /**
-     * @template TDocument of InventoryReceipt|StockAdjustment
-     *
-     * @param  TDocument  $document
-     * @return TDocument
-     */
     private function cancelDocument(
         InventoryReceipt|StockAdjustment $document,
         string $reason,
@@ -1130,9 +1085,6 @@ class InventoryService
         }
     }
 
-    /**
-     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
-     */
     private function transactionDates(string $date): array
     {
         $displayDate = CarbonImmutable::parse(
@@ -1163,9 +1115,6 @@ class InventoryService
         return round((float) $value, 2);
     }
 
-    /**
-     * @param  Collection<int, mixed>  $lines
-     */
     private function sum(Collection $lines, string $field): float
     {
         return $this->quantity(

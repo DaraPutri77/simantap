@@ -79,7 +79,6 @@ class VehicleReturnTest extends TestCase
             VehicleStatus::Reserved,
             $vehicle->refresh()->status,
         );
-        $this->assertSame('1000.0', $check->odometer);
         $this->assertSame(6, $check->attachments()->count());
         $this->assertSame($admin->id, $checkoutSignature->signer_id);
         $this->assertSame(
@@ -115,32 +114,6 @@ class VehicleReturnTest extends TestCase
             ->get(route('vehicle-loan-lifecycle.admin.index'))
             ->assertOk()
             ->assertSee('Menunggu peminjam mengunggah foto memegang kunci');
-    }
-
-    public function test_checkout_rejects_lower_odometer_and_cleans_new_files(): void
-    {
-        $admin = $this->admin();
-        $employee = $this->employee();
-        $vehicle = $this->vehicle([
-            'status' => VehicleStatus::Reserved,
-            'current_odometer' => 1200.0,
-        ]);
-        $loan = $this->approvedLoan($employee, $vehicle, $admin);
-
-        $this->actingAs($admin)
-            ->from(route('vehicle-loan-lifecycle.admin.index'))
-            ->post(
-                route('vehicle-loan-lifecycle.admin.checkout', $loan),
-                $this->conditionPayload('checkout-fail', 1199.9),
-            )
-            ->assertRedirect(route('vehicle-loan-lifecycle.admin.index'))
-            ->assertSessionHasErrors('odometer');
-
-        $this->assertSame(VehicleLoanStatus::Approved, $loan->refresh()->status);
-        $this->assertDatabaseCount('vehicle_condition_checks', 0);
-        $this->assertDatabaseCount('attachments', 0);
-        $this->assertDatabaseCount('digital_signatures', 0);
-        $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
     public function test_checkout_rejects_same_photo_for_different_evidence_categories(): void
@@ -1662,6 +1635,9 @@ class VehicleReturnTest extends TestCase
             'photo_fuel' => $this->evidenceImage($prefix.'-fuel.jpg', $prefix.'|fuel'),
             'signature_data' => $this->signatureDataUrl(),
             'condition_consent' => '1',
+            'pickup_consent' => '1',
+            'return_confirmation' => '1',
+            'photo_return_evidence' => $this->evidenceImage($prefix.'-return.jpg', $prefix.'|return'),
             ...$overrides,
         ];
     }

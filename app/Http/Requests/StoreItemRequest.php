@@ -30,9 +30,6 @@ class StoreItemRequest extends FormRequest
         ]);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     public function rules(): array
     {
         return [
@@ -44,6 +41,13 @@ class StoreItemRequest extends FormRequest
                 Rule::unique('items', 'item_code'),
             ],
             'name' => ['required', 'string', 'max:255'],
+            'harga' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:9999999999999.99',
+                'decimal:0,2',
+            ],
             'category_id' => [
                 'required',
                 'integer',
@@ -91,6 +95,7 @@ class StoreItemRequest extends FormRequest
         return [
             'item_code' => 'kode barang',
             'name' => 'nama barang',
+            'harga' => 'harga barang',
             'category_id' => 'kategori',
             'unit_id' => 'satuan',
             'initial_stock' => 'stok awal',

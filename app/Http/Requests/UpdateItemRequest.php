@@ -49,6 +49,13 @@ class UpdateItemRequest extends FormRequest
                     ->ignore($item instanceof Item ? $item->id : null),
             ],
             'name' => ['required', 'string', 'max:255'],
+            'harga' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:9999999999999.99',
+                'decimal:0,2',
+            ],
             'category_id' => [
                 'required',
                 'integer',
@@ -90,6 +97,7 @@ class UpdateItemRequest extends FormRequest
         return [
             'item_code' => 'kode barang',
             'name' => 'nama barang',
+            'harga' => 'harga barang',
             'category_id' => 'kategori',
             'unit_id' => 'satuan',
             'minimum_stock' => 'stok minimum',
